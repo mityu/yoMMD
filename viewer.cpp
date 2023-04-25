@@ -5,6 +5,7 @@
 #include <string_view>
 #include "sokol_gfx.h"
 #include "sokol_log.h"
+#include "sokol_time.h"
 #include "Saba/Model/MMD/MMDMaterial.h"
 #include "Saba/Model/MMD/MMDModel.h"
 #include "Saba/Base/Path.h"
@@ -101,6 +102,7 @@ void Routine::Init() {
         .logger.func = slog_func,
     };
     sg_setup(&desc);
+    stm_setup();
 
     const sg_backend backend = sg_query_backend();
     shaderMMD = sg_make_shader(mmd_shader_desc(backend));
@@ -116,6 +118,7 @@ void Routine::Init() {
         .index_buffer = ibo,
     };
 
+    timeBeginAnimation = timeLastFrame = stm_now();
     shouldTerminate = true;
 }
 
@@ -255,7 +258,7 @@ void Routine::initPipeline() {
         //     .ref = 1,
         //     .read_mask = 1,
         // },
-        .sample_count = SAMPLE_COUNT,
+        // .sample_count = SAMPLE_COUNT,
         .colors = {
             [0] = {
                 .blend = {
@@ -280,14 +283,14 @@ void Routine::initPipeline() {
 }
 
 void Routine::Update() {
-    // static float animTime = 0.0f;
     const auto model = mmd.GetModel();
     const size_t vertCount = model->GetVertexCount();
 
-    // animTime += 0.5f;
-    // model->BeginAnimation();
-    // model->UpdateAllAnimation(mmd.GetAnimation().get(), animTime, 1.0f / 60.0f);
-    // model->EndAnimation();
+    const double vmdFrame = stm_sec(stm_since(timeBeginAnimation)) * constant::VmdFPS;
+    const double elapsedTime = stm_sec(stm_since(timeLastFrame));
+    model->BeginAnimation();
+    model->UpdateAllAnimation(mmd.GetAnimation().get(), vmdFrame, elapsedTime);
+    model->EndAnimation();
     model->Update();
 
     sg_update_buffer(posVB, (sg_range){
@@ -302,6 +305,8 @@ void Routine::Update() {
                 .size = vertCount * sizeof(glm::vec2),
                 .ptr = model->GetUpdateUVs(),
             });
+
+    timeLastFrame = stm_now();
 }
 
 void Routine::Draw() {

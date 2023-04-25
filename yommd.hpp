@@ -15,14 +15,17 @@
 #include "glm/glm.hpp"
 #include "sokol_gfx.h"
 
-// FIXME:
-constexpr int SAMPLE_COUNT = 4;
-
 #include "platform.hpp"
 
 #if defined(PLATFORM_WINDOWS) && !defined(_WIN32)
 #  define _WIN32
 #endif
+
+namespace constant {
+constexpr int SampleCount = 4;
+constexpr float FPS = 60.0f;
+constexpr float VmdFPS = 30.0f;
+}
 
 struct NonCopyable {
     NonCopyable() = default;
@@ -162,6 +165,10 @@ private:
     std::map<std::string, sg_image> textures;  // For "texture" and "spTexture".
     std::map<std::string, sg_image> toonTextures;
     std::vector<Material> materials;
+
+    // Timers for animation.
+    uint64_t timeBeginAnimation;
+    uint64_t timeLastFrame;
 };
 
 #endif  // YOMMD_HPP_

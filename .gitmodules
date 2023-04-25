@@ -1,0 +1,15 @@
+[submodule "lib/saba"]
+	path = lib/saba
+	url = https://github.com/benikabocha/saba
+[submodule "lib/glm"]
+	path = lib/glm
+	url = https://github.com/g-truc/glm
+[submodule "lib/stb"]
+	path = lib/stb
+	url = https://github.com/nothings/stb
+[submodule "lib/incbin"]
+	path = lib/incbin
+	url = https://github.com/graphitemaster/incbin
+[submodule "lib/sokol"]
+	path = lib/sokol
+	url = https://github.com/floooh/sokol

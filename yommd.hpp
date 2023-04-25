@@ -2,6 +2,7 @@
 #define YOMMD_HPP_
 
 #include <memory>
+#include <random>
 #include <string>
 #include <vector>
 #include <iostream>
@@ -172,6 +173,12 @@ private:
     // Timers for animation.
     uint64_t timeBeginAnimation;
     uint64_t timeLastFrame;
+
+    size_t motionID;
+    bool needBridgeMotions;
+
+    std::mt19937 rand;
+    std::uniform_int_distribution<size_t> randDist;
 };
 
 #endif  // YOMMD_HPP_

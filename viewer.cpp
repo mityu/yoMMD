@@ -1,8 +1,10 @@
+#include <ctime>
 #include <functional>
 #include <optional>
 #include <memory>
 #include <string>
 #include <string_view>
+#include <random>
 #include "sokol_gfx.h"
 #include "sokol_log.h"
 #include "sokol_time.h"
@@ -70,10 +72,8 @@ void MMD::Load() {
                 Err::Log("Failed to create VMDCameraAnimation.");
         }
 
-        // vmdAnim->SyncPhysics(0.0f);
         animations.push_back(std::move(vmdAnim));
     }
-    animations[0]->SyncPhysics(0.0f);
 }
 
 bool MMD::IsLoaded() const {
@@ -93,7 +93,9 @@ const std::unique_ptr<saba::VMDCameraAnimation>& MMD::GetCameraAnimation() const
 }
 
 Routine::Routine() :
-    passAction({.colors[0] = {.action = SG_ACTION_CLEAR, .value = {.a = 0}}})
+    passAction({.colors[0] = {.action = SG_ACTION_CLEAR, .value = {.a = 0}}}),
+    timeBeginAnimation(0), timeLastFrame(0), motionID(0), needBridgeMotions(false),
+    rand(static_cast<int>(std::time(nullptr)))
 {}
 
 Routine::~Routine() {
@@ -134,6 +136,10 @@ void Routine::Init() {
         .index_buffer = ibo,
     };
 
+    randDist.param(decltype(randDist)::param_type(0, mmd.GetAnimations().size() - 1));
+
+    motionID = randDist(rand);
+    needBridgeMotions = false;
     timeBeginAnimation = timeLastFrame = stm_now();
     shouldTerminate = true;
 }
@@ -300,8 +306,6 @@ void Routine::initPipeline() {
 }
 
 void Routine::Update() {
-    static int motionID = 0;
-    static bool needBridgeMotion = false;
     const auto size{Context::getWindowSize()};
     const auto model = mmd.GetModel();
     const size_t vertCount = model->GetVertexCount();
@@ -331,14 +335,14 @@ void Routine::Update() {
     }
 
     model->BeginAnimation();
-    if (needBridgeMotion) {
+    if (needBridgeMotions) {
         mmd.GetAnimations()[motionID]->Evaluate(0.0f, stm_sec(stm_since(timeBeginAnimation)));
 		model->UpdateMorphAnimation();
 		model->UpdateNodeAnimation(false);
 		model->UpdatePhysicsAnimation(elapsedTime);
 		model->UpdateNodeAnimation(true);
         if (vmdFrame >= constant::VmdFPS) {
-            needBridgeMotion = false;
+            needBridgeMotions = false;
             timeBeginAnimation = stm_now();
         }
     } else {
@@ -361,11 +365,11 @@ void Routine::Update() {
             });
 
     timeLastFrame = stm_now();
-    if (vmdFrame > (mmd.GetAnimations()[motionID]->GetMaxKeyTime())) {
+    if (vmdFrame > mmd.GetAnimations()[motionID]->GetMaxKeyTime()) {
         model->SaveBaseAnimation();
         timeBeginAnimation = timeLastFrame;
-        motionID = 1;
-        needBridgeMotion = true;
+        motionID = randDist(rand);
+        needBridgeMotions = true;
     }
 
     // TODO: cameraAnimation->reset() should be called anywhere?
@@ -499,6 +503,8 @@ void Routine::Draw() {
 void Routine::Terminate() {
     if (!shouldTerminate)
         return;
+
+    motionID = 0;
 
     sg_destroy_shader(shaderMMD);
 

@@ -132,11 +132,14 @@ public:
     void Draw();
     void Terminate();
 private:
+    using ImageMap = std::map<std::string, Image>;
     void initBuffers();
-    std::optional<sg_image> getTexture(const std::string_view path);
+    void initTextures();
+    void initPipeline();
+    std::optional<ImageMap::const_iterator> loadImage(std::string path);
+    std::optional<sg_image> getTexture(std::string path);
+    std::optional<sg_image> getToonTexture(std::string path);
 private:
-    static constexpr unsigned char dummyPixel[4] = {0, 0, 0, 0};
-
     bool shouldTerminate;
     const sg_pass_action passAction;
     sg_shader shaderMMD;
@@ -145,23 +148,20 @@ private:
     sg_buffer normVB;
     sg_buffer uvVB;
     sg_buffer ibo;
-    sg_index_type indexType;
     sg_pipeline pipeline;
     sg_pipeline pipeline_bothface;
     sg_bindings binds;
 
-    sg_image dummyTex;
-    // sg_image mmdTex;
-    // sg_image sphereTex;
-    // sg_image toonTex;
-
     glm::mat4 viewMatrix;
     glm::mat4 projectionMatrix;
     MMD mmd;
-    std::vector<Material> materials;
-    std::map<std::string, std::pair<sg_image, Image>> textures;
-    std::map<std::string, Image> images;
     // TransparentFBO transparentFBO;
+
+    sg_image dummyTex;
+    ImageMap texImages;
+    std::map<std::string, sg_image> textures;  // For "texture" and "spTexture".
+    std::map<std::string, sg_image> toonTextures;
+    std::vector<Material> materials;
 };
 
 #endif  // YOMMD_HPP_

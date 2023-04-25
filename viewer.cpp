@@ -102,76 +102,12 @@ void Routine::Init() {
     };
     sg_setup(&desc);
 
-    initBuffers();
-
-    dummyTex = sg_make_image((sg_image_desc){
-                .width = 1,
-                .height = 1,
-                .data.subimage[0][0] = {.size = 4, .ptr = dummyPixel},
-            });
-
     const sg_backend backend = sg_query_backend();
     shaderMMD = sg_make_shader(mmd_shader_desc(backend));
 
-    sg_pipeline_desc pipeline_desc ={
-        .shader = shaderMMD,
-        .index_type = indexType,
-        .layout = {
-            .attrs = {
-                [ATTR_mmd_vs_in_Pos] = {
-                    .buffer_index = ATTR_mmd_vs_in_Pos,
-                    .format = SG_VERTEXFORMAT_FLOAT3,
-                },
-                [ATTR_mmd_vs_in_Nor] = {
-                    .buffer_index = ATTR_mmd_vs_in_Nor,
-                    .format = SG_VERTEXFORMAT_FLOAT3,
-                },
-                [ATTR_mmd_vs_in_UV] = {
-                    .buffer_index = ATTR_mmd_vs_in_UV,
-                    .format = SG_VERTEXFORMAT_FLOAT2,
-                },
-            },
-        },
-        .cull_mode = SG_CULLMODE_FRONT,
-        // .stencil = {
-        //     .enabled = true,
-        //     .front = {
-        //         // .compare = SG_COMPAREFUNC_NOT_EQUAL,
-        //         // .pass_op = SG_STENCILOP_REPLACE,
-        //         .compare = SG_COMPAREFUNC_ALWAYS,
-        //         .pass_op = SG_STENCILOP_KEEP,
-        //     },
-        //     .back = {
-        //         // .compare = SG_COMPAREFUNC_NOT_EQUAL,
-        //         // .pass_op = SG_STENCILOP_REPLACE,
-        //         .compare = SG_COMPAREFUNC_ALWAYS,
-        //         .pass_op = SG_STENCILOP_KEEP,
-        //     },
-        //     .ref = 1,
-        //     .read_mask = 1,
-        // },
-        .sample_count = SAMPLE_COUNT,
-        .colors = {
-            [0] = {
-                .blend = {
-                    .enabled = true,
-                    .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
-                    .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-                    .src_factor_alpha = SG_BLENDFACTOR_SRC_ALPHA,
-                    .dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-                },
-            },
-        },
-        .depth = {
-            .write_enabled = true,
-            .compare = SG_COMPAREFUNC_LESS,
-        },
-        .primitive_type = SG_PRIMITIVETYPE_TRIANGLES,
-    };
-    pipeline = sg_make_pipeline(&pipeline_desc);
-
-    pipeline_desc.cull_mode = SG_CULLMODE_NONE;
-    pipeline_bothface = sg_make_pipeline(&pipeline_desc);
+    initBuffers();
+    initTextures();
+    initPipeline();
 
     binds = (sg_bindings){
         .vertex_buffers[ATTR_mmd_vs_in_Pos] = posVB,
@@ -179,110 +115,6 @@ void Routine::Init() {
         .vertex_buffers[ATTR_mmd_vs_in_UV] = uvVB,
         .index_buffer = ibo,
     };
-
-    const auto& model = mmd.GetModel();
-    Info::Log("Index count:", model->GetIndexCount());
-    Info::Log("Index element size:", model->GetIndexElementSize());
-
-    // Setup materials
-    const size_t subMeshcount = model->GetSubMeshCount();
-    for (size_t i = 0; i < subMeshcount; ++i) {
-        const auto& mmdMaterial = model->GetMaterials()[i];
-        Material material(mmdMaterial);
-        if (!mmdMaterial.m_texture.empty()) {
-            auto itr = images.find(mmdMaterial.m_texture);
-            Image img;
-            if (itr == images.cend()) {
-                if (img.loadFromFile(mmdMaterial.m_texture)) {
-                    images.emplace(mmdMaterial.m_texture, std::move(img));
-                    itr = images.find(mmdMaterial.m_texture);
-                } else {
-                    Err::Log("Failed to load image:", mmdMaterial.m_texture);
-                }
-            }
-            if (itr != images.cend()) {
-                const auto& image = itr->second;
-                material.texture = sg_make_image(sg_image_desc{
-                    .type = SG_IMAGETYPE_2D,
-                    .render_target = false,
-                    .width = static_cast<int>(image.width),
-                    .height = static_cast<int>(image.height),
-                    .usage = SG_USAGE_IMMUTABLE,
-                    .pixel_format = SG_PIXELFORMAT_RGBA8,
-                    .min_filter = SG_FILTER_LINEAR,
-                    .mag_filter = SG_FILTER_LINEAR,
-                    .data.subimage[0][0] = {
-                        .size = image.pixels.size(),
-                        .ptr = image.pixels.data(),
-                    },
-                });
-                material.textureHasAlpha = image.hasAlpha;
-            }
-            // material.texture = getTexture(mmdMaterial.m_texture);
-            // if (material.texture) {
-            //     material.textureHasAlpha = textures[mmdMaterial.m_texture].second.hasAlpha;
-            // }
-        }
-        if (!mmdMaterial.m_spTexture.empty()) {
-            // material.spTexture = getTexture(mmdMaterial.m_spTexture);
-            auto itr = images.find(mmdMaterial.m_spTexture);
-            Image img;
-            if (itr == images.cend()) {
-                if (img.loadFromFile(mmdMaterial.m_spTexture)) {
-                    images.emplace(mmdMaterial.m_spTexture, std::move(img));
-                    itr = images.find(mmdMaterial.m_spTexture);
-                }
-            }
-            if (itr != images.cend()) {
-                const auto& image = itr->second;
-                material.spTexture = sg_make_image(sg_image_desc{
-                    .type = SG_IMAGETYPE_2D,
-                    .render_target = false,
-                    .width = static_cast<int>(image.width),
-                    .height = static_cast<int>(image.height),
-                    .usage = SG_USAGE_IMMUTABLE,
-                    .pixel_format = SG_PIXELFORMAT_RGBA8,
-                    .min_filter = SG_FILTER_LINEAR,
-                    .mag_filter = SG_FILTER_LINEAR,
-                    .data.subimage[0][0] = {
-                        .size = image.pixels.size(),
-                        .ptr = image.pixels.data(),
-                    },
-                });
-            }
-        }
-        if (!mmdMaterial.m_toonTexture.empty()) {
-            // material.toonTexture = getTexture(mmdMaterial.m_toonTexture);
-            auto itr = images.find(mmdMaterial.m_toonTexture);
-            Image img;
-            if (itr == images.cend()) {
-                if (img.loadFromFile(mmdMaterial.m_toonTexture)) {
-                    images.emplace(mmdMaterial.m_toonTexture, std::move(img));
-                    itr = images.find(mmdMaterial.m_toonTexture);
-                }
-            }
-            if (itr != images.cend()) {
-                const auto& image = itr->second;
-                material.toonTexture = sg_make_image(sg_image_desc{
-                    .type = SG_IMAGETYPE_2D,
-                    .render_target = false,
-                    .width = static_cast<int>(image.width),
-                    .height = static_cast<int>(image.height),
-                    .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-                    .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
-                    .usage = SG_USAGE_IMMUTABLE,
-                    .pixel_format = SG_PIXELFORMAT_RGBA8,
-                    .min_filter = SG_FILTER_LINEAR,
-                    .mag_filter = SG_FILTER_LINEAR,
-                    .data.subimage[0][0] = {
-                        .size = image.pixels.size(),
-                        .ptr = image.pixels.data(),
-                    },
-                });
-            }
-        }
-        materials.emplace_back(std::move(material));
-    }
 
     shouldTerminate = true;
 }
@@ -345,7 +177,6 @@ void Routine::initBuffers() {
             induces.push_back(getInduceAt(subMesth.m_beginIndex + j));
     }
 
-
     ibo = sg_make_buffer((sg_buffer_desc){
                 .type = SG_BUFFERTYPE_INDEXBUFFER,
                 .usage = SG_USAGE_IMMUTABLE,
@@ -354,7 +185,98 @@ void Routine::initBuffers() {
                     .ptr = induces.data(),
                 },
             });
-    indexType = SG_INDEXTYPE_UINT32;
+}
+
+void Routine::initTextures() {
+    static constexpr uint8_t dummyPixel[4] = {0, 0, 0, 0};
+
+    dummyTex = sg_make_image((sg_image_desc){
+                .width = 1,
+                .height = 1,
+                .data.subimage[0][0] = {.size = 4, .ptr = dummyPixel},
+            });
+
+    const auto& model = mmd.GetModel();
+    const size_t subMeshCount = model->GetSubMeshCount();
+    for (size_t i = 0; i < subMeshCount; ++i) {
+        const auto& mmdMaterial = model->GetMaterials()[i];
+        Material material(mmdMaterial);
+        if (!mmdMaterial.m_texture.empty()) {
+            material.texture = getTexture(mmdMaterial.m_texture);
+            if (material.texture) {
+                material.textureHasAlpha = texImages[mmdMaterial.m_texture].hasAlpha;
+            }
+        }
+        if (!mmdMaterial.m_spTexture.empty()) {
+            material.spTexture = getTexture(mmdMaterial.m_spTexture);
+        }
+        if (!mmdMaterial.m_toonTexture.empty()) {
+            material.toonTexture = getToonTexture(mmdMaterial.m_toonTexture);
+        }
+        materials.push_back(std::move(material));
+    }
+}
+
+void Routine::initPipeline() {
+    sg_pipeline_desc pipeline_desc ={
+        .shader = shaderMMD,
+        .index_type = SG_INDEXTYPE_UINT32,
+        .layout = {
+            .attrs = {
+                [ATTR_mmd_vs_in_Pos] = {
+                    .buffer_index = ATTR_mmd_vs_in_Pos,
+                    .format = SG_VERTEXFORMAT_FLOAT3,
+                },
+                [ATTR_mmd_vs_in_Nor] = {
+                    .buffer_index = ATTR_mmd_vs_in_Nor,
+                    .format = SG_VERTEXFORMAT_FLOAT3,
+                },
+                [ATTR_mmd_vs_in_UV] = {
+                    .buffer_index = ATTR_mmd_vs_in_UV,
+                    .format = SG_VERTEXFORMAT_FLOAT2,
+                },
+            },
+        },
+        .cull_mode = SG_CULLMODE_FRONT,
+        // .stencil = {
+        //     .enabled = true,
+        //     .front = {
+        //         // .compare = SG_COMPAREFUNC_NOT_EQUAL,
+        //         // .pass_op = SG_STENCILOP_REPLACE,
+        //         .compare = SG_COMPAREFUNC_ALWAYS,
+        //         .pass_op = SG_STENCILOP_KEEP,
+        //     },
+        //     .back = {
+        //         // .compare = SG_COMPAREFUNC_NOT_EQUAL,
+        //         // .pass_op = SG_STENCILOP_REPLACE,
+        //         .compare = SG_COMPAREFUNC_ALWAYS,
+        //         .pass_op = SG_STENCILOP_KEEP,
+        //     },
+        //     .ref = 1,
+        //     .read_mask = 1,
+        // },
+        .sample_count = SAMPLE_COUNT,
+        .colors = {
+            [0] = {
+                .blend = {
+                    .enabled = true,
+                    .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
+                    .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                    .src_factor_alpha = SG_BLENDFACTOR_SRC_ALPHA,
+                    .dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                },
+            },
+        },
+        .depth = {
+            .write_enabled = true,
+            .compare = SG_COMPAREFUNC_LESS,
+        },
+        .primitive_type = SG_PRIMITIVETYPE_TRIANGLES,
+    };
+    pipeline = sg_make_pipeline(&pipeline_desc);
+
+    pipeline_desc.cull_mode = SG_CULLMODE_NONE;
+    pipeline_bothface = sg_make_pipeline(&pipeline_desc);
 }
 
 void Routine::Update() {
@@ -407,7 +329,6 @@ void Routine::Update() {
     //             .size = vertCount * sizeof(glm::vec2),
     //             .ptr = uvs.data(),
     //         });
-
 }
 
 void Routine::Draw() {
@@ -559,30 +480,64 @@ void Routine::Terminate() {
     shouldTerminate = false;
 }
 
-std::optional<sg_image> Routine::getTexture(const std::string_view path) {
-    std::string spath{path};
-    auto it = textures.find(spath);
-    if (it != textures.cend())
-        return it->second.first;
+std::optional<Routine::ImageMap::const_iterator> Routine::loadImage(std::string path) {
+    auto itr = texImages.find(path);
+    if (itr == texImages.cend()) {
+        Image img;
+        if (img.loadFromFile(path)) {
+            texImages.emplace(path, std::move(img));
+            return texImages.find(path);
+        } else {
+            Err::Log("Failed to load image:", path);
+            return std::nullopt;
+        }
+    } else {
+        return itr;
+    }
+}
 
-    Image image;
-    if (!image.loadFromFile(path))
+std::optional<sg_image> Routine::getTexture(std::string path) {
+    const auto itr = loadImage(path);
+    if (!itr)
         return std::nullopt;
 
-    sg_image texture = sg_make_image((sg_image_desc) {
-                .type = SG_IMAGETYPE_2D,
-                .render_target = false,
-                .width = static_cast<int>(image.width),
-                .height = static_cast<int>(image.height),
-                .usage = SG_USAGE_IMMUTABLE,
-                .pixel_format = SG_PIXELFORMAT_RGBA8,
-                .min_filter = SG_FILTER_LINEAR,
-                .mag_filter = SG_FILTER_LINEAR,
-                .data.subimage[0][0] = {
-                    .size = image.pixels.size(),
-                    .ptr = image.pixels.data(),
-                },
-            });
-    textures.emplace(spath, std::make_pair(texture, std::move(image)));
-    return textures[spath].first;
+    const auto& image = (*itr)->second;
+    return sg_make_image(sg_image_desc{
+        .type = SG_IMAGETYPE_2D,
+        .render_target = false,
+        .width = static_cast<int>(image.width),
+        .height = static_cast<int>(image.height),
+        .usage = SG_USAGE_IMMUTABLE,
+        .pixel_format = SG_PIXELFORMAT_RGBA8,
+        .min_filter = SG_FILTER_LINEAR,
+        .mag_filter = SG_FILTER_LINEAR,
+        .data.subimage[0][0] = {
+            .size = image.pixels.size(),
+            .ptr = image.pixels.data(),
+        },
+    });
+}
+
+std::optional<sg_image> Routine::getToonTexture(std::string path) {
+    const auto itr = loadImage(path);
+    if (!itr)
+        return std::nullopt;
+
+    const auto& image = (*itr)->second;
+    return sg_make_image(sg_image_desc{
+        .type = SG_IMAGETYPE_2D,
+        .render_target = false,
+        .width = static_cast<int>(image.width),
+        .height = static_cast<int>(image.height),
+        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
+        .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
+        .usage = SG_USAGE_IMMUTABLE,
+        .pixel_format = SG_PIXELFORMAT_RGBA8,
+        .min_filter = SG_FILTER_LINEAR,
+        .mag_filter = SG_FILTER_LINEAR,
+        .data.subimage[0][0] = {
+            .size = image.pixels.size(),
+            .ptr = image.pixels.data(),
+        },
+    });
 }

@@ -122,7 +122,7 @@ static const void *getSokolRenderpassDescriptor(void);
     // TODO: implement
 }
 -(sg_context_desc)getSokolContext {
-    return (sg_context_desc) {
+    return sg_context_desc{
         .sample_count = constant::SampleCount,  // TODO:
         .metal = {
             .device = (__bridge const void *)metalDevice,

@@ -121,7 +121,7 @@ void Routine::Init() {
     initTextures();
     initPipeline();
 
-    binds = (sg_bindings){
+    binds = sg_bindings{
         .vertex_buffers[ATTR_mmd_vs_in_Pos] = posVB,
         .vertex_buffers[ATTR_mmd_vs_in_Nor] = normVB,
         .vertex_buffers[ATTR_mmd_vs_in_UV] = uvVB,
@@ -138,17 +138,17 @@ void Routine::initBuffers() {
     const size_t vertCount = model->GetVertexCount();
     const size_t indexSize = model->GetIndexElementSize();
 
-    posVB = sg_make_buffer((sg_buffer_desc){
+    posVB = sg_make_buffer(sg_buffer_desc{
                 .type = SG_BUFFERTYPE_VERTEXBUFFER,
                 .usage = SG_USAGE_DYNAMIC,
                 .size = vertCount * sizeof(glm::vec3),
             });
-    normVB = sg_make_buffer((sg_buffer_desc){
+    normVB = sg_make_buffer(sg_buffer_desc{
                 .type = SG_BUFFERTYPE_VERTEXBUFFER,
                 .usage = SG_USAGE_DYNAMIC,
                 .size = vertCount * sizeof(glm::vec3),
             });
-    uvVB = sg_make_buffer((sg_buffer_desc){
+    uvVB = sg_make_buffer(sg_buffer_desc{
                 .type = SG_BUFFERTYPE_VERTEXBUFFER,
                 .usage = SG_USAGE_DYNAMIC,
                 .size = vertCount * sizeof(glm::vec2),
@@ -190,7 +190,7 @@ void Routine::initBuffers() {
             induces.push_back(getInduceAt(subMesth.m_beginIndex + j));
     }
 
-    ibo = sg_make_buffer((sg_buffer_desc){
+    ibo = sg_make_buffer(sg_buffer_desc{
                 .type = SG_BUFFERTYPE_INDEXBUFFER,
                 .usage = SG_USAGE_IMMUTABLE,
                 .data = {
@@ -203,7 +203,7 @@ void Routine::initBuffers() {
 void Routine::initTextures() {
     static constexpr uint8_t dummyPixel[4] = {0, 0, 0, 0};
 
-    dummyTex = sg_make_image((sg_image_desc){
+    dummyTex = sg_make_image(sg_image_desc{
                 .width = 1,
                 .height = 1,
                 .data.subimage[0][0] = {.size = 4, .ptr = dummyPixel},
@@ -326,15 +326,15 @@ void Routine::Update() {
     model->EndAnimation();
     model->Update();
 
-    sg_update_buffer(posVB, (sg_range){
+    sg_update_buffer(posVB, sg_range{
                 .size = vertCount * sizeof(glm::vec3),
                 .ptr = model->GetUpdatePositions(),
             });
-    sg_update_buffer(normVB, (sg_range){
+    sg_update_buffer(normVB, sg_range{
                 .size = vertCount * sizeof(glm::vec3),
                 .ptr = model->GetUpdateNormals(),
             });
-    sg_update_buffer(uvVB, (sg_range){
+    sg_update_buffer(uvVB, sg_range{
                 .size = vertCount * sizeof(glm::vec2),
                 .ptr = model->GetUpdateUVs(),
             });

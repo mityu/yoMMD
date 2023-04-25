@@ -12,6 +12,7 @@
 #include "Saba/Model/MMD/MMDMaterial.h"
 #include "Saba/Model/MMD/MMDModel.h"
 #include "Saba/Model/MMD/VMDAnimation.h"
+#include "Saba/Model/MMD/VMDCameraAnimation.h"
 #include "glm/glm.hpp"
 #include "sokol_gfx.h"
 
@@ -98,9 +99,11 @@ public:
     bool IsLoaded() const;
     const std::shared_ptr<saba::MMDModel> GetModel() const;
     const std::unique_ptr<saba::VMDAnimation>& GetAnimation() const;
+    const std::unique_ptr<saba::VMDCameraAnimation>& GetCameraAnimation() const;
 private:
     std::shared_ptr<saba::MMDModel> model;
     std::unique_ptr<saba::VMDAnimation> animation;
+    std::unique_ptr<saba::VMDCameraAnimation> cameraAnimation;
 };
 
 // class TransparentFBO {

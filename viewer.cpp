@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include "Saba/Model/MMD/MMDCamera.h"
 #include "sokol_gfx.h"
 #include "sokol_log.h"
 #include "sokol_time.h"
@@ -58,7 +59,12 @@ void MMD::Load() {
     if (!vmdAnim->Add(vmdFile)) {
         Err::Exit("Failed to add VMDAnimation");
     }
-    // TODO: Read camera.
+
+    if (!vmdFile.m_cameras.empty()) {
+        cameraAnimation = std::make_unique<saba::VMDCameraAnimation>();
+        if (!cameraAnimation->Create(vmdFile))
+            Err::Log("Failed to create VMDCameraAnimation.");
+    }
 
     vmdAnim->SyncPhysics(0.0f);
     animation = std::move(vmdAnim);
@@ -74,6 +80,10 @@ const std::shared_ptr<saba::MMDModel> MMD::GetModel() const {
 
 const std::unique_ptr<saba::VMDAnimation>& MMD::GetAnimation() const {
     return animation;
+}
+
+const std::unique_ptr<saba::VMDCameraAnimation>& MMD::GetCameraAnimation() const {
+    return cameraAnimation;
 }
 
 Routine::Routine() :
@@ -283,11 +293,34 @@ void Routine::initPipeline() {
 }
 
 void Routine::Update() {
+    const auto size{Context::getWindowSize()};
     const auto model = mmd.GetModel();
     const size_t vertCount = model->GetVertexCount();
-
     const double vmdFrame = stm_sec(stm_since(timeBeginAnimation)) * constant::VmdFPS;
     const double elapsedTime = stm_sec(stm_since(timeLastFrame));
+
+    if (mmd.GetCameraAnimation()) {
+        auto& cameraAnimation = mmd.GetCameraAnimation();
+        cameraAnimation->Evaluate(vmdFrame);
+        const auto& mmdCamera = cameraAnimation->GetCamera();
+        saba::MMDLookAtCamera lookAtCamera(mmdCamera);
+        viewMatrix = glm::lookAt(lookAtCamera.m_eye, lookAtCamera.m_center, lookAtCamera.m_up);
+        projectionMatrix = glm::perspectiveFovRH(
+                mmdCamera.m_fov,
+                static_cast<float>(size.first),
+                static_cast<float>(size.second),
+                1.0f,
+                10000.0f);
+    } else {
+        viewMatrix = glm::lookAt(glm::vec3(0, 10, 50), glm::vec3(0, 10, 0), glm::vec3(0, 1, 0));
+        projectionMatrix = glm::perspectiveFovRH(
+                glm::radians(30.0f),
+                static_cast<float>(size.first),
+                static_cast<float>(size.second),
+                1.0f,
+                10000.0f);
+    }
+
     model->BeginAnimation();
     model->UpdateAllAnimation(mmd.GetAnimation().get(), vmdFrame, elapsedTime);
     model->EndAnimation();
@@ -307,6 +340,8 @@ void Routine::Update() {
             });
 
     timeLastFrame = stm_now();
+
+    // TODO: cameraAnimation->reset() should be called anywhere?
 }
 
 void Routine::Draw() {
@@ -318,11 +353,6 @@ void Routine::Draw() {
     //     0.0f, 0.0f, 0.5f, 0.0f,
     //     0.0f, 0.0f, 0.5f, 1.0f
     // );
-
-    // TODO: This should be done in Routine::Update().  Refer to sample mmd
-    // viewer for when this should be inserted.
-    viewMatrix = glm::lookAt(glm::vec3(0, 10, 50), glm::vec3(0, 10, 0), glm::vec3(0, 1, 0));
-    projectionMatrix = glm::perspectiveFovRH(glm::radians(30.0f), float(size.first), float(size.second), 1.0f, 10000.0f);
 
     auto world = glm::mat4(1.0f);
     auto wv = viewMatrix * world;

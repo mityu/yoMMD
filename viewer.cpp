@@ -231,7 +231,7 @@ void Routine::initTextures() {
 }
 
 void Routine::initPipeline() {
-    sg_pipeline_desc pipeline_desc ={
+    sg_pipeline_desc pipeline_desc = {
         .shader = shaderMMD,
         .index_type = SG_INDEXTYPE_UINT32,
         .layout = {
@@ -251,6 +251,7 @@ void Routine::initPipeline() {
             },
         },
         .cull_mode = SG_CULLMODE_FRONT,
+        .face_winding = SG_FACEWINDING_CW,
         // .stencil = {
         //     .enabled = true,
         //     .front = {
@@ -368,7 +369,7 @@ void Routine::Draw() {
     lightDir = glm::mat3(viewMatrix) * lightDir;
 
     sg_begin_default_pass(&passAction, size.first, size.second);
-    sg_apply_viewport(0, 0, size.first, size.second, true);
+    sg_apply_viewport(0, 0, size.first, size.second, false);  // TODO: Remove this.
 
     const size_t subMeshCount = model->GetSubMeshCount();
     for (size_t i = 0; i < subMeshCount; ++i) {

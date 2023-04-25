@@ -98,11 +98,11 @@ public:
     void Load();
     bool IsLoaded() const;
     const std::shared_ptr<saba::MMDModel> GetModel() const;
-    const std::unique_ptr<saba::VMDAnimation>& GetAnimation() const;
+    const std::vector<std::unique_ptr<saba::VMDAnimation>>& GetAnimations() const;
     const std::unique_ptr<saba::VMDCameraAnimation>& GetCameraAnimation() const;
 private:
     std::shared_ptr<saba::MMDModel> model;
-    std::unique_ptr<saba::VMDAnimation> animation;
+    std::vector<std::unique_ptr<saba::VMDAnimation>> animations;
     std::unique_ptr<saba::VMDCameraAnimation> cameraAnimation;
 };
 

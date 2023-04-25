@@ -26,7 +26,10 @@ Material::Material(const saba::MMDMaterial& mat) :
 
 void MMD::Load() {
     const std::string modelPath = "./misc/model/miku/miku.pmx";
-    const std::string motionPath = "./misc/motion/nobi.vmd";
+    const std::vector<std::string> motionPaths = {
+        "./misc/motion/stay.vmd",
+        "./misc/motion/nobi.vmd",
+    };
     const std::string resourcePath = "./misc/resource/mmd/";
 
     auto ext = saba::PathUtil::GetExt(modelPath);
@@ -48,26 +51,29 @@ void MMD::Load() {
 
     model->InitializeAnimation();
 
-    auto vmdAnim = std::make_unique<saba::VMDAnimation>();
-    if (!vmdAnim->Create(model)) {
-        Err::Exit("Failed to create VMDAnimation.");
-    }
-    saba::VMDFile vmdFile;
-    if (!saba::ReadVMDFile(&vmdFile, motionPath.c_str())) {
-        Err::Exit("Failed to read VMD file.");
-    }
-    if (!vmdAnim->Add(vmdFile)) {
-        Err::Exit("Failed to add VMDAnimation");
-    }
+    for (const auto& motionPath : motionPaths) {
+        auto vmdAnim = std::make_unique<saba::VMDAnimation>();
+        if (!vmdAnim->Create(model)) {
+            Err::Exit("Failed to create VMDAnimation.");
+        }
+        saba::VMDFile vmdFile;
+        if (!saba::ReadVMDFile(&vmdFile, motionPath.c_str())) {
+            Err::Exit("Failed to read VMD file.");
+        }
+        if (!vmdAnim->Add(vmdFile)) {
+            Err::Exit("Failed to add VMDAnimation");
+        }
 
-    if (!vmdFile.m_cameras.empty()) {
-        cameraAnimation = std::make_unique<saba::VMDCameraAnimation>();
-        if (!cameraAnimation->Create(vmdFile))
-            Err::Log("Failed to create VMDCameraAnimation.");
-    }
+        if (!vmdFile.m_cameras.empty()) {
+            cameraAnimation = std::make_unique<saba::VMDCameraAnimation>();
+            if (!cameraAnimation->Create(vmdFile))
+                Err::Log("Failed to create VMDCameraAnimation.");
+        }
 
-    vmdAnim->SyncPhysics(0.0f);
-    animation = std::move(vmdAnim);
+        // vmdAnim->SyncPhysics(0.0f);
+        animations.push_back(std::move(vmdAnim));
+    }
+    animations[0]->SyncPhysics(0.0f);
 }
 
 bool MMD::IsLoaded() const {
@@ -78,8 +84,8 @@ const std::shared_ptr<saba::MMDModel> MMD::GetModel() const {
     return model;
 }
 
-const std::unique_ptr<saba::VMDAnimation>& MMD::GetAnimation() const {
-    return animation;
+const std::vector<std::unique_ptr<saba::VMDAnimation>>& MMD::GetAnimations() const {
+    return animations;
 }
 
 const std::unique_ptr<saba::VMDCameraAnimation>& MMD::GetCameraAnimation() const {
@@ -294,6 +300,8 @@ void Routine::initPipeline() {
 }
 
 void Routine::Update() {
+    static int motionID = 0;
+    static bool needBridgeMotion = false;
     const auto size{Context::getWindowSize()};
     const auto model = mmd.GetModel();
     const size_t vertCount = model->GetVertexCount();
@@ -323,7 +331,19 @@ void Routine::Update() {
     }
 
     model->BeginAnimation();
-    model->UpdateAllAnimation(mmd.GetAnimation().get(), vmdFrame, elapsedTime);
+    if (needBridgeMotion) {
+        mmd.GetAnimations()[motionID]->Evaluate(0.0f, stm_sec(stm_since(timeBeginAnimation)));
+		model->UpdateMorphAnimation();
+		model->UpdateNodeAnimation(false);
+		model->UpdatePhysicsAnimation(elapsedTime);
+		model->UpdateNodeAnimation(true);
+        if (vmdFrame >= constant::VmdFPS) {
+            needBridgeMotion = false;
+            timeBeginAnimation = stm_now();
+        }
+    } else {
+        model->UpdateAllAnimation(mmd.GetAnimations()[motionID].get(), vmdFrame, elapsedTime);
+    }
     model->EndAnimation();
     model->Update();
 
@@ -341,8 +361,11 @@ void Routine::Update() {
             });
 
     timeLastFrame = stm_now();
-    if (vmdFrame > (mmd.GetAnimation()->GetMaxKeyTime() + constant::FPS * 2)) {
-        timeBeginAnimation = stm_now();
+    if (vmdFrame > (mmd.GetAnimations()[motionID]->GetMaxKeyTime())) {
+        model->SaveBaseAnimation();
+        timeBeginAnimation = timeLastFrame;
+        motionID = 1;
+        needBridgeMotion = true;
     }
 
     // TODO: cameraAnimation->reset() should be called anywhere?

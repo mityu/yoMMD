@@ -280,29 +280,15 @@ void Routine::initPipeline() {
 }
 
 void Routine::Update() {
-    static float animTime = 0.0f;
+    // static float animTime = 0.0f;
     const auto model = mmd.GetModel();
     const size_t vertCount = model->GetVertexCount();
 
-    animTime += 0.5f;
-    model->BeginAnimation();
-    model->UpdateAllAnimation(mmd.GetAnimation().get(), animTime, 1.0f / 60.0f);
-    model->EndAnimation();
+    // animTime += 0.5f;
+    // model->BeginAnimation();
+    // model->UpdateAllAnimation(mmd.GetAnimation().get(), animTime, 1.0f / 60.0f);
+    // model->EndAnimation();
     model->Update();
-
-    // static std::vector<glm::vec3> verts, norms;
-    // static std::vector<glm::vec2> uvs;
-    // verts.resize(vertCount);
-    // norms.resize(vertCount);
-    // uvs.resize(vertCount);
-    // const auto origVerts = model->GetUpdatePositions();
-    // const auto origNorms = model->GetUpdateNormals();
-    // const auto origUVs = model->GetUpdateUVs();
-    // for (size_t i = 0; i < vertCount; ++i) {
-    //     verts[i] = origVerts[i] * glm::vec3(1, 1, -1);
-    //     norms[i] = origNorms[i] * glm::vec3(1, 1, -1);
-    //     uvs[i] = glm::vec2(origUVs[i].x, 1.0f - origUVs[i].y);
-    // }
 
     sg_update_buffer(posVB, (sg_range){
                 .size = vertCount * sizeof(glm::vec3),
@@ -316,19 +302,6 @@ void Routine::Update() {
                 .size = vertCount * sizeof(glm::vec2),
                 .ptr = model->GetUpdateUVs(),
             });
-
-    // sg_update_buffer(posVB, (sg_range){
-    //             .size = vertCount * sizeof(glm::vec3),
-    //             .ptr = verts.data(),
-    //         });
-    // sg_update_buffer(normVB, (sg_range){
-    //             .size = vertCount * sizeof(glm::vec3),
-    //             .ptr = norms.data(),
-    //         });
-    // sg_update_buffer(uvVB, (sg_range){
-    //             .size = vertCount * sizeof(glm::vec2),
-    //             .ptr = uvs.data(),
-    //         });
 }
 
 void Routine::Draw() {

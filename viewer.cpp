@@ -269,11 +269,11 @@ void Routine::initPipeline() {
         },
         .depth = {
             .write_enabled = true,
-            .compare = SG_COMPAREFUNC_LESS,
+            .compare = SG_COMPAREFUNC_LESS_EQUAL,  // FIXME: SG_COMPAREFUNC_LESS?
         },
         .primitive_type = SG_PRIMITIVETYPE_TRIANGLES,
     };
-    pipeline = sg_make_pipeline(&pipeline_desc);
+    pipeline_frontface = sg_make_pipeline(&pipeline_desc);
 
     pipeline_desc.cull_mode = SG_CULLMODE_NONE;
     pipeline_bothface = sg_make_pipeline(&pipeline_desc);
@@ -447,7 +447,7 @@ void Routine::Draw() {
         if (mmdMaterial.m_bothFace)
             sg_apply_pipeline(pipeline_bothface);
         else
-            sg_apply_pipeline(pipeline);
+            sg_apply_pipeline(pipeline_frontface);
         sg_apply_bindings(binds);
         // TODO: Transput glBindTexutre
         sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_u_mmd_vs, SG_RANGE(u_mmd_vs));
@@ -473,7 +473,8 @@ void Routine::Terminate() {
 
     sg_destroy_image(dummyTex);
 
-    sg_destroy_pipeline(pipeline);
+    sg_destroy_pipeline(pipeline_frontface);
+    sg_destroy_pipeline(pipeline_bothface);
 
     sg_shutdown();
 

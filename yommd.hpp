@@ -148,7 +148,7 @@ private:
     sg_buffer normVB;
     sg_buffer uvVB;
     sg_buffer ibo;
-    sg_pipeline pipeline;
+    sg_pipeline pipeline_frontface;
     sg_pipeline pipeline_bothface;
     sg_bindings binds;
 

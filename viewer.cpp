@@ -6,7 +6,6 @@
 #include <string_view>
 #include <random>
 #include "sokol_gfx.h"
-#include "sokol_log.h"
 #include "sokol_time.h"
 #include "Saba/Base/Path.h"
 #include "Saba/Model/MMD/MMDCamera.h"
@@ -117,7 +116,7 @@ void Routine::Init() {
 
     sg_desc desc = {
         .context = Context::getSokolContext(),
-        .logger.func = slog_func,
+        .logger.func = Yommd::slogFunc,
     };
     sg_setup(&desc);
     stm_setup();

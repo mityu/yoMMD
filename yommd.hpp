@@ -61,6 +61,13 @@ template <typename... Args> [[noreturn]] void Exit(Args&&... args) {
 }
 }
 
+// util.cpp
+namespace Yommd {
+void parseArgs(const std::vector<std::string>& args);
+void slogFunc(const char *tag, uint32_t logLevel, uint32_t logItem,
+        const char *message, uint32_t linenr, const char *filename, void *user_data);
+}
+
 // main_osx.mm
 namespace Context {
 sg_context_desc getSokolContext();

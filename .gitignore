@@ -1,0 +1,6 @@
+!.gitignore
+yommd
+obj/
+dist/
+misc/
+tool/sokol-shdc

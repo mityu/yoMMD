@@ -1,0 +1,10 @@
+-std=c++17
+-fobjc-arc
+-Ilib/saba/src
+-Ilib/sokol
+-Ilib/glm
+-Ilib/stb
+-I/opt/homebrew/include
+-Wall
+-Wdeprecated
+-Wextra

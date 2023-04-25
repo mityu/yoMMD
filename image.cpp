@@ -73,27 +73,16 @@ bool Image::loadFromFile(const std::string_view path) {
     if (ret == 0)
         return false;
 
-    // TODO:
-    if (comp != 4) {
-        uint8_t *image = stbi_load_from_file(file, &width, &height, &comp, STBI_rgb);
-        dataSize = width * height * 4;
-        hasAlpha = false;
-        pixels.reserve(width * height * 4);
-        for (int i = 0; i < width * height * 3; i += 3) {
-            pixels.push_back(image[i]);
-            pixels.push_back(image[i+1]);
-            pixels.push_back(image[i+2]);
-            pixels.push_back(1);
-        }
-        stbi_image_free(image);
-    } else {
-        uint8_t *image = stbi_load_from_file(file, &width, &height, &comp, STBI_rgb_alpha);
-        dataSize = width * height * 4;
+    if (comp == 4)
         hasAlpha = true;
-        pixels.resize(dataSize);
-        std::copy(image, image + dataSize, pixels.data());
-        stbi_image_free(image);
-    }
+    else
+        hasAlpha = false;
+
+    uint8_t *image = stbi_load_from_file(file, &width, &height, &comp, STBI_rgb_alpha);
+    dataSize = width * height * 4;
+    pixels.resize(dataSize);
+    std::copy(image, image + dataSize, pixels.data());
+    stbi_image_free(image);
 
     return true;
 }

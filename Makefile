@@ -4,7 +4,7 @@ TARGET:=yommd
 OBJDIR:=./obj
 SRC:=viewer.cpp image.cpp libs.mm
 OBJ=$(addsuffix .o,$(addprefix $(OBJDIR)/,$(SRC)))
-CFLAGS:=-Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb -Wall -Wextra
+CFLAGS:=-Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb -Wall -Wextra -pedantic
 CPPFLAGS=-std=c++17
 OBJCFLAGS=-fobjc-arc
 LDFLAGS:=-Llib/saba/build/src -lSaba

@@ -341,6 +341,9 @@ void Routine::Update() {
             });
 
     timeLastFrame = stm_now();
+    if (vmdFrame > (mmd.GetAnimation()->GetMaxKeyTime() + constant::FPS * 2)) {
+        timeBeginAnimation = stm_now();
+    }
 
     // TODO: cameraAnimation->reset() should be called anywhere?
 }

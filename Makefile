@@ -2,7 +2,7 @@ CXX:=g++
 CC:=gcc
 TARGET:=yommd
 OBJDIR:=./obj
-SRC:=viewer.cpp image.cpp libs.mm
+SRC:=viewer.cpp image.cpp util.cpp libs.mm
 OBJ=$(addsuffix .o,$(addprefix $(OBJDIR)/,$(SRC)))
 CFLAGS:=-Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb -Wall -Wextra -pedantic
 CPPFLAGS=-std=c++17
@@ -41,7 +41,6 @@ endif
 
 $(TARGET): $(OBJDIR) yommd.glsl.h $(LIB_SABA) $(OBJ)
 	$(CXX) -o $@ $(LDFLAGS) $(OBJ)
-	@echo 'TODO: Set sample value'
 
 debug: CFLAGS+=-g -O0
 debug: clean $(TARGET)

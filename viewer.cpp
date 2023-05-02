@@ -106,10 +106,13 @@ void Routine::LoadMMD() {
     std::vector<std::string_view> motionPaths;
     config.parse();
     auto motions = config.getMotions();
-    motionPaths.reserve(motions.size());
     for (const auto& motion : motions) {
-        motionPaths.push_back(motion.path);
+        if (motion.enabled) {
+            motionPaths.push_back(motion.path);
+        }
     }
+    if (motionPaths.empty())
+        Err::Exit("No motion file specified/enabled");  // FIXME: Allow only view MMD model
     mmd.Load(config.getModel(), motionPaths);
 }
 

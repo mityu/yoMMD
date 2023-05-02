@@ -1,4 +1,5 @@
 #include <ctime>
+#include <filesystem>
 #include <functional>
 #include <optional>
 #include <memory>
@@ -27,8 +28,7 @@ Material::Material(const saba::MMDMaterial& mat) :
     textureHasAlpha(false)
 {}
 
-void MMD::Load() {
-    const std::string modelPath = "./misc/model/rin/White.pmx";
+void MMD::Load(std::string_view modelPath) {
     const std::vector<std::string> motionPaths = {
         "./misc/motion/stay.vmd",
         "./misc/motion/nobi.vmd",
@@ -36,16 +36,16 @@ void MMD::Load() {
     };
     const std::string resourcePath = "./misc/resource/mmd/";
 
-    auto ext = saba::PathUtil::GetExt(modelPath);
-    if (ext == "pmx") {
+    auto ext = std::filesystem::path(modelPath).extension();
+    if (ext == ".pmx") {
         auto pmx = std::make_unique<saba::PMXModel>();
-        if (!pmx->Load(modelPath, resourcePath)) {
+        if (!pmx->Load(std::string(modelPath), resourcePath)) {
             Err::Exit("Failed to load PMX:", modelPath);
         }
         model = std::move(pmx);
-    } else if (ext == "pmd") {
+    } else if (ext == ".pmd") {
         auto pmd = std::make_unique<saba::PMDModel>();
-        if (!pmd->Load(modelPath, resourcePath)) {
+        if (!pmd->Load(std::string(modelPath), resourcePath)) {
             Err::Exit("Failed to load PMD:", modelPath);
         }
         model = std::move(pmd);
@@ -109,7 +109,7 @@ void Routine::LoadMMD() {
         Err::Exit("Model is already loaded.");
     }
     config.parse();
-    mmd.Load();
+    mmd.Load(config.getModel());
 }
 
 void Routine::Init() {

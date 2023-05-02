@@ -122,7 +122,7 @@ public:
 
 class MMD : private NonCopyable {
 public:
-    void Load(std::string_view modelPath);
+    void Load(std::string_view modelPath, const std::vector<std::string_view>& motionPaths);
     bool IsLoaded() const;
     const std::shared_ptr<saba::MMDModel> GetModel() const;
     const std::vector<std::unique_ptr<saba::VMDAnimation>>& GetAnimations() const;

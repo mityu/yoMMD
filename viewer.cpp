@@ -28,15 +28,10 @@ Material::Material(const saba::MMDMaterial& mat) :
     textureHasAlpha(false)
 {}
 
-void MMD::Load(std::string_view modelPath) {
-    const std::vector<std::string> motionPaths = {
-        "./misc/motion/stay.vmd",
-        "./misc/motion/nobi.vmd",
-        "./misc/motion/nagekiss.vmd",
-    };
+void MMD::Load(std::string_view modelPath, const std::vector<std::string_view>& motionPaths) {
     const std::string resourcePath = "./misc/resource/mmd/";
 
-    auto ext = std::filesystem::path(modelPath).extension();
+    const auto ext = std::filesystem::path(modelPath).extension();
     if (ext == ".pmx") {
         auto pmx = std::make_unique<saba::PMXModel>();
         if (!pmx->Load(std::string(modelPath), resourcePath)) {
@@ -58,20 +53,20 @@ void MMD::Load(std::string_view modelPath) {
     for (const auto& motionPath : motionPaths) {
         auto vmdAnim = std::make_unique<saba::VMDAnimation>();
         if (!vmdAnim->Create(model)) {
-            Err::Exit("Failed to create VMDAnimation.");
+            Err::Exit("Failed to create VMDAnimation:", motionPath);
         }
         saba::VMDFile vmdFile;
-        if (!saba::ReadVMDFile(&vmdFile, motionPath.c_str())) {
-            Err::Exit("Failed to read VMD file.");
+        if (!saba::ReadVMDFile(&vmdFile, motionPath.data())) {
+            Err::Exit("Failed to read VMD file:", motionPath);
         }
         if (!vmdAnim->Add(vmdFile)) {
-            Err::Exit("Failed to add VMDAnimation");
+            Err::Exit("Failed to add VMDAnimation:", motionPath);
         }
 
         if (!vmdFile.m_cameras.empty()) {
             cameraAnimation = std::make_unique<saba::VMDCameraAnimation>();
             if (!cameraAnimation->Create(vmdFile))
-                Err::Log("Failed to create VMDCameraAnimation.");
+                Err::Log("Failed to create VMDCameraAnimation:", motionPath);
         }
 
         animations.push_back(std::move(vmdAnim));
@@ -108,8 +103,14 @@ void Routine::LoadMMD() {
     if (mmd.IsLoaded()) {
         Err::Exit("Model is already loaded.");
     }
+    std::vector<std::string_view> motionPaths;
     config.parse();
-    mmd.Load(config.getModel());
+    auto motions = config.getMotions();
+    motionPaths.reserve(motions.size());
+    for (const auto& motion : motions) {
+        motionPaths.push_back(motion.path);
+    }
+    mmd.Load(config.getModel(), motionPaths);
 }
 
 void Routine::Init() {

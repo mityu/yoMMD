@@ -318,7 +318,7 @@ void Routine::Update() {
     const auto size{Context::getWindowSize()};
     const auto model = mmd.GetModel();
     const size_t vertCount = model->GetVertexCount();
-    const double vmdFrame = stm_sec(stm_since(timeBeginAnimation)) * constant::VmdFPS;
+    const double vmdFrame = stm_sec(stm_since(timeBeginAnimation)) * Constant::VmdFPS;
     const double elapsedTime = stm_sec(stm_since(timeLastFrame));
 
     if (mmd.GetCameraAnimation()) {
@@ -350,7 +350,7 @@ void Routine::Update() {
 		model->UpdateNodeAnimation(false);
 		model->UpdatePhysicsAnimation(elapsedTime);
 		model->UpdateNodeAnimation(true);
-        if (vmdFrame >= constant::VmdFPS) {
+        if (vmdFrame >= Constant::VmdFPS) {
             needBridgeMotions = false;
             timeBeginAnimation = stm_now();
         }

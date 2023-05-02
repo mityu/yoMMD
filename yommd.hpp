@@ -23,7 +23,7 @@
 #  define _WIN32
 #endif
 
-namespace constant {
+namespace Constant {
 constexpr int SampleCount = 4;
 constexpr float FPS = 60.0f;
 constexpr float VmdFPS = 30.0f;

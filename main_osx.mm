@@ -105,7 +105,7 @@ static const void *getSokolRenderpassDescriptor(void);
     viewDelegate = [[ViewDelegate alloc] init];
     metalDevice = MTLCreateSystemDefaultDevice();
     view = [[MTKView alloc] init];
-    [view setPreferredFramesPerSecond:static_cast<NSInteger>(constant::FPS)];
+    [view setPreferredFramesPerSecond:static_cast<NSInteger>(Constant::FPS)];
     [view setDelegate:viewDelegate];
     [view setDevice: metalDevice];
     [view setColorPixelFormat:MTLPixelFormatBGRA8Unorm];
@@ -123,7 +123,7 @@ static const void *getSokolRenderpassDescriptor(void);
 }
 -(sg_context_desc)getSokolContext {
     return sg_context_desc{
-        .sample_count = constant::SampleCount,  // TODO:
+        .sample_count = Constant::SampleCount,  // TODO:
         .metal = {
             .device = (__bridge const void *)metalDevice,
             .renderpass_descriptor_cb = getSokolRenderpassDescriptor,

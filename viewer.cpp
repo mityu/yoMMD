@@ -145,9 +145,13 @@ void Routine::Init() {
         .index_buffer = ibo,
     };
 
-    auto distSup = std::reduce(motionWeights.cbegin(), motionWeights.cend(), 0u);
-    if (distSup == 0)  // TODO: Support no-motions included.
-        Err::Exit("Sum of weights is 0.");
+    // FIXME: Support for viewing models without any motions.
+    if (motionWeights.empty())
+        Err::Exit("At least one motion must be specified.");
+
+    const auto distSup = std::reduce(motionWeights.cbegin(), motionWeights.cend(), 0u);
+    if (!motionWeights.empty() && distSup == 0)
+        Err::Exit("Sum of motion weights is 0.");
     randDist.param(decltype(randDist)::param_type(0, distSup - 1));
 
     auto physics = mmd.GetModel()->GetMMDPhysics();

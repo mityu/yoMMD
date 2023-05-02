@@ -33,12 +33,12 @@ void Config::parse() {
         }
 
         simulationFPS_ = toml::find_or(entire, "SimulationFPS", simulationFPS_);
-    } catch (std::runtime_error e) {
+    } catch (std::runtime_error& e) {
         // File open error, file read error, etc...
         Err::Exit(e.what());
-    } catch (std::exception e) {
+    } catch (std::exception& e) {
         Err::Log(e.what());
-    } catch (std::out_of_range e) {
+    } catch (std::out_of_range& e) {
         Err::Log(e.what());
     }
 }

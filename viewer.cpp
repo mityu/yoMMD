@@ -1,6 +1,7 @@
 #include <ctime>
 #include <filesystem>
 #include <functional>
+#include <numeric>
 #include <optional>
 #include <memory>
 #include <string>
@@ -109,6 +110,7 @@ void Routine::LoadMMD() {
     for (const auto& motion : motions) {
         if (motion.enabled) {
             motionPaths.push_back(motion.path);
+            motionWeights.push_back(motion.weight);
         }
     }
     if (motionPaths.empty())
@@ -143,14 +145,17 @@ void Routine::Init() {
         .index_buffer = ibo,
     };
 
-    randDist.param(decltype(randDist)::param_type(0, mmd.GetAnimations().size() - 1));
+    auto distSup = std::reduce(motionWeights.cbegin(), motionWeights.cend(), 0u);
+    if (distSup == 0)  // TODO: Support no-motions included.
+        Err::Exit("Sum of weights is 0.");
+    randDist.param(decltype(randDist)::param_type(0, distSup - 1));
 
     auto physics = mmd.GetModel()->GetMMDPhysics();
     physics->GetDynamicsWorld()->setGravity(btVector3(0, -9.8f * 5.0f, 0));
     physics->SetMaxSubStepCount(INT_MAX);
     physics->SetFPS(config.getSimulationFPS());
 
-    motionID = randDist(rand);
+    selectNextMotion();
     needBridgeMotions = false;
     timeBeginAnimation = timeLastFrame = stm_now();
     shouldTerminate = true;
@@ -317,6 +322,21 @@ void Routine::initPipeline() {
     pipeline_bothface = sg_make_pipeline(&pipeline_desc);
 }
 
+void Routine::selectNextMotion() {
+    // Select next MMD motion by weighted rate.
+    unsigned int rnd = randDist(rand);
+    unsigned int sum = 0;
+    const auto motionCount = motionWeights.size();
+    motionID = motionCount - 1;
+    for (size_t i = 0; i < motionCount; ++i) {
+        sum += motionWeights[i];
+        if (sum >= rnd) {
+            motionID = i;
+            break;
+        }
+    }
+}
+
 void Routine::Update() {
     const auto size{Context::getWindowSize()};
     const auto model = mmd.GetModel();
@@ -380,7 +400,7 @@ void Routine::Update() {
     if (vmdFrame > mmd.GetAnimations()[motionID]->GetMaxKeyTime()) {
         model->SaveBaseAnimation();
         timeBeginAnimation = timeLastFrame;
-        motionID = randDist(rand);
+        selectNextMotion();
         needBridgeMotions = true;
     }
 

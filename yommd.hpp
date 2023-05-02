@@ -169,13 +169,14 @@ private:
     void initBuffers();
     void initTextures();
     void initPipeline();
+    void selectNextMotion();
     std::optional<ImageMap::const_iterator> loadImage(std::string path);
     std::optional<sg_image> getTexture(std::string path);
     std::optional<sg_image> getToonTexture(std::string path);
 private:
-    bool shouldTerminate;
-
     Config config;
+
+    bool shouldTerminate;
 
     const sg_pass_action passAction;
     sg_shader shaderMMD;
@@ -205,6 +206,7 @@ private:
 
     size_t motionID;
     bool needBridgeMotions;
+    std::vector<unsigned int> motionWeights;
 
     std::mt19937 rand;
     std::uniform_int_distribution<size_t> randDist;

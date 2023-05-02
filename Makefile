@@ -66,6 +66,8 @@ run: $(TARGET)
 clean:
 	$(RM) $(OBJDIR)/* $(TARGET) yommd.glsl.h
 
+all: clean $(TARGET);
+
 $(OBJDIR) tool/:
 	mkdir -p $@
 

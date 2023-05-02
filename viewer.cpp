@@ -11,11 +11,13 @@
 #include "Saba/Model/MMD/MMDCamera.h"
 #include "Saba/Model/MMD/MMDMaterial.h"
 #include "Saba/Model/MMD/MMDModel.h"
+#include "Saba/Model/MMD/MMDPhysics.h"
 #include "Saba/Model/MMD/PMDModel.h"
 #include "Saba/Model/MMD/PMXModel.h"
 #include "Saba/Model/MMD/VMDAnimation.h"
 #include "Saba/Model/MMD/VMDCameraAnimation.h"
 #include "Saba/Model/MMD/VMDFile.h"
+#include "btBulletDynamicsCommon.h"
 #include "yommd.hpp"
 #include "yommd.glsl.h"
 
@@ -26,10 +28,11 @@ Material::Material(const saba::MMDMaterial& mat) :
 {}
 
 void MMD::Load() {
-    const std::string modelPath = "./misc/model/miku/miku.pmx";
+    const std::string modelPath = "./misc/model/rin/White.pmx";
     const std::vector<std::string> motionPaths = {
         "./misc/motion/stay.vmd",
         "./misc/motion/nobi.vmd",
+        "./misc/motion/nagekiss.vmd",
     };
     const std::string resourcePath = "./misc/resource/mmd/";
 
@@ -105,6 +108,7 @@ void Routine::LoadMMD() {
     if (mmd.IsLoaded()) {
         Err::Exit("Model is already loaded.");
     }
+    config.parse();
     mmd.Load();
 }
 
@@ -136,6 +140,11 @@ void Routine::Init() {
     };
 
     randDist.param(decltype(randDist)::param_type(0, mmd.GetAnimations().size() - 1));
+
+    auto physics = mmd.GetModel()->GetMMDPhysics();
+    physics->GetDynamicsWorld()->setGravity(btVector3(0, -9.8f * 5.0f, 0));
+    physics->SetMaxSubStepCount(INT_MAX);
+    physics->SetFPS(config.getSimulationFPS());
 
     motionID = randDist(rand);
     needBridgeMotions = false;

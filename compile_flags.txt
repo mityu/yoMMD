@@ -4,7 +4,9 @@
 -Ilib/sokol
 -Ilib/glm
 -Ilib/stb
+-Ilib/toml11
 -I/opt/homebrew/include
+-I/opt/homebrew/include/bullet
 -Wall
 -Wdeprecated
 -Wextra

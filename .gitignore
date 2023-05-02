@@ -1,4 +1,5 @@
 !.gitignore
+config.toml
 yommd
 obj/
 dist/

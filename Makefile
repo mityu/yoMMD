@@ -2,9 +2,9 @@ CXX:=g++
 CC:=gcc
 TARGET:=yommd
 OBJDIR:=./obj
-SRC:=viewer.cpp image.cpp util.cpp libs.mm
+SRC:=viewer.cpp config.cpp image.cpp util.cpp libs.mm
 OBJ=$(addsuffix .o,$(addprefix $(OBJDIR)/,$(SRC)))
-CFLAGS:=-Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb -Wall -Wextra -pedantic
+CFLAGS:=-Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb -Ilib/toml11 -Wall -Wextra -pedantic
 CPPFLAGS=-std=c++17
 OBJCFLAGS=-fobjc-arc
 LDFLAGS:=-Llib/saba/build/src -lSaba
@@ -23,7 +23,7 @@ else ifeq ($(shell uname),Darwin)
 CXX:=clang++
 CC:=clang
 SRC+=main_osx.mm
-CFLAGS+=-I/opt/homebrew/include
+CFLAGS+=-I/opt/homebrew/include -I/opt/homebrew/include/bullet
 LDFLAGS+=-framework Foundation -framework Cocoa -framework Metal -framework MetalKit -framework QuartzCore
 LDFLAGS+=-L/opt/homebrew/lib/bullet/single -lBulletCollision -lBulletDynamics -lBulletSoftBody -lLinearMath
 # In order to prefer staic link library to dynamic link library with clang, we

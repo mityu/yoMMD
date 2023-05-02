@@ -74,6 +74,25 @@ sg_context_desc getSokolContext();
 std::pair<int, int> getWindowSize();
 }
 
+class Config {
+public:
+    struct Motion {
+        bool enabled;
+        unsigned int weight;
+        std::string path;
+    };
+    Config();
+    void parse();
+    const std::string& getModel() const;
+    const std::vector<Motion>& getMotions() const;
+    float getSimulationFPS() const;
+private:
+    std::string model_;
+    std::vector<Motion> motions_;
+    float simulationFPS_;
+    float gravity_;
+};
+
 // image.cpp
 class Image : private NonCopyable {
 public:
@@ -155,6 +174,9 @@ private:
     std::optional<sg_image> getToonTexture(std::string path);
 private:
     bool shouldTerminate;
+
+    Config config;
+
     const sg_pass_action passAction;
     sg_shader shaderMMD;
 

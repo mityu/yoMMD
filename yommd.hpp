@@ -155,6 +155,16 @@ private:
 //     sg_bindings binds;
 // };
 
+class UserViewport {
+public:
+    UserViewport();
+    glm::mat4 getMatrix() const;
+    operator glm::mat4() const;
+private:
+    float scale_;
+    glm::vec3 translate_;
+};
+
 class Routine : private NonCopyable {
 public:
     Routine();
@@ -175,6 +185,7 @@ private:
     std::optional<sg_image> getToonTexture(std::string path);
 private:
     Config config;
+    UserViewport userViewport_;
 
     bool shouldTerminate;
 

@@ -90,6 +90,19 @@ const std::unique_ptr<saba::VMDCameraAnimation>& MMD::GetCameraAnimation() const
     return cameraAnimation;
 }
 
+UserViewport::UserViewport() :
+    scale_(1.0f), translate_(0.0f, 0.0f, 0.0f)
+{}
+
+glm::mat4 UserViewport::getMatrix() const {
+    const glm::vec3 scale(scale_, scale_, 1.0f);
+    return glm::scale(glm::translate(glm::mat4(1.0f), translate_), scale);
+}
+
+UserViewport::operator glm::mat4() const {
+    return getMatrix();
+}
+
 Routine::Routine() :
     passAction({.colors[0] = {.action = SG_ACTION_CLEAR, .value = {.a = 0}}}),
     timeBeginAnimation(0), timeLastFrame(0), motionID(0), needBridgeMotions(false),
@@ -302,7 +315,7 @@ void Routine::initPipeline() {
         //     .ref = 1,
         //     .read_mask = 1,
         // },
-        // .sample_count = SAMPLE_COUNT,
+        .sample_count = Constant::SampleCount,
         .colors = {
             [0] = {
                 .blend = {
@@ -339,6 +352,8 @@ void Routine::selectNextMotion() {
             break;
         }
     }
+    if (motionID >= motionCount)
+        Err::Exit("Internal error: unreachable:", __FILE__ ":", __LINE__, ':', __func__);
 }
 
 void Routine::Update() {
@@ -369,6 +384,7 @@ void Routine::Update() {
                 1.0f,
                 10000.0f);
     }
+    projectionMatrix *= userViewport_.getMatrix();
 
     model->BeginAnimation();
     if (needBridgeMotions) {
@@ -435,7 +451,6 @@ void Routine::Draw() {
     lightDir = glm::mat3(viewMatrix) * lightDir;
 
     sg_begin_default_pass(&passAction, size.first, size.second);
-    sg_apply_viewport(0, 0, size.first, size.second, false);  // TODO: Remove this.
 
     const size_t subMeshCount = model->GetSubMeshCount();
     for (size_t i = 0; i < subMeshCount; ++i) {

@@ -33,6 +33,14 @@ void parseArgs(const std::vector<std::string>& args) {
             }
             // TODO: Detect multiple config files and give error for duplications.
             // TODO: Set config file.
+        } else if (*itr == "--logfile") {
+            if (++itr == end) {
+                Err::Log("No log file name specified after \"--logfile\"");
+                Err::Exit(usage);
+            }
+            // TODO: Detect multiple log files and give warns for duplications.
+            // TODO: Pick up the last specified log file.
+            // TODO: Set log file.
         } else {
             Err::Exit("Unknown option:", *itr, '\n', usage);
         }

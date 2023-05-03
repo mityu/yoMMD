@@ -85,14 +85,13 @@ public:
     };
     Config();
     void parse();
-    const std::string& getModel() const;
-    const std::vector<Motion>& getMotions() const;
-    float getSimulationFPS() const;
-private:
-    std::string model_;
-    std::vector<Motion> motions_;
-    float simulationFPS_;
-    float gravity_;
+
+    std::string model;
+    std::vector<Motion> motions;
+    float simulationFPS;
+    float gravity;
+    glm::vec2 defaultPosition;
+    float defaultScale;
 };
 
 // image.cpp
@@ -165,6 +164,8 @@ public:
     void onMouseDown();
     void onMouseDragged();
     void onWheelScrolled(float delta);
+    void setDefaultTranslation(glm::vec2 pos);
+    void setDefaultScaling(float scale);
 private:
     struct DragHelper {
         glm::vec2 firstMousePosition;

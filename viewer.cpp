@@ -124,6 +124,15 @@ void UserViewport::onWheelScrolled(float delta) {
     }
 }
 
+void UserViewport::setDefaultTranslation(glm::vec2 pos) {
+    translate_.x = pos.x;
+    translate_.y = -pos.y;
+}
+
+void UserViewport::setDefaultScaling(float scale) {
+    scale_ = scale;
+}
+
 Routine::Routine() :
     passAction({.colors[0] = {.action = SG_ACTION_CLEAR, .value = {1, 1, 1, 0}}}),
     timeBeginAnimation(0), timeLastFrame(0), motionID(0), needBridgeMotions(false),
@@ -140,8 +149,7 @@ void Routine::LoadMMD() {
     }
     std::vector<std::string_view> motionPaths;
     config.parse();
-    auto motions = config.getMotions();
-    for (const auto& motion : motions) {
+    for (const auto& motion : config.motions) {
         if (motion.enabled) {
             motionPaths.push_back(motion.path);
             motionWeights.push_back(motion.weight);
@@ -149,7 +157,7 @@ void Routine::LoadMMD() {
     }
     if (motionPaths.empty())
         Err::Exit("No motion file specified/enabled");  // FIXME: Allow only view MMD model
-    mmd.Load(config.getModel(), motionPaths);
+    mmd.Load(config.model, motionPaths);
 }
 
 void Routine::Init() {
@@ -191,7 +199,12 @@ void Routine::Init() {
     auto physics = mmd.GetModel()->GetMMDPhysics();
     physics->GetDynamicsWorld()->setGravity(btVector3(0, -9.8f * 5.0f, 0));
     physics->SetMaxSubStepCount(INT_MAX);
-    physics->SetFPS(config.getSimulationFPS());
+    physics->SetFPS(config.simulationFPS);
+
+    userViewport_.setDefaultTranslation(config.defaultPosition);
+    userViewport_.setDefaultScaling(config.defaultScale);
+    Info::Log("default position:", config.defaultPosition.x, config.defaultPosition.y);
+    Info::Log("default scale:", config.defaultScale);
 
     selectNextMotion();
     needBridgeMotions = false;

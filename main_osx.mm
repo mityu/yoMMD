@@ -1,6 +1,3 @@
-#include "platform.hpp"
-#ifdef PLATFORM_MAC
-
 #import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
 #import <Cocoa/Cocoa.h>
@@ -13,8 +10,6 @@
 #include "sokol_gfx.h"
 
 #include "yommd.hpp"
-
-#define DISABLE_TRANSPARENT_WINDOW 0
 
 @interface AppDelegate: NSObject<NSApplicationDelegate>
 @end
@@ -142,11 +137,9 @@ static const void *getSokolRenderpassDescriptor(void);
     [window setTitle:@"yoMMD"];
     [window center];
     [window setIsVisible:YES];
-#if DISABLE_TRANSPARENT_WINDOW == 0
     [window setOpaque:NO];
     [window setHasShadow:NO];
     [window setBackgroundColor:[NSColor clearColor]];
-#endif
     [window setLevel:NSFloatingWindowLevel];
     [window setCollectionBehavior:collectionBehavior];
     [window setDelegate:windowDelegate];
@@ -164,9 +157,7 @@ static const void *getSokolRenderpassDescriptor(void);
 
     [window setContentView:view];
     [[view layer] setMagnificationFilter:kCAFilterNearest];
-#if DISABLE_TRANSPARENT_WINDOW == 0
     [[view layer] setOpaque:NO];  // Make transparent
-#endif
 }
 -(void)createStatusItem {
     NSImage *icon = [NSImage imageWithSystemSymbolName:@"face.smiling" accessibilityDescription:@"Smiling"];
@@ -289,5 +280,3 @@ int main(int argc, char *argv[]) {
     [NSApp activateIgnoringOtherApps:NO];
     [NSApp run];
 }
-
-#endif  // PLATFORM_MAC

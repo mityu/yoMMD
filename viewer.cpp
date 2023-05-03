@@ -119,6 +119,9 @@ void UserViewport::onMouseDragged() {
 
 void UserViewport::onWheelScrolled(float delta) {
     scale_ -= delta / Context::getWindowSize().y;
+    if (scale_ < 0.4f) {
+        scale_ = 0.4f;
+    }
 }
 
 Routine::Routine() :

@@ -66,14 +66,15 @@ static const void *getSokolRenderpassDescriptor(void);
 
 @implementation Window
 - (void)mouseDragged:(NSEvent *)event {
-    // const auto size{Context::getWindowSize()};
-    // glm::vec2 delta(static_cast<float>(event.deltaX), static_cast<float>(-event.deltaY));
-    // delta = delta / 30.0f;
     [appMain getRoutine].OnMouseDragged();
-    // Info::Log("deltaX:", delta.x, "deltaY:", delta.y);
 }
 - (void)mouseDown:(NSEvent *)event {
     [appMain getRoutine].OnMouseDown();
+}
+- (void)scrollWheel:(NSEvent *)event {
+    if (event.hasPreciseScrollingDeltas) {
+        [appMain getRoutine].OnWheelScrolled(event.scrollingDeltaY);
+    }
 }
 @end
 
@@ -109,8 +110,8 @@ static const void *getSokolRenderpassDescriptor(void);
     Routine routine;
 }
 -(void)createMainWindow {
-    // const NSUInteger style = NSWindowStyleMaskBorderless;
-    const NSUInteger style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable;
+    const NSUInteger style = NSWindowStyleMaskBorderless;
+    // const NSUInteger style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable;
     const auto screenRect = [NSScreen mainScreen].visibleFrame;
 
     window = [[Window alloc] initWithContentRect:screenRect

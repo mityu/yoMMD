@@ -117,6 +117,10 @@ void UserViewport::onMouseDragged() {
     translate_.y = dragHelper_.firstTranslate.y + delta.y;
 }
 
+void UserViewport::onWheelScrolled(float delta) {
+    scale_ -= delta / Context::getWindowSize().y;
+}
+
 Routine::Routine() :
     passAction({.colors[0] = {.action = SG_ACTION_CLEAR, .value = {1, 1, 1, 0}}}),
     timeBeginAnimation(0), timeLastFrame(0), motionID(0), needBridgeMotions(false),
@@ -593,6 +597,10 @@ void Routine::OnMouseDown() {
 
 void Routine::OnMouseDragged() {
     userViewport_.onMouseDragged();
+}
+
+void Routine::OnWheelScrolled(float delta) {
+    userViewport_.onWheelScrolled(delta);
 }
 
 std::optional<Routine::ImageMap::const_iterator> Routine::loadImage(std::string path) {

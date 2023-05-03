@@ -164,6 +164,7 @@ public:
     operator glm::mat4() const;
     void onMouseDown();
     void onMouseDragged();
+    void onWheelScrolled(float delta);
 private:
     struct DragHelper {
         glm::vec2 firstMousePosition;
@@ -186,6 +187,7 @@ public:
     void Terminate();
     void OnMouseDragged();
     void OnMouseDown();
+    void OnWheelScrolled(float delta);
 private:
     using ImageMap = std::map<std::string, Image>;
     void initBuffers();

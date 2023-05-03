@@ -34,6 +34,8 @@
 @interface AppMain: NSObject
 -(void)createMainWindow;
 -(void)createStatusItem;
+-(void)actionQuit:(id)sender;
+-(void)actionToggleHandleMouse:(id)sender;
 -(sg_context_desc)getSokolContext;
 -(id<CAMetalDrawable>)getDrawable;
 -(MTLRenderPassDescriptor *)getRenderPassDescriptor;
@@ -76,6 +78,9 @@ static const void *getSokolRenderpassDescriptor(void);
         [appMain getRoutine].OnWheelScrolled(event.scrollingDeltaY);
     }
 }
+- (BOOL)canBecomeKeyWindow {
+    return NO;
+}
 @end
 
 @implementation WindowDelegate
@@ -107,6 +112,12 @@ static const void *getSokolRenderpassDescriptor(void);
     View *view;
     id<MTLDevice> metalDevice;
     ViewDelegate *viewDelegate;
+    NSStatusItem *statusItem;
+    struct {
+        NSMenuItem *enableMouse;
+        NSMenuItem *quit;
+    } menuItems;
+    NSRunningApplication *alterApp;
     Routine routine;
 }
 -(void)createMainWindow {
@@ -157,7 +168,57 @@ static const void *getSokolRenderpassDescriptor(void);
 #endif
 }
 -(void)createStatusItem {
-    // TODO: implement
+    NSImage *icon = [NSImage imageWithSystemSymbolName:@"face.smiling" accessibilityDescription:@"Smiling"];
+    statusItem =
+        [[NSStatusBar systemStatusBar] statusItemWithLength:NSSquareStatusItemLength];
+    [statusItem.button setImage:icon];
+    [statusItem setBehavior:NSStatusItemBehaviorTerminationOnRemoval];
+    [statusItem setVisible:YES];
+
+    NSMenu *menu = [[NSMenu alloc] init];
+
+    menuItems.enableMouse = [[NSMenuItem alloc]
+                        initWithTitle:@"Enable Mouse"
+                               action:@selector(actionToggleHandleMouse:)
+                        keyEquivalent:@""];
+    [menuItems.enableMouse setTarget:self];
+    [menuItems.enableMouse setState:NSControlStateValueOff];
+
+    menuItems.quit = [[NSMenuItem alloc]
+            initWithTitle:@"Quit" action:@selector(actionQuit:) keyEquivalent:@""];
+    [menuItems.quit setTarget:self];
+
+    [menu addItem:menuItems.enableMouse];
+    [menu addItem:[NSMenuItem separatorItem]];
+    [menu addItem:menuItems.quit];
+    [statusItem setMenu:menu];
+
+    alterApp = NULL;
+}
+-(void)actionQuit:(id)sender {
+    [NSApp terminate:sender];
+}
+-(void)actionToggleHandleMouse:(id)sender {
+    if (menuItems.enableMouse.state == NSControlStateValueOff) {
+        auto appList = [[NSWorkspace sharedWorkspace] runningApplications];
+        for (NSUInteger i = 0; i < appList.count; ++i) {
+            auto app = [appList objectAtIndex:i];
+            if (app.active) {
+                alterApp = app;
+                break;
+            }
+        }
+
+        [menuItems.enableMouse setState:NSControlStateValueOn];
+        [window setIgnoresMouseEvents:NO];
+    } else {
+        [menuItems.enableMouse setState:NSControlStateValueOff];
+        [window setIgnoresMouseEvents:YES];
+        if (NSApp.active && alterApp) {
+            [alterApp activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+        }
+        alterApp = NULL;
+    }
 }
 -(sg_context_desc)getSokolContext {
     return sg_context_desc{

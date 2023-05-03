@@ -155,8 +155,6 @@ void Routine::Init(const CmdArgs& args) {
             motionWeights.push_back(motion.weight);
         }
     }
-    if (motionPaths.empty())
-        Err::Exit("No motion file specified/enabled");  // FIXME: Allow only view MMD model
     mmd.Load(config.model, motionPaths, resourcePath);
 
     sg_desc desc = {
@@ -361,6 +359,9 @@ void Routine::initPipeline() {
 
 void Routine::selectNextMotion() {
     // Select next MMD motion by weighted rate.
+    if (motionWeights.empty())
+        return;
+
     unsigned int rnd = randDist(rand);
     unsigned int sum = 0;
     const auto motionCount = motionWeights.size();
@@ -383,8 +384,7 @@ void Routine::Update() {
     const double vmdFrame = stm_sec(stm_since(timeBeginAnimation)) * Constant::VmdFPS;
     const double elapsedTime = stm_sec(stm_since(timeLastFrame));
 
-    if (mmd.GetCameraAnimation()) {
-        auto& cameraAnimation = mmd.GetCameraAnimation();
+    if (auto& cameraAnimation = mmd.GetCameraAnimation(); cameraAnimation) {
         cameraAnimation->Evaluate(vmdFrame);
         const auto& mmdCamera = cameraAnimation->GetCamera();
         saba::MMDLookAtCamera lookAtCamera(mmdCamera);
@@ -405,21 +405,25 @@ void Routine::Update() {
                 10000.0f);
     }
 
-    model->BeginAnimation();
-    if (needBridgeMotions) {
-        mmd.GetAnimations()[motionID]->Evaluate(0.0f, stm_sec(stm_since(timeBeginAnimation)));
-		model->UpdateMorphAnimation();
-		model->UpdateNodeAnimation(false);
-		model->UpdatePhysicsAnimation(elapsedTime);
-		model->UpdateNodeAnimation(true);
-        if (vmdFrame >= Constant::VmdFPS) {
-            needBridgeMotions = false;
-            timeBeginAnimation = stm_now();
+    auto& animations = mmd.GetAnimations();
+    if (!animations.empty()) {
+        auto& animation = animations[motionID];
+        model->BeginAnimation();
+        if (needBridgeMotions) {
+            animation->Evaluate(0.0f, stm_sec(stm_since(timeBeginAnimation)));
+            model->UpdateMorphAnimation();
+            model->UpdateNodeAnimation(false);
+            model->UpdatePhysicsAnimation(elapsedTime);
+            model->UpdateNodeAnimation(true);
+            if (vmdFrame >= Constant::VmdFPS) {
+                needBridgeMotions = false;
+                timeBeginAnimation = stm_now();
+            }
+        } else {
+            model->UpdateAllAnimation(animation.get(), vmdFrame, elapsedTime);
         }
-    } else {
-        model->UpdateAllAnimation(mmd.GetAnimations()[motionID].get(), vmdFrame, elapsedTime);
+        model->EndAnimation();
     }
-    model->EndAnimation();
     model->Update();
 
     sg_update_buffer(posVB, sg_range{
@@ -435,12 +439,14 @@ void Routine::Update() {
                 .ptr = model->GetUpdateUVs(),
             });
 
-    timeLastFrame = stm_now();
-    if (vmdFrame > mmd.GetAnimations()[motionID]->GetMaxKeyTime()) {
-        model->SaveBaseAnimation();
-        timeBeginAnimation = timeLastFrame;
-        selectNextMotion();
-        needBridgeMotions = true;
+    if (!animations.empty()) {
+        timeLastFrame = stm_now();
+        if (vmdFrame > animations[motionID]->GetMaxKeyTime()) {
+            model->SaveBaseAnimation();
+            timeBeginAnimation = timeLastFrame;
+            selectNextMotion();
+            needBridgeMotions = true;
+        }
     }
 
     // TODO: cameraAnimation->reset() should be called anywhere?

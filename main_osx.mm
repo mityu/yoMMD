@@ -113,6 +113,13 @@ static const void *getSokolRenderpassDescriptor(void);
     const NSUInteger style = NSWindowStyleMaskBorderless;
     // const NSUInteger style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable;
     const auto screenRect = [NSScreen mainScreen].visibleFrame;
+    const NSUInteger collectionBehavior =
+        NSWindowCollectionBehaviorCanJoinAllSpaces |
+        NSWindowCollectionBehaviorStationary |
+        NSWindowCollectionBehaviorTransient |
+        NSWindowCollectionBehaviorFullScreenAuxiliary |
+        NSWindowCollectionBehaviorFullScreenDisallowsTiling |
+        NSWindowCollectionBehaviorIgnoresCycle;
 
     window = [[Window alloc] initWithContentRect:screenRect
                                          styleMask:style
@@ -129,6 +136,7 @@ static const void *getSokolRenderpassDescriptor(void);
     [window setBackgroundColor:[NSColor clearColor]];
 #endif
     [window setLevel:NSFloatingWindowLevel];
+    [window setCollectionBehavior:collectionBehavior];
     [window setDelegate:windowDelegate];
     [window setIgnoresMouseEvents:YES];
 

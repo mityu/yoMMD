@@ -31,7 +31,7 @@
 -(void)createStatusItem;
 -(void)actionQuit:(NSMenuItem *)sender;
 -(void)actionToggleHandleMouse:(NSMenuItem *)sender;
--(NSMenu *)getAppMenu;
+-(const NSMenu *)getAppMenu;
 -(sg_context_desc)getSokolContext;
 -(id<CAMetalDrawable>)getDrawable;
 -(MTLRenderPassDescriptor *)getRenderPassDescriptor;
@@ -86,7 +86,7 @@ static const void *getSokolRenderpassDescriptor(void);
 -(BOOL)acceptsFirstMouse:(NSEvent *)event {
     return NO;
 }
-- (NSMenu *)menuForEvent:(NSEvent *)event {
+- (const NSMenu *)menuForEvent:(NSEvent *)event {
     return [appMain getAppMenu];
 }
 @end
@@ -212,7 +212,7 @@ static const void *getSokolRenderpassDescriptor(void);
         alterApp = NULL;
     }
 }
--(NSMenu *)getAppMenu {
+-(const NSMenu *)getAppMenu {
     return appMenu;
 }
 -(sg_context_desc)getSokolContext {

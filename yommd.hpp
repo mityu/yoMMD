@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <string_view>
 #include <map>
+#include <filesystem>
 #include <utility>
 #include "Saba/Model/MMD/MMDMaterial.h"
 #include "Saba/Model/MMD/MMDModel.h"
@@ -27,6 +28,8 @@ namespace Constant {
 constexpr int SampleCount = 4;
 constexpr float FPS = 60.0f;
 constexpr float VmdFPS = 30.0f;
+constexpr std::string_view DefaultConfigFilePath = "./config.toml";
+constexpr std::string_view DefaultLogFilePath = "";
 }
 
 struct NonCopyable {
@@ -62,11 +65,38 @@ template <typename... Args> [[noreturn]] void Exit(Args&&... args) {
 }
 
 // util.cpp
+struct CmdArgs {
+    using Path = std::filesystem::path;
+    Path cwd;
+    Path configFile;
+    Path logFile;
+
+    static CmdArgs Parse(const std::vector<std::string>& args);
+};
+
 namespace Yommd {
-void parseArgs(const std::vector<std::string>& args);
 void slogFunc(const char *tag, uint32_t logLevel, uint32_t logItem,
         const char *message, uint32_t linenr, const char *filename, void *user_data);
 }
+
+// config.cpp
+struct Config {
+    struct Motion {
+        bool enabled;
+        unsigned int weight;
+        std::string path;
+    };
+    Config();
+
+    std::string model;
+    std::vector<Motion> motions;
+    float simulationFPS;
+    float gravity;
+    glm::vec2 defaultPosition;
+    float defaultScale;
+
+    static Config Parse(std::string_view configFile);
+};
 
 // main_osx.mm
 namespace Context {
@@ -75,24 +105,6 @@ glm::vec2 getWindowSize();
 glm::vec2 getDrawableSize();
 glm::vec2 getMousePosition();
 }
-
-class Config {
-public:
-    struct Motion {
-        bool enabled;
-        unsigned int weight;
-        std::string path;
-    };
-    Config();
-    void parse();
-
-    std::string model;
-    std::vector<Motion> motions;
-    float simulationFPS;
-    float gravity;
-    glm::vec2 defaultPosition;
-    float defaultScale;
-};
 
 // image.cpp
 class Image : private NonCopyable {
@@ -123,7 +135,9 @@ public:
 
 class MMD : private NonCopyable {
 public:
-    void Load(std::string_view modelPath, const std::vector<std::string_view>& motionPaths);
+    void Load(std::string_view modelPath,
+            const std::vector<std::string>& motionPaths,
+            std::string_view resourcePath);
     bool IsLoaded() const;
     const std::shared_ptr<saba::MMDModel> GetModel() const;
     const std::vector<std::unique_ptr<saba::VMDAnimation>>& GetAnimations() const;
@@ -181,8 +195,7 @@ class Routine : private NonCopyable {
 public:
     Routine();
     ~Routine();
-    void LoadMMD();
-    void Init();
+    void Init(const CmdArgs &args);
     void Update();
     void Draw();
     void Terminate();
@@ -199,7 +212,6 @@ private:
     std::optional<sg_image> getTexture(std::string path);
     std::optional<sg_image> getToonTexture(std::string path);
 private:
-    Config config;
     UserViewport userViewport_;
 
     bool shouldTerminate;

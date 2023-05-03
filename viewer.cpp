@@ -29,19 +29,20 @@ Material::Material(const saba::MMDMaterial& mat) :
     textureHasAlpha(false)
 {}
 
-void MMD::Load(std::string_view modelPath, const std::vector<std::string_view>& motionPaths) {
-    const std::string resourcePath = "./misc/resource/mmd/";
-
+void MMD::Load(
+        std::string_view modelPath,
+        const std::vector<std::string>& motionPaths,
+        std::string_view resourcePath) {
     const auto ext = std::filesystem::path(modelPath).extension();
     if (ext == ".pmx") {
         auto pmx = std::make_unique<saba::PMXModel>();
-        if (!pmx->Load(std::string(modelPath), resourcePath)) {
+        if (!pmx->Load(std::string(modelPath), std::string(resourcePath))) {
             Err::Exit("Failed to load PMX:", modelPath);
         }
         model = std::move(pmx);
     } else if (ext == ".pmd") {
         auto pmd = std::make_unique<saba::PMDModel>();
-        if (!pmd->Load(std::string(modelPath), resourcePath)) {
+        if (!pmd->Load(std::string(modelPath), std::string(resourcePath))) {
             Err::Exit("Failed to load PMD:", modelPath);
         }
         model = std::move(pmd);
@@ -143,28 +144,22 @@ Routine::~Routine() {
     Terminate();
 }
 
-void Routine::LoadMMD() {
-    if (mmd.IsLoaded()) {
-        Err::Exit("Model is already loaded.");
-    }
-    std::vector<std::string_view> motionPaths;
-    config.parse();
+void Routine::Init(const CmdArgs& args) {
+    std::filesystem::path resourcePath = args.cwd / "./misc/resource/mmd";
+    std::vector<std::string> motionPaths;
+    const Config config = Config::Parse(args.configFile.string());
     for (const auto& motion : config.motions) {
         if (motion.enabled) {
-            motionPaths.push_back(motion.path);
+            std::filesystem::path path(motion.path);
+            if (!path.is_absolute())
+                path = args.cwd / path;
+            motionPaths.push_back(path);
             motionWeights.push_back(motion.weight);
         }
     }
     if (motionPaths.empty())
         Err::Exit("No motion file specified/enabled");  // FIXME: Allow only view MMD model
-    mmd.Load(config.model, motionPaths);
-}
-
-void Routine::Init() {
-    if (!mmd.IsLoaded()) {
-        Err::Exit("Internal Error:", "function", __func__,
-                "must be called after loading MMD model.");
-    }
+    mmd.Load(config.model, motionPaths, resourcePath.string());
 
     sg_desc desc = {
         .context = Context::getSokolContext(),
@@ -187,10 +182,6 @@ void Routine::Init() {
         .index_buffer = ibo,
     };
 
-    // FIXME: Support for viewing models without any motions.
-    if (motionWeights.empty())
-        Err::Exit("At least one motion must be specified.");
-
     const auto distSup = std::reduce(motionWeights.cbegin(), motionWeights.cend(), 0u);
     if (!motionWeights.empty() && distSup == 0)
         Err::Exit("Sum of motion weights is 0.");
@@ -203,8 +194,6 @@ void Routine::Init() {
 
     userViewport_.setDefaultTranslation(config.defaultPosition);
     userViewport_.setDefaultScaling(config.defaultScale);
-    Info::Log("default position:", config.defaultPosition.x, config.defaultPosition.y);
-    Info::Log("default scale:", config.defaultScale);
 
     selectNextMotion();
     needBridgeMotions = false;
@@ -590,6 +579,11 @@ void Routine::Terminate() {
         return;
 
     motionID = 0;
+    motionWeights.clear();
+    texImages.clear();
+    textures.clear();
+    toonTextures.clear();
+    materials.clear();
 
     sg_destroy_shader(shaderMMD);
 

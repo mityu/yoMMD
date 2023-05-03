@@ -47,13 +47,19 @@ const void *getSokolRenderpassDescriptor(void);
 
 @implementation AppDelegate
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
+    NSArray *argsArray = [[NSProcessInfo processInfo] arguments];
+    std::vector<std::string> argsVec;
+    for (NSString *arg in argsArray) {
+        argsVec.push_back([arg UTF8String]);
+    }
+    const auto cmdArgs = CmdArgs::Parse(argsVec);
+
     globals::appMain = [[AppMain alloc] init];
     [globals::appMain createMainWindow];
     [globals::appMain createStatusItem];
 
     auto& routine = [globals::appMain getRoutine];
-    routine.LoadMMD();
-    routine.Init();
+    routine.Init(cmdArgs);
 }
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
     [globals::appMain getRoutine].Terminate();
@@ -266,8 +272,7 @@ glm::vec2 Context::getMousePosition() {
     return glm::vec2(pos.x, pos.y);
 }
 
-int main(int argc, char *argv[]) {
-    (void)argc; (void)argv;
+int main() {
     [NSApplication sharedApplication];
 
     auto appDelegate = [[AppDelegate alloc] init];

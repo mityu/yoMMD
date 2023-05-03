@@ -1,4 +1,5 @@
 #include <string_view>
+#include <filesystem>
 #include <vector>
 #include "toml.hpp"
 #include "yommd.hpp"
@@ -7,19 +8,26 @@ Config::Config() :
     simulationFPS(60.0f), gravity(9.8f), defaultPosition(0.0f, 0.0f), defaultScale(1.0f)
 {}
 
-Config Config::Parse(std::string_view configFile) {
+Config Config::Parse(const std::filesystem::path& configFile) {
+    namespace fs = std::filesystem;
+
     Config config;
+    auto configDir = fs::path(configFile).parent_path();
 
     try {
         const auto entire = toml::parse(configFile);
 
-        config.model = toml::find<std::string>(entire, "model");
+        config.model = fs::path(toml::find<std::string>(entire, "model"));
+        if (config.model.is_relative())
+            config.model = configDir / config.model;
 
         const toml::array motions = toml::find_or(entire, "motion", toml::array());
         for (const auto& motion : motions) {
             bool enabled = toml::find_or(motion, "enabled", true);
             auto weight = toml::find_or<decltype(Motion::weight)>(motion, "weight", 1);
-            std::string path = toml::find<std::string>(motion, "path");
+            auto path = fs::path(toml::find<std::string>(motion, "path"));
+            if (path.is_relative())
+                path = configDir / path;
             config.motions.push_back(Motion{
                 .enabled = enabled,
                 .weight = weight,

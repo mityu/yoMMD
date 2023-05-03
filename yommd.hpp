@@ -81,21 +81,23 @@ void slogFunc(const char *tag, uint32_t logLevel, uint32_t logItem,
 
 // config.cpp
 struct Config {
+    using Path = std::filesystem::path;
+
     struct Motion {
         bool enabled;
         unsigned int weight;
-        std::string path;
+        Path path;
     };
     Config();
 
-    std::string model;
+    Path model;
     std::vector<Motion> motions;
     float simulationFPS;
     float gravity;
     glm::vec2 defaultPosition;
     float defaultScale;
 
-    static Config Parse(std::string_view configFile);
+    static Config Parse(const std::filesystem::path& configFile);
 };
 
 // main_osx.mm
@@ -135,9 +137,10 @@ public:
 
 class MMD : private NonCopyable {
 public:
-    void Load(std::string_view modelPath,
-            const std::vector<std::string>& motionPaths,
-            std::string_view resourcePath);
+    using Path = std::filesystem::path;
+    void Load(const Path& modelPath,
+            const std::vector<const Path *>& motionPaths,  // We doesn't have path_view yet.
+            const Path& resourcePath);
     bool IsLoaded() const;
     const std::shared_ptr<saba::MMDModel> GetModel() const;
     const std::vector<std::unique_ptr<saba::VMDAnimation>>& GetAnimations() const;

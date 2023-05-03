@@ -30,9 +30,9 @@ Material::Material(const saba::MMDMaterial& mat) :
 {}
 
 void MMD::Load(
-        std::string_view modelPath,
-        const std::vector<std::string>& motionPaths,
-        std::string_view resourcePath) {
+        const std::filesystem::path& modelPath,
+        const std::vector<const std::filesystem::path *>& motionPaths,
+        const std::filesystem::path& resourcePath) {
     const auto ext = std::filesystem::path(modelPath).extension();
     if (ext == ".pmx") {
         auto pmx = std::make_unique<saba::PMXModel>();
@@ -58,7 +58,7 @@ void MMD::Load(
             Err::Exit("Failed to create VMDAnimation:", motionPath);
         }
         saba::VMDFile vmdFile;
-        if (!saba::ReadVMDFile(&vmdFile, motionPath.data())) {
+        if (!saba::ReadVMDFile(&vmdFile, motionPath->c_str())) {
             Err::Exit("Failed to read VMD file:", motionPath);
         }
         if (!vmdAnim->Add(vmdFile)) {
@@ -145,21 +145,19 @@ Routine::~Routine() {
 }
 
 void Routine::Init(const CmdArgs& args) {
-    std::filesystem::path resourcePath = args.cwd / "./misc/resource/mmd";
-    std::vector<std::string> motionPaths;
-    const Config config = Config::Parse(args.configFile.string());
+    namespace fs = std::filesystem;
+    fs::path resourcePath = args.cwd / "./misc/resource/mmd";
+    std::vector<const fs::path *> motionPaths;
+    const Config config = Config::Parse(args.configFile);
     for (const auto& motion : config.motions) {
         if (motion.enabled) {
-            std::filesystem::path path(motion.path);
-            if (!path.is_absolute())
-                path = args.cwd / path;
-            motionPaths.push_back(path);
+            motionPaths.push_back(&motion.path);
             motionWeights.push_back(motion.weight);
         }
     }
     if (motionPaths.empty())
         Err::Exit("No motion file specified/enabled");  // FIXME: Allow only view MMD model
-    mmd.Load(config.model, motionPaths, resourcePath.string());
+    mmd.Load(config.model, motionPaths, resourcePath);
 
     sg_desc desc = {
         .context = Context::getSokolContext(),

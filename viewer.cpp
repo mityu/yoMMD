@@ -202,7 +202,6 @@ void Routine::Init(const CmdArgs& args) {
 }
 
 void Routine::initBuffers() {
-    static std::vector<uint32_t> induces;
     const auto model = mmd.GetModel();
     const size_t vertCount = model->GetVertexCount();
     const size_t indexSize = model->GetIndexElementSize();
@@ -580,6 +579,7 @@ void Routine::Terminate() {
 
     motionID = 0;
     motionWeights.clear();
+    induces.clear();
     texImages.clear();
     textures.clear();
     toonTextures.clear();

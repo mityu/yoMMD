@@ -219,6 +219,7 @@ private:
     const sg_pass_action passAction;
     sg_shader shaderMMD;
 
+    std::vector<uint32_t> induces;
     sg_buffer posVB;  // VB stands for vertex buffer
     sg_buffer normVB;
     sg_buffer uvVB;

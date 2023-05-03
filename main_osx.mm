@@ -130,7 +130,7 @@ static const void *getSokolRenderpassDescriptor(void);
 #endif
     [window setLevel:NSFloatingWindowLevel];
     [window setDelegate:windowDelegate];
-    // [window setIgnoresMouseEvents:YES];
+    [window setIgnoresMouseEvents:YES];
 
     viewDelegate = [[ViewDelegate alloc] init];
     metalDevice = MTLCreateSystemDefaultDevice();
@@ -140,7 +140,7 @@ static const void *getSokolRenderpassDescriptor(void);
     [view setDevice: metalDevice];
     [view setColorPixelFormat:MTLPixelFormatBGRA8Unorm];
     [view setDepthStencilPixelFormat:MTLPixelFormatDepth32Float_Stencil8];
-    [view setAutoResizeDrawable:NO];
+    // [view setAutoResizeDrawable:NO];
 
     [window setContentView:view];
     [[view layer] setMagnificationFilter:kCAFilterNearest];
@@ -212,8 +212,8 @@ int main(int argc, char *argv[]) {
     auto appDelegate = [[AppDelegate alloc] init];
 
     [NSApp setDelegate:appDelegate];
-    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
-    [NSApp activateIgnoringOtherApps:YES];
+    [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
+    [NSApp activateIgnoringOtherApps:NO];
     [NSApp run];
 }
 

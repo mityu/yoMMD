@@ -36,13 +36,13 @@ void MMD::Load(
     const auto ext = std::filesystem::path(modelPath).extension();
     if (ext == ".pmx") {
         auto pmx = std::make_unique<saba::PMXModel>();
-        if (!pmx->Load(std::string(modelPath), std::string(resourcePath))) {
+        if (!pmx->Load(modelPath.string(), resourcePath.string())) {
             Err::Exit("Failed to load PMX:", modelPath);
         }
         model = std::move(pmx);
     } else if (ext == ".pmd") {
         auto pmd = std::make_unique<saba::PMDModel>();
-        if (!pmd->Load(std::string(modelPath), std::string(resourcePath))) {
+        if (!pmd->Load(modelPath.string(), resourcePath.string())) {
             Err::Exit("Failed to load PMD:", modelPath);
         }
         model = std::move(pmd);
@@ -58,7 +58,7 @@ void MMD::Load(
             Err::Exit("Failed to create VMDAnimation:", motionPath);
         }
         saba::VMDFile vmdFile;
-        if (!saba::ReadVMDFile(&vmdFile, motionPath->c_str())) {
+        if (!saba::ReadVMDFile(&vmdFile, motionPath->string().c_str())) {
             Err::Exit("Failed to read VMD file:", motionPath);
         }
         if (!vmdAnim->Add(vmdFile)) {

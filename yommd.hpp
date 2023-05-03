@@ -1,6 +1,7 @@
 #ifndef YOMMD_HPP_
 #define YOMMD_HPP_
 
+#include <optional>
 #include <memory>
 #include <random>
 #include <string>

@@ -1,12 +1,14 @@
-CXX:=g++
-CC:=gcc
+# CXX:=g++
+# CC:=gcc
+CXX:=clang++
+CC:=clang
 TARGET:=yommd
 OBJDIR:=./obj
 SRC:=viewer.cpp config.cpp image.cpp util.cpp libs.mm
 OBJ=$(addsuffix .o,$(addprefix $(OBJDIR)/,$(SRC)))
 CFLAGS:=-Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb -Ilib/toml11 -Wall -Wextra -pedantic
 CPPFLAGS=-std=c++17
-OBJCFLAGS=-fobjc-arc
+OBJCFLAGS= # -fobjc-arc seems to be out of support on mingw64 clang on msys2
 LDFLAGS:=-Llib/saba/build/src -lSaba
 LIB_SABA=
 SOKOL_SHDC:=tool/sokol-shdc
@@ -14,8 +16,9 @@ SOKOL_SHDC_URL=
 
 ifeq ($(OS),Windows_NT)
 # TODO:
-CFLAGS+=-mwin32
+CFLAGS+=-I/mingw64/include/bullet
 LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi
+LIB_SABA=lib/saba/build/src/libSaba.a
 SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/win32/sokol-shdc.exe
 SOKOL_SHDC:=$(SOKOL_SHDC).exe
 else ifeq ($(shell uname),Darwin)
@@ -25,6 +28,7 @@ CC:=clang
 SRC+=main_osx.mm
 CFLAGS+=-I/opt/homebrew/include -I/opt/homebrew/include/bullet
 LDFLAGS+=-framework Foundation -framework Cocoa -framework Metal -framework MetalKit -framework QuartzCore
+OBJCFLAGS=-fobjc-arc
 LDFLAGS+=-L/opt/homebrew/lib/bullet/single -lBulletCollision -lBulletDynamics -lBulletSoftBody -lLinearMath
 # In order to prefer staic link library to dynamic link library with clang, we
 # need to specify library with path, not with -l option.
@@ -57,8 +61,8 @@ $(OBJDIR)/%.m.o: %.m yommd.hpp
 $(OBJDIR)/%.mm.o: %.mm yommd.hpp
 	$(CXX) -o $@ $(CPPFLAGS) $(OBJCFLAGS) $(CFLAGS) -c $<
 
-yommd.glsl.h: yommd.glsl tool/sokol-shdc
-	tool/sokol-shdc --input $< --output $@ --slang metal_macos:hlsl5
+yommd.glsl.h: yommd.glsl $(SOKOL_SHDC)
+	$(SOKOL_SHDC) --input $< --output $@ --slang metal_macos:hlsl5
 
 run: $(TARGET)
 	./$(TARGET)
@@ -76,9 +80,13 @@ dist:
 	echo 'TODO: Make distribution package'
 
 # Build saba library
+LIB_SABA_BUILDER=make -j4
+ifeq ($(OS),Windows_NT)
+LIB_SABA_BUILDER=ninja
+endif
 $(LIB_SABA):
 	@[ -d "lib/saba/build" ] || mkdir lib/saba/build
-	@cd lib/saba/build && cmake -DCMAKE_BUILD_TYPE=RELEASE .. && make -j4 Saba
+	@cd lib/saba/build && cmake -DCMAKE_BUILD_TYPE=RELEASE .. && $(LIB_SABA_BUILDER) Saba
 
 $(SOKOL_SHDC): tool/
 	curl -L -o $@ $(SOKOL_SHDC_URL)
@@ -88,6 +96,6 @@ update-sokol-shdc:
 	$(RM) $(SOKOL_SHDC) && make $(SOKOL_SHDC)
 
 init-submodule:
-	git submodule update --init
+	@git submodule update --init
 
 .PHONY: help run clean dist update-sokol-shdc init-submodule

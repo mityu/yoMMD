@@ -7,6 +7,7 @@
 -Ilib/toml11
 -I/opt/homebrew/include
 -I/opt/homebrew/include/bullet
+-I/mingw64/include/bullet
 -Wall
 -Wdeprecated
 -Wextra

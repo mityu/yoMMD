@@ -142,7 +142,6 @@ static const void *getSokolRenderpassDescriptor(void);
     [view setAutoResizeDrawable:NO];
 
     [window setContentView:view];
-    [view setDrawableSize:screenRect.size];
     [[view layer] setMagnificationFilter:kCAFilterNearest];
 #if DISABLE_TRANSPARENT_WINDOW == 0
     [[view layer] setOpaque:NO];  // Make transparent

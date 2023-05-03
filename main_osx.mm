@@ -19,7 +19,13 @@
 @interface AppDelegate: NSObject<NSApplicationDelegate>
 @end
 
+@interface Window: NSWindow
+@end
+
 @interface WindowDelegate: NSObject<NSWindowDelegate>
+@end
+
+@interface View: MTKView
 @end
 
 @interface ViewDelegate: NSObject<MTKViewDelegate>
@@ -32,6 +38,7 @@
 -(id<CAMetalDrawable>)getDrawable;
 -(MTLRenderPassDescriptor *)getRenderPassDescriptor;
 -(NSSize)getWindowSize;
+-(NSSize)getDrawableSize;
 -(Routine&)getRoutine;
 @end
 
@@ -44,8 +51,10 @@ static const void *getSokolRenderpassDescriptor(void);
     appMain = [[AppMain alloc] init];
     [appMain createMainWindow];
     [appMain createStatusItem];
-    [appMain getRoutine].LoadMMD();
-    [appMain getRoutine].Init();
+
+    auto& routine = [appMain getRoutine];
+    routine.LoadMMD();
+    routine.Init();
 }
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
     [appMain getRoutine].Terminate();
@@ -55,11 +64,31 @@ static const void *getSokolRenderpassDescriptor(void);
 }
 @end
 
+@implementation Window
+- (void)mouseDragged:(NSEvent *)event {
+    // const auto size{Context::getWindowSize()};
+    // glm::vec2 delta(static_cast<float>(event.deltaX), static_cast<float>(-event.deltaY));
+    // delta = delta / 30.0f;
+    [appMain getRoutine].OnMouseDragged();
+    // Info::Log("deltaX:", delta.x, "deltaY:", delta.y);
+}
+- (void)mouseDown:(NSEvent *)event {
+    [appMain getRoutine].OnMouseDown();
+}
+@end
+
 @implementation WindowDelegate
+@end
+
+@implementation View
+-(BOOL)acceptsFirstMouse:(NSEvent *)event {
+    return NO;
+}
 @end
 
 @implementation ViewDelegate
 - (void)mtkView:(nonnull MTKView*)view drawableSizeWillChange:(CGSize)size {
+    Info::Log("drawableSize:", size.width, ',', size.height);
 }
 - (void)drawInMTKView:(nonnull MTKView*)view {
     @autoreleasepool {
@@ -72,9 +101,9 @@ static const void *getSokolRenderpassDescriptor(void);
 
 @implementation AppMain {
     AppDelegate *appDelegate;
-    NSWindow *window;
+    Window *window;
     WindowDelegate *windowDelegate;
-    MTKView *view;
+    View *view;
     id<MTLDevice> metalDevice;
     ViewDelegate *viewDelegate;
     Routine routine;
@@ -84,7 +113,7 @@ static const void *getSokolRenderpassDescriptor(void);
     const NSUInteger style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable;
     const auto screenRect = [NSScreen mainScreen].visibleFrame;
 
-    window = [[NSWindow alloc] initWithContentRect:screenRect
+    window = [[Window alloc] initWithContentRect:screenRect
                                          styleMask:style
                                            backing:NSBackingStoreBuffered
                                              defer:NO];
@@ -104,12 +133,13 @@ static const void *getSokolRenderpassDescriptor(void);
 
     viewDelegate = [[ViewDelegate alloc] init];
     metalDevice = MTLCreateSystemDefaultDevice();
-    view = [[MTKView alloc] init];
+    view = [[View alloc] init];
     [view setPreferredFramesPerSecond:static_cast<NSInteger>(Constant::FPS)];
     [view setDelegate:viewDelegate];
     [view setDevice: metalDevice];
     [view setColorPixelFormat:MTLPixelFormatBGRA8Unorm];
     [view setDepthStencilPixelFormat:MTLPixelFormatDepth32Float_Stencil8];
+    [view setAutoResizeDrawable:NO];
 
     [window setContentView:view];
     [view setDrawableSize:screenRect.size];
@@ -123,7 +153,7 @@ static const void *getSokolRenderpassDescriptor(void);
 }
 -(sg_context_desc)getSokolContext {
     return sg_context_desc{
-        .sample_count = Constant::SampleCount,  // TODO:
+        .sample_count = Constant::SampleCount,
         .metal = {
             .device = (__bridge const void *)metalDevice,
             .renderpass_descriptor_cb = getSokolRenderpassDescriptor,
@@ -139,6 +169,9 @@ static const void *getSokolRenderpassDescriptor(void);
 }
 -(NSSize)getWindowSize {
     return window.frame.size;
+}
+-(NSSize)getDrawableSize {
+    return view.drawableSize;
 }
 -(Routine&)getRoutine {
     return routine;
@@ -157,9 +190,19 @@ sg_context_desc Context::getSokolContext() {
     return [appMain getSokolContext];
 }
 
-std::pair<int, int> Context::getWindowSize() {
+glm::vec2 Context::getWindowSize() {
     const auto size = [appMain getWindowSize];
-    return {size.width, size.height};
+    return glm::vec2(size.width, size.height);
+}
+
+glm::vec2 Context::getDrawableSize() {
+    const auto size = [appMain getDrawableSize];
+    return glm::vec2(size.width, size.height);
+}
+
+glm::vec2 Context::getMousePosition() {
+    const auto pos = [NSEvent mouseLocation];
+    return glm::vec2(pos.x, pos.y);
 }
 
 int main(int argc, char *argv[]) {

@@ -103,8 +103,22 @@ UserViewport::operator glm::mat4() const {
     return getMatrix();
 }
 
+void UserViewport::onMouseDown() {
+    dragHelper_.firstMousePosition = Context::getMousePosition();
+    dragHelper_.firstTranslate = translate_;
+}
+
+void UserViewport::onMouseDragged() {
+    const auto winSize{Context::getWindowSize()};
+    const float scale = (Context::getDrawableSize() / winSize).x;
+    auto delta = Context::getMousePosition() - dragHelper_.firstMousePosition;
+    delta = delta / Context::getWindowSize() * scale;
+    translate_.x = dragHelper_.firstTranslate.x + delta.x;
+    translate_.y = dragHelper_.firstTranslate.y + delta.y;
+}
+
 Routine::Routine() :
-    passAction({.colors[0] = {.action = SG_ACTION_CLEAR, .value = {.a = 0}}}),
+    passAction({.colors[0] = {.action = SG_ACTION_CLEAR, .value = {1, 1, 1, 0}}}),
     timeBeginAnimation(0), timeLastFrame(0), motionID(0), needBridgeMotions(false),
     rand(static_cast<int>(std::time(nullptr)))
 {}
@@ -371,20 +385,19 @@ void Routine::Update() {
         viewMatrix = glm::lookAt(lookAtCamera.m_eye, lookAtCamera.m_center, lookAtCamera.m_up);
         projectionMatrix = glm::perspectiveFovRH(
                 mmdCamera.m_fov,
-                static_cast<float>(size.first),
-                static_cast<float>(size.second),
+                static_cast<float>(size.x),
+                static_cast<float>(size.y),
                 1.0f,
                 10000.0f);
     } else {
         viewMatrix = glm::lookAt(glm::vec3(0, 10, 50), glm::vec3(0, 10, 0), glm::vec3(0, 1, 0));
         projectionMatrix = glm::perspectiveFovRH(
                 glm::radians(30.0f),
-                static_cast<float>(size.first),
-                static_cast<float>(size.second),
+                static_cast<float>(size.x),
+                static_cast<float>(size.y),
                 1.0f,
                 10000.0f);
     }
-    projectionMatrix *= userViewport_.getMatrix();
 
     model->BeginAnimation();
     if (needBridgeMotions) {
@@ -437,11 +450,12 @@ void Routine::Draw() {
     //     0.0f, 0.0f, 0.5f, 1.0f
     // );
 
+    auto userView = userViewport_.getMatrix();
     auto world = glm::mat4(1.0f);
-    auto wv = viewMatrix * world;
-    // auto wvp = dxMat * projectionMatrix * viewMatrix * world;
-    auto wvp = projectionMatrix * viewMatrix * world;
-    auto wvit = glm::mat3(viewMatrix * world);
+    auto wv = userView * viewMatrix * world;
+    auto wvp = userView * projectionMatrix * viewMatrix * world;
+    // wvp = dxMat * wvp;
+    auto wvit = glm::mat3(userView * viewMatrix * world);
     wvit = glm::inverse(wvit);
     wvit = glm::transpose(wvit);
 
@@ -450,7 +464,7 @@ void Routine::Draw() {
     // auto viewMat = glm::mat3(viewMatrix);
     lightDir = glm::mat3(viewMatrix) * lightDir;
 
-    sg_begin_default_pass(&passAction, size.first, size.second);
+    sg_begin_default_pass(&passAction, size.x, size.y);
 
     const size_t subMeshCount = model->GetSubMeshCount();
     for (size_t i = 0; i < subMeshCount; ++i) {
@@ -571,6 +585,14 @@ void Routine::Terminate() {
     sg_shutdown();
 
     shouldTerminate = false;
+}
+
+void Routine::OnMouseDown() {
+    userViewport_.onMouseDown();
+}
+
+void Routine::OnMouseDragged() {
+    userViewport_.onMouseDragged();
 }
 
 std::optional<Routine::ImageMap::const_iterator> Routine::loadImage(std::string path) {

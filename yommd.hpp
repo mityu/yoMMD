@@ -71,7 +71,9 @@ void slogFunc(const char *tag, uint32_t logLevel, uint32_t logItem,
 // main_osx.mm
 namespace Context {
 sg_context_desc getSokolContext();
-std::pair<int, int> getWindowSize();
+glm::vec2 getWindowSize();
+glm::vec2 getDrawableSize();
+glm::vec2 getMousePosition();
 }
 
 class Config {
@@ -160,9 +162,17 @@ public:
     UserViewport();
     glm::mat4 getMatrix() const;
     operator glm::mat4() const;
+    void onMouseDown();
+    void onMouseDragged();
 private:
+    struct DragHelper {
+        glm::vec2 firstMousePosition;
+        glm::vec3 firstTranslate;
+    };
+
     float scale_;
     glm::vec3 translate_;
+    DragHelper dragHelper_;
 };
 
 class Routine : private NonCopyable {
@@ -174,6 +184,8 @@ public:
     void Update();
     void Draw();
     void Terminate();
+    void OnMouseDragged();
+    void OnMouseDown();
 private:
     using ImageMap = std::map<std::string, Image>;
     void initBuffers();

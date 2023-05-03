@@ -58,7 +58,7 @@ $(OBJDIR)/%.mm.o: %.mm yommd.hpp
 	$(CXX) -o $@ $(CPPFLAGS) $(OBJCFLAGS) $(CFLAGS) -c $<
 
 yommd.glsl.h: yommd.glsl tool/sokol-shdc
-	tool/sokol-shdc --input $< --output $@ --slang glsl330:metal_macos:hlsl5
+	tool/sokol-shdc --input $< --output $@ --slang metal_macos:hlsl5
 
 run: $(TARGET)
 	./$(TARGET)

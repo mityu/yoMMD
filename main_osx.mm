@@ -17,9 +17,6 @@
 @interface Window: NSWindow
 @end
 
-@interface WindowDelegate: NSObject<NSWindowDelegate>
-@end
-
 @interface View: MTKView
 @end
 
@@ -79,9 +76,6 @@ static const void *getSokolRenderpassDescriptor(void);
 }
 @end
 
-@implementation WindowDelegate
-@end
-
 @implementation View
 -(BOOL)acceptsFirstMouse:(NSEvent *)event {
     return NO;
@@ -107,7 +101,6 @@ static const void *getSokolRenderpassDescriptor(void);
 @implementation AppMain {
     AppDelegate *appDelegate;
     Window *window;
-    WindowDelegate *windowDelegate;
     View *view;
     id<MTLDevice> metalDevice;
     ViewDelegate *viewDelegate;
@@ -132,7 +125,6 @@ static const void *getSokolRenderpassDescriptor(void);
                                          styleMask:style
                                            backing:NSBackingStoreBuffered
                                              defer:NO];
-    windowDelegate = [[WindowDelegate alloc] init];
 
     [window setTitle:@"yoMMD"];
     [window center];
@@ -142,7 +134,6 @@ static const void *getSokolRenderpassDescriptor(void);
     [window setBackgroundColor:[NSColor clearColor]];
     [window setLevel:NSFloatingWindowLevel];
     [window setCollectionBehavior:collectionBehavior];
-    [window setDelegate:windowDelegate];
     [window setIgnoresMouseEvents:YES];
 
     viewDelegate = [[ViewDelegate alloc] init];

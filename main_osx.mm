@@ -37,22 +37,26 @@
 -(Routine&)getRoutine;
 @end
 
-static AppMain *appMain;
-static const void *getSokolDrawable(void);
-static const void *getSokolRenderpassDescriptor(void);
+namespace{
+namespace globals {
+AppMain *appMain;
+}
+const void *getSokolDrawable(void);
+const void *getSokolRenderpassDescriptor(void);
+}
 
 @implementation AppDelegate
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
-    appMain = [[AppMain alloc] init];
-    [appMain createMainWindow];
-    [appMain createStatusItem];
+    globals::appMain = [[AppMain alloc] init];
+    [globals::appMain createMainWindow];
+    [globals::appMain createStatusItem];
 
-    auto& routine = [appMain getRoutine];
+    auto& routine = [globals::appMain getRoutine];
     routine.LoadMMD();
     routine.Init();
 }
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
-    [appMain getRoutine].Terminate();
+    [globals::appMain getRoutine].Terminate();
 }
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender {
     return YES;
@@ -61,14 +65,14 @@ static const void *getSokolRenderpassDescriptor(void);
 
 @implementation Window
 - (void)mouseDragged:(NSEvent *)event {
-    [appMain getRoutine].OnMouseDragged();
+    [globals::appMain getRoutine].OnMouseDragged();
 }
 - (void)mouseDown:(NSEvent *)event {
-    [appMain getRoutine].OnMouseDown();
+    [globals::appMain getRoutine].OnMouseDown();
 }
 - (void)scrollWheel:(NSEvent *)event {
     if (event.hasPreciseScrollingDeltas) {
-        [appMain getRoutine].OnWheelScrolled(event.scrollingDeltaY);
+        [globals::appMain getRoutine].OnWheelScrolled(event.scrollingDeltaY);
     }
 }
 - (BOOL)canBecomeKeyWindow {
@@ -81,7 +85,7 @@ static const void *getSokolRenderpassDescriptor(void);
     return NO;
 }
 - (const NSMenu *)menuForEvent:(NSEvent *)event {
-    return [appMain getAppMenu];
+    return [globals::appMain getAppMenu];
 }
 @end
 
@@ -91,7 +95,7 @@ static const void *getSokolRenderpassDescriptor(void);
 }
 - (void)drawInMTKView:(nonnull MTKView*)view {
     @autoreleasepool {
-        auto& routine = [appMain getRoutine];
+        auto& routine = [globals::appMain getRoutine];
         routine.Update();
         routine.Draw();
     }
@@ -233,25 +237,27 @@ static const void *getSokolRenderpassDescriptor(void);
 }
 @end
 
-static const void *getSokolDrawable() {
-    return (__bridge const void *)[appMain getDrawable];
+namespace{
+const void *getSokolDrawable() {
+    return (__bridge const void *)[globals::appMain getDrawable];
 }
 
-static const void *getSokolRenderpassDescriptor(void) {
-    return (__bridge const void *)[appMain getRenderPassDescriptor];
+const void *getSokolRenderpassDescriptor(void) {
+    return (__bridge const void *)[globals::appMain getRenderPassDescriptor];
+}
 }
 
 sg_context_desc Context::getSokolContext() {
-    return [appMain getSokolContext];
+    return [globals::appMain getSokolContext];
 }
 
 glm::vec2 Context::getWindowSize() {
-    const auto size = [appMain getWindowSize];
+    const auto size = [globals::appMain getWindowSize];
     return glm::vec2(size.width, size.height);
 }
 
 glm::vec2 Context::getDrawableSize() {
-    const auto size = [appMain getDrawableSize];
+    const auto size = [globals::appMain getDrawableSize];
     return glm::vec2(size.width, size.height);
 }
 

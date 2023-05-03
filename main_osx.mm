@@ -34,8 +34,8 @@
 @interface AppMain: NSObject
 -(void)createMainWindow;
 -(void)createStatusItem;
--(void)actionQuit:(id)sender;
--(void)actionToggleHandleMouse:(id)sender;
+-(void)actionQuit:(NSMenuItem *)sender;
+-(void)actionToggleHandleMouse:(NSMenuItem *)sender;
 -(sg_context_desc)getSokolContext;
 -(id<CAMetalDrawable>)getDrawable;
 -(MTLRenderPassDescriptor *)getRenderPassDescriptor;
@@ -113,10 +113,7 @@ static const void *getSokolRenderpassDescriptor(void);
     id<MTLDevice> metalDevice;
     ViewDelegate *viewDelegate;
     NSStatusItem *statusItem;
-    struct {
-        NSMenuItem *enableMouse;
-        NSMenuItem *quit;
-    } menuItems;
+    NSMenu *appMenu;
     NSRunningApplication *alterApp;
     Routine routine;
 }
@@ -175,31 +172,31 @@ static const void *getSokolRenderpassDescriptor(void);
     [statusItem setBehavior:NSStatusItemBehaviorTerminationOnRemoval];
     [statusItem setVisible:YES];
 
-    NSMenu *menu = [[NSMenu alloc] init];
+    appMenu = [[NSMenu alloc] init];
 
-    menuItems.enableMouse = [[NSMenuItem alloc]
+    NSMenuItem *enableMouse = [[NSMenuItem alloc]
                         initWithTitle:@"Enable Mouse"
                                action:@selector(actionToggleHandleMouse:)
                         keyEquivalent:@""];
-    [menuItems.enableMouse setTarget:self];
-    [menuItems.enableMouse setState:NSControlStateValueOff];
+    [enableMouse setTarget:self];
+    [enableMouse setState:NSControlStateValueOff];
 
-    menuItems.quit = [[NSMenuItem alloc]
+    NSMenuItem *quit = [[NSMenuItem alloc]
             initWithTitle:@"Quit" action:@selector(actionQuit:) keyEquivalent:@""];
-    [menuItems.quit setTarget:self];
+    [quit setTarget:self];
 
-    [menu addItem:menuItems.enableMouse];
-    [menu addItem:[NSMenuItem separatorItem]];
-    [menu addItem:menuItems.quit];
-    [statusItem setMenu:menu];
+    [appMenu addItem:enableMouse];
+    [appMenu addItem:[NSMenuItem separatorItem]];
+    [appMenu addItem:quit];
+    [statusItem setMenu:appMenu];
 
     alterApp = NULL;
 }
 -(void)actionQuit:(id)sender {
     [NSApp terminate:sender];
 }
--(void)actionToggleHandleMouse:(id)sender {
-    if (menuItems.enableMouse.state == NSControlStateValueOff) {
+-(void)actionToggleHandleMouse:(NSMenuItem *)sender {
+    if (sender.state == NSControlStateValueOff) {
         auto appList = [[NSWorkspace sharedWorkspace] runningApplications];
         for (NSUInteger i = 0; i < appList.count; ++i) {
             auto app = [appList objectAtIndex:i];
@@ -209,10 +206,10 @@ static const void *getSokolRenderpassDescriptor(void);
             }
         }
 
-        [menuItems.enableMouse setState:NSControlStateValueOn];
+        [sender setState:NSControlStateValueOn];
         [window setIgnoresMouseEvents:NO];
     } else {
-        [menuItems.enableMouse setState:NSControlStateValueOff];
+        [sender setState:NSControlStateValueOff];
         [window setIgnoresMouseEvents:YES];
         if (NSApp.active && alterApp) {
             [alterApp activateWithOptions:NSApplicationActivateIgnoringOtherApps];

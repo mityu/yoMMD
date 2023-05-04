@@ -1,6 +1,7 @@
 !.gitignore
 config.toml
 yommd
+yommd.exe
 obj/
 dist/
 misc/

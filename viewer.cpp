@@ -136,6 +136,7 @@ void UserViewport::SetDefaultScaling(float scale) {
 
 Routine::Routine() :
     passAction({.colors = {{.action = SG_ACTION_CLEAR, .value = {1, 1, 1, 0}}}}),
+    binds({}),
     timeBeginAnimation(0), timeLastFrame(0), motionID(0), needBridgeMotions(false),
     rand(static_cast<int>(std::time(nullptr)))
 {}
@@ -323,7 +324,6 @@ void Routine::initPipeline() {
 
     sg_pipeline_desc pipeline_desc = {
         .shader = shaderMMD,
-        .layout = layout_desc,
         .depth = {
             .compare = SG_COMPAREFUNC_LESS_EQUAL,  // FIXME: SG_COMPAREFUNC_LESS?
             .write_enabled = true,
@@ -352,6 +352,10 @@ void Routine::initPipeline() {
         //     .read_mask = 1,
         // },
     };
+    pipeline_desc.layout.attrs[ATTR_mmd_vs_in_Pos] = layout_desc.attrs[ATTR_mmd_vs_in_Pos];
+    pipeline_desc.layout.attrs[ATTR_mmd_vs_in_Nor] = layout_desc.attrs[ATTR_mmd_vs_in_Nor];
+    pipeline_desc.layout.attrs[ATTR_mmd_vs_in_UV] = layout_desc.attrs[ATTR_mmd_vs_in_UV];
+
     pipeline_frontface = sg_make_pipeline(&pipeline_desc);
 
     pipeline_desc.cull_mode = SG_CULLMODE_NONE;

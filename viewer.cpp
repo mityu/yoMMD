@@ -617,7 +617,7 @@ void Routine::OnWheelScrolled(float delta) {
     userViewport_.onWheelScrolled(delta);
 }
 
-std::optional<Routine::ImageMap::const_iterator> Routine::loadImage(std::string path) {
+std::optional<Routine::ImageMap::const_iterator> Routine::loadImage(const std::string& path) {
     auto itr = texImages.find(path);
     if (itr == texImages.cend()) {
         Image img;
@@ -633,7 +633,7 @@ std::optional<Routine::ImageMap::const_iterator> Routine::loadImage(std::string 
     }
 }
 
-std::optional<sg_image> Routine::getTexture(std::string path) {
+std::optional<sg_image> Routine::getTexture(const std::string& path) {
     const auto itr = loadImage(path);
     if (!itr)
         return std::nullopt;
@@ -655,7 +655,7 @@ std::optional<sg_image> Routine::getTexture(std::string path) {
     });
 }
 
-std::optional<sg_image> Routine::getToonTexture(std::string path) {
+std::optional<sg_image> Routine::getToonTexture(const std::string& path) {
     const auto itr = loadImage(path);
     if (!itr)
         return std::nullopt;

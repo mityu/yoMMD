@@ -211,9 +211,9 @@ private:
     void initTextures();
     void initPipeline();
     void selectNextMotion();
-    std::optional<ImageMap::const_iterator> loadImage(std::string path);
-    std::optional<sg_image> getTexture(std::string path);
-    std::optional<sg_image> getToonTexture(std::string path);
+    std::optional<ImageMap::const_iterator> loadImage(const std::string& path);
+    std::optional<sg_image> getTexture(const std::string& path);
+    std::optional<sg_image> getToonTexture(const std::string& path);
 private:
     UserViewport userViewport_;
 

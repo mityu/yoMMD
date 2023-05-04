@@ -1,23 +1,22 @@
-# CXX:=g++
-# CC:=gcc
-CXX:=clang++
-CC:=clang
+CXX:=g++
+CC:=gcc
 TARGET:=yommd
 OBJDIR:=./obj
 SRC:=viewer.cpp config.cpp image.cpp util.cpp libs.mm
 OBJ=$(addsuffix .o,$(addprefix $(OBJDIR)/,$(SRC)))
 CFLAGS:=-Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb -Ilib/toml11 -Wall -Wextra -pedantic
-CPPFLAGS=-std=c++17
-OBJCFLAGS= # -fobjc-arc seems to be out of support on mingw64 clang on msys2
+CPPFLAGS=-std=c++20
+OBJCFLAGS=
 LDFLAGS:=-Llib/saba/build/src -lSaba
 LIB_SABA=
 SOKOL_SHDC:=tool/sokol-shdc
 SOKOL_SHDC_URL=
 
 ifeq ($(OS),Windows_NT)
-# TODO:
+SRC+=main_windows.cpp
 CFLAGS+=-I/mingw64/include/bullet
 LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi
+LDFLAGS+=-LC:/msys64/mingw64/lib -lBulletCollision.dll -lBulletDynamics.dll -lBulletSoftBody.dll -lLinearMath.dll
 LIB_SABA=lib/saba/build/src/libSaba.a
 SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/win32/sokol-shdc.exe
 SOKOL_SHDC:=$(SOKOL_SHDC).exe
@@ -43,8 +42,8 @@ ifeq ($(strip $(LIB_SABA)),)
 $(error LIB_SABA is not set)
 endif
 
-$(TARGET): init-submodule $(OBJDIR) yommd.glsl.h $(LIB_SABA) $(OBJ)
-	$(CXX) -o $@ $(LDFLAGS) $(OBJ)
+$(TARGET): $(OBJDIR) yommd.glsl.h $(LIB_SABA) $(OBJ)
+	$(CXX) -o $@ $(OBJ) $(LDFLAGS)
 
 debug: CFLAGS+=-g -O0
 debug: clean $(TARGET)
@@ -54,6 +53,11 @@ $(OBJDIR)/viewer.cpp.o: viewer.cpp yommd.glsl.h yommd.hpp
 
 $(OBJDIR)/%.cpp.o: %.cpp yommd.hpp
 	$(CXX) -o $@ $(CPPFLAGS) $(CFLAGS) -c $<
+
+ifneq ($(shell uname),Darwin)
+$(OBJDIR)/libs.mm.o: libs.mm platform.hpp
+	$(CC) -o $@ $(CFLAGS) -c -x c $<
+endif
 
 $(OBJDIR)/%.m.o: %.m yommd.hpp
 	$(CC) -o $@ $(OBJCFLAGS) $(CFLAGS) -c $<
@@ -96,6 +100,6 @@ update-sokol-shdc:
 	$(RM) $(SOKOL_SHDC) && make $(SOKOL_SHDC)
 
 init-submodule:
-	@git submodule update --init
+	git submodule update --init
 
 .PHONY: help run clean dist update-sokol-shdc init-submodule

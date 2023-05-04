@@ -39,7 +39,7 @@ ifeq ($(strip $(LIB_SABA)),)
 $(error LIB_SABA is not set)
 endif
 
-$(TARGET): $(OBJDIR) yommd.glsl.h $(LIB_SABA) $(OBJ)
+$(TARGET): init-submodule $(OBJDIR) yommd.glsl.h $(LIB_SABA) $(OBJ)
 	$(CXX) -o $@ $(LDFLAGS) $(OBJ)
 
 debug: CFLAGS+=-g -O0
@@ -87,4 +87,7 @@ $(SOKOL_SHDC): tool/
 update-sokol-shdc:
 	$(RM) $(SOKOL_SHDC) && make $(SOKOL_SHDC)
 
-.PHONY: help run clean dist update-sokol-shdc
+init-submodule:
+	git submodule update --init
+
+.PHONY: help run clean dist update-sokol-shdc init-submodule

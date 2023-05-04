@@ -135,7 +135,7 @@ void UserViewport::SetDefaultScaling(float scale) {
 }
 
 Routine::Routine() :
-    passAction({.colors[0] = {.action = SG_ACTION_CLEAR, .value = {1, 1, 1, 0}}}),
+    passAction({.colors = {{.action = SG_ACTION_CLEAR, .value = {1, 1, 1, 0}}}}),
     timeBeginAnimation(0), timeLastFrame(0), motionID(0), needBridgeMotions(false),
     rand(static_cast<int>(std::time(nullptr)))
 {}
@@ -158,8 +158,10 @@ void Routine::Init(const CmdArgs& args) {
     mmd.Load(config.model, motionPaths, resourcePath);
 
     sg_desc desc = {
+        .logger = {
+            .func = Yommd::slogFunc,
+        },
         .context = Context::getSokolContext(),
-        .logger.func = Yommd::slogFunc,
     };
     sg_setup(&desc);
     stm_setup();
@@ -171,12 +173,10 @@ void Routine::Init(const CmdArgs& args) {
     initTextures();
     initPipeline();
 
-    binds = sg_bindings{
-        .vertex_buffers[ATTR_mmd_vs_in_Pos] = posVB,
-        .vertex_buffers[ATTR_mmd_vs_in_Nor] = normVB,
-        .vertex_buffers[ATTR_mmd_vs_in_UV] = uvVB,
-        .index_buffer = ibo,
-    };
+    binds.index_buffer = ibo;
+    binds.vertex_buffers[ATTR_mmd_vs_in_Pos] = posVB;
+    binds.vertex_buffers[ATTR_mmd_vs_in_Nor] = normVB;
+    binds.vertex_buffers[ATTR_mmd_vs_in_UV] = uvVB;
 
     const auto distSup = std::reduce(motionWeights.cbegin(), motionWeights.cend(), 0u);
     if (!motionWeights.empty() && distSup == 0)
@@ -203,19 +203,19 @@ void Routine::initBuffers() {
     const size_t indexSize = model->GetIndexElementSize();
 
     posVB = sg_make_buffer(sg_buffer_desc{
+                .size = vertCount * sizeof(glm::vec3),
                 .type = SG_BUFFERTYPE_VERTEXBUFFER,
                 .usage = SG_USAGE_DYNAMIC,
-                .size = vertCount * sizeof(glm::vec3),
             });
     normVB = sg_make_buffer(sg_buffer_desc{
+                .size = vertCount * sizeof(glm::vec3),
                 .type = SG_BUFFERTYPE_VERTEXBUFFER,
                 .usage = SG_USAGE_DYNAMIC,
-                .size = vertCount * sizeof(glm::vec3),
             });
     uvVB = sg_make_buffer(sg_buffer_desc{
+                .size = vertCount * sizeof(glm::vec2),
                 .type = SG_BUFFERTYPE_VERTEXBUFFER,
                 .usage = SG_USAGE_DYNAMIC,
-                .size = vertCount * sizeof(glm::vec2),
             });
 
 
@@ -258,8 +258,8 @@ void Routine::initBuffers() {
                 .type = SG_BUFFERTYPE_INDEXBUFFER,
                 .usage = SG_USAGE_IMMUTABLE,
                 .data = {
-                    .size = induces.size() * sizeof(uint32_t),
                     .ptr = induces.data(),
+                    .size = induces.size() * sizeof(uint32_t),
                 },
             });
 }
@@ -268,10 +268,12 @@ void Routine::initTextures() {
     static constexpr uint8_t dummyPixel[4] = {0, 0, 0, 0};
 
     dummyTex = sg_make_image(sg_image_desc{
-                .width = 1,
-                .height = 1,
-                .data.subimage[0][0] = {.size = 4, .ptr = dummyPixel},
-            });
+        .width = 1,
+        .height = 1,
+        .data = {
+            .subimage = {{{.ptr = dummyPixel, .size = 4}}},
+        },
+    });
 
     const auto& model = mmd.GetModel();
     const size_t subMeshCount = model->GetSubMeshCount();
@@ -295,27 +297,43 @@ void Routine::initTextures() {
 }
 
 void Routine::initPipeline() {
+    sg_layout_desc layout_desc;
+    layout_desc.attrs[ATTR_mmd_vs_in_Pos] = {
+        .buffer_index = ATTR_mmd_vs_in_Pos,
+        .format = SG_VERTEXFORMAT_FLOAT3,
+    };
+    layout_desc.attrs[ATTR_mmd_vs_in_Nor] = {
+        .buffer_index = ATTR_mmd_vs_in_Nor,
+        .format = SG_VERTEXFORMAT_FLOAT3,
+    };
+    layout_desc.attrs[ATTR_mmd_vs_in_UV] = {
+        .buffer_index = ATTR_mmd_vs_in_UV,
+        .format = SG_VERTEXFORMAT_FLOAT2,
+    };
+
+    sg_color_state color_state = {
+        .blend = {
+            .enabled = true,
+            .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
+            .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+            .src_factor_alpha = SG_BLENDFACTOR_ONE,
+            .dst_factor_alpha = SG_BLENDFACTOR_ONE,
+        },
+    };
+
     sg_pipeline_desc pipeline_desc = {
         .shader = shaderMMD,
-        .index_type = SG_INDEXTYPE_UINT32,
-        .layout = {
-            .attrs = {
-                [ATTR_mmd_vs_in_Pos] = {
-                    .buffer_index = ATTR_mmd_vs_in_Pos,
-                    .format = SG_VERTEXFORMAT_FLOAT3,
-                },
-                [ATTR_mmd_vs_in_Nor] = {
-                    .buffer_index = ATTR_mmd_vs_in_Nor,
-                    .format = SG_VERTEXFORMAT_FLOAT3,
-                },
-                [ATTR_mmd_vs_in_UV] = {
-                    .buffer_index = ATTR_mmd_vs_in_UV,
-                    .format = SG_VERTEXFORMAT_FLOAT2,
-                },
-            },
+        .layout = layout_desc,
+        .depth = {
+            .compare = SG_COMPAREFUNC_LESS_EQUAL,  // FIXME: SG_COMPAREFUNC_LESS?
+            .write_enabled = true,
         },
+        .colors = {{color_state}},
+        .primitive_type = SG_PRIMITIVETYPE_TRIANGLES,
+        .index_type = SG_INDEXTYPE_UINT32,
         .cull_mode = SG_CULLMODE_FRONT,
         .face_winding = SG_FACEWINDING_CW,
+        .sample_count = Constant::SampleCount,
         // .stencil = {
         //     .enabled = true,
         //     .front = {
@@ -333,23 +351,6 @@ void Routine::initPipeline() {
         //     .ref = 1,
         //     .read_mask = 1,
         // },
-        .sample_count = Constant::SampleCount,
-        .colors = {
-            [0] = {
-                .blend = {
-                    .enabled = true,
-                    .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
-                    .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-                    .src_factor_alpha = SG_BLENDFACTOR_ONE,
-                    .dst_factor_alpha = SG_BLENDFACTOR_ONE,
-                },
-            },
-        },
-        .depth = {
-            .write_enabled = true,
-            .compare = SG_COMPAREFUNC_LESS_EQUAL,  // FIXME: SG_COMPAREFUNC_LESS?
-        },
-        .primitive_type = SG_PRIMITIVETYPE_TRIANGLES,
     };
     pipeline_frontface = sg_make_pipeline(&pipeline_desc);
 
@@ -427,16 +428,16 @@ void Routine::Update() {
     model->Update();
 
     sg_update_buffer(posVB, sg_range{
-                .size = vertCount * sizeof(glm::vec3),
                 .ptr = model->GetUpdatePositions(),
+                .size = vertCount * sizeof(glm::vec3),
             });
     sg_update_buffer(normVB, sg_range{
-                .size = vertCount * sizeof(glm::vec3),
                 .ptr = model->GetUpdateNormals(),
+                .size = vertCount * sizeof(glm::vec3),
             });
     sg_update_buffer(uvVB, sg_range{
-                .size = vertCount * sizeof(glm::vec2),
                 .ptr = model->GetUpdateUVs(),
+                .size = vertCount * sizeof(glm::vec2),
             });
 
     if (!animations.empty()) {
@@ -495,15 +496,15 @@ void Routine::Draw() {
 
         u_mmd_fs_t u_mmd_fs = {
             .u_Alpha = mmdMaterial.m_alpha,
-            .u_Ambient = mmdMaterial.m_ambient,
             .u_Diffuse = mmdMaterial.m_diffuse,
+            .u_Ambient = mmdMaterial.m_ambient,
             .u_Specular = mmdMaterial.m_specular,
             .u_SpecularPower = mmdMaterial.m_specularPower,
-            .u_TexMode = 0,
-            .u_SphereTexMode = 0,
-            .u_ToonTexMode = 0,
             .u_LightColor = lightColor,
             .u_LightDir = lightDir,
+            .u_TexMode = 0,
+            .u_ToonTexMode = 0,
+            .u_SphereTexMode = 0,
         };
 
 #if 1
@@ -639,7 +640,7 @@ std::optional<sg_image> Routine::getTexture(const std::string& path) {
         return std::nullopt;
 
     const auto& image = (*itr)->second;
-    return sg_make_image(sg_image_desc{
+    sg_image_desc image_desc = {
         .type = SG_IMAGETYPE_2D,
         .render_target = false,
         .width = static_cast<int>(image.width),
@@ -648,11 +649,12 @@ std::optional<sg_image> Routine::getTexture(const std::string& path) {
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .min_filter = SG_FILTER_LINEAR,
         .mag_filter = SG_FILTER_LINEAR,
-        .data.subimage[0][0] = {
-            .size = image.pixels.size(),
-            .ptr = image.pixels.data(),
-        },
-    });
+    };
+    image_desc.data.subimage[0][0] =  {
+        .ptr = image.pixels.data(),
+        .size = image.pixels.size(),
+    };
+    return sg_make_image(&image_desc);
 }
 
 std::optional<sg_image> Routine::getToonTexture(const std::string& path) {
@@ -661,20 +663,21 @@ std::optional<sg_image> Routine::getToonTexture(const std::string& path) {
         return std::nullopt;
 
     const auto& image = (*itr)->second;
-    return sg_make_image(sg_image_desc{
+    sg_image_desc image_desc = {
         .type = SG_IMAGETYPE_2D,
         .render_target = false,
         .width = static_cast<int>(image.width),
         .height = static_cast<int>(image.height),
-        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-        .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
         .usage = SG_USAGE_IMMUTABLE,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .min_filter = SG_FILTER_LINEAR,
         .mag_filter = SG_FILTER_LINEAR,
-        .data.subimage[0][0] = {
-            .size = image.pixels.size(),
-            .ptr = image.pixels.data(),
-        },
-    });
+        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
+        .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
+    };
+    image_desc.data.subimage[0][0] =  {
+        .ptr = image.pixels.data(),
+        .size = image.pixels.size(),
+    };
+    return sg_make_image(&image_desc);
 }

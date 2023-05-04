@@ -176,13 +176,13 @@ private:
 class UserViewport {
 public:
     UserViewport();
-    glm::mat4 getMatrix() const;
+    glm::mat4 GetMatrix() const;
     operator glm::mat4() const;
-    void onMouseDown();
-    void onMouseDragged();
-    void onWheelScrolled(float delta);
-    void setDefaultTranslation(glm::vec2 pos);
-    void setDefaultScaling(float scale);
+    void OnMouseDown();
+    void OnMouseDragged();
+    void OnWheelScrolled(float delta);
+    void SetDefaultTranslation(glm::vec2 pos);
+    void SetDefaultScaling(float scale);
 private:
     struct DragHelper {
         glm::vec2 firstMousePosition;

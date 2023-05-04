@@ -95,21 +95,21 @@ UserViewport::UserViewport() :
     scale_(1.0f), translate_(0.0f, 0.0f, 0.0f)
 {}
 
-glm::mat4 UserViewport::getMatrix() const {
+glm::mat4 UserViewport::GetMatrix() const {
     const glm::vec3 scale(scale_, scale_, 1.0f);
     return glm::scale(glm::translate(glm::mat4(1.0f), translate_), scale);
 }
 
 UserViewport::operator glm::mat4() const {
-    return getMatrix();
+    return GetMatrix();
 }
 
-void UserViewport::onMouseDown() {
+void UserViewport::OnMouseDown() {
     dragHelper_.firstMousePosition = Context::getMousePosition();
     dragHelper_.firstTranslate = translate_;
 }
 
-void UserViewport::onMouseDragged() {
+void UserViewport::OnMouseDragged() {
     const auto winSize{Context::getWindowSize()};
     const float scale = (Context::getDrawableSize() / winSize).x;
     auto delta = Context::getMousePosition() - dragHelper_.firstMousePosition;
@@ -118,19 +118,19 @@ void UserViewport::onMouseDragged() {
     translate_.y = dragHelper_.firstTranslate.y + delta.y;
 }
 
-void UserViewport::onWheelScrolled(float delta) {
+void UserViewport::OnWheelScrolled(float delta) {
     scale_ -= delta / Context::getWindowSize().y;
     if (scale_ < 0.4f) {
         scale_ = 0.4f;
     }
 }
 
-void UserViewport::setDefaultTranslation(glm::vec2 pos) {
+void UserViewport::SetDefaultTranslation(glm::vec2 pos) {
     translate_.x = pos.x;
     translate_.y = -pos.y;
 }
 
-void UserViewport::setDefaultScaling(float scale) {
+void UserViewport::SetDefaultScaling(float scale) {
     scale_ = scale;
 }
 
@@ -188,8 +188,8 @@ void Routine::Init(const CmdArgs& args) {
     physics->SetMaxSubStepCount(INT_MAX);
     physics->SetFPS(config.simulationFPS);
 
-    userViewport_.setDefaultTranslation(config.defaultPosition);
-    userViewport_.setDefaultScaling(config.defaultScale);
+    userViewport_.SetDefaultTranslation(config.defaultPosition);
+    userViewport_.SetDefaultScaling(config.defaultScale);
 
     selectNextMotion();
     needBridgeMotions = false;
@@ -462,7 +462,7 @@ void Routine::Draw() {
     //     0.0f, 0.0f, 0.5f, 1.0f
     // );
 
-    auto userView = userViewport_.getMatrix();
+    auto userView = userViewport_.GetMatrix();
     auto world = glm::mat4(1.0f);
     auto wv = userView * viewMatrix * world;
     auto wvp = userView * projectionMatrix * viewMatrix * world;
@@ -606,15 +606,15 @@ void Routine::Terminate() {
 }
 
 void Routine::OnMouseDown() {
-    userViewport_.onMouseDown();
+    userViewport_.OnMouseDown();
 }
 
 void Routine::OnMouseDragged() {
-    userViewport_.onMouseDragged();
+    userViewport_.OnMouseDragged();
 }
 
 void Routine::OnWheelScrolled(float delta) {
-    userViewport_.onWheelScrolled(delta);
+    userViewport_.OnWheelScrolled(delta);
 }
 
 std::optional<Routine::ImageMap::const_iterator> Routine::loadImage(const std::string& path) {

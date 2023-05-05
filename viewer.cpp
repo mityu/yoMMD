@@ -136,7 +136,7 @@ void UserViewport::SetDefaultScaling(float scale) {
 }
 
 Routine::Routine() :
-    passAction({.colors = {{.action = SG_ACTION_CLEAR, .value = {1, 1, 1, 0}}}}),
+    passAction({.colors = {{.action = SG_ACTION_CLEAR, .value = {0, 0, 0, 0}}}}),
     binds({}),
     timeBeginAnimation(0), timeLastFrame(0), motionID(0), needBridgeMotions(false),
     rand(static_cast<int>(std::time(nullptr)))

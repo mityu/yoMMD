@@ -2,8 +2,10 @@
 #include <vector>
 #include <string_view>
 #include <windows.h>
+#include <windowsx.h>
 #include <d3d11.h>
 #include <dxgi.h>
+// #include <dwmapi.h>
 #include "sokol_gfx.h"
 #include "sokol_time.h"
 #include "glm/glm.hpp"
@@ -32,6 +34,7 @@ private:
             HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
     void createWindow();
+    // void updateFramebufferTransparency();
     void createDrawable();
     void destroyDrawable();
     LRESULT handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -73,9 +76,15 @@ AppMain::~AppMain() {
 
 void AppMain::Setup(const CmdArgs& cmdArgs) {
     createWindow();
-    ShowWindow(hwnd_, SW_SHOW);
     createDrawable();
     routine_.Init(cmdArgs);
+
+    // FIXME: Remove title bar here, because doing this in createWindow()
+    // cause crash. (Somehow GetWindowSize() is called but it returns
+    // glm::vec2{0, 0} and it misses assersion done in glm library.)
+    SetWindowLongW(hwnd_, GWL_STYLE, WS_POPUP);
+    SetWindowPos(hwnd_, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED ) ;
+    ShowWindow(hwnd_, SW_SHOWNORMAL);
 }
 
 void AppMain::UpdateDisplay() {
@@ -114,6 +123,7 @@ sg_context_desc AppMain::GetSokolContext() const {
 glm::vec2 AppMain::GetWindowSize() const {
     RECT rect;
     if (!GetClientRect(hwnd_, &rect)) {
+        Err::Log("Failed to get window rect");
         return glm::vec2();
     }
     return glm::vec2(rect.right - rect.left, rect.bottom - rect.top);
@@ -134,8 +144,10 @@ const ID3D11DepthStencilView *AppMain::GetDepthStencilView() const {
 }
 
 void AppMain::createWindow() {
+    // updateFramebufferTransparency();
+
     DWORD winStyle = WS_OVERLAPPEDWINDOW;
-    DWORD winExStyle = 0;
+    DWORD winExStyle = WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST;
     LONG width = CW_USEDEFAULT;
     LONG height = CW_USEDEFAULT;
 
@@ -159,7 +171,52 @@ void AppMain::createWindow() {
 
     if (!hwnd_)
         Err::Exit("Failed to create window.");
+
+
+    // NOTE: Don't call ShowWindow() here.  It's called later.
+
+    SetWindowLong(hwnd_, GWL_EXSTYLE, winExStyle);
+    SetLayeredWindowAttributes(hwnd_, RGB(0, 0, 0), 255, LWA_ALPHA | LWA_COLORKEY);
+
+    // BLENDFUNCTION blend;
+    // blend.BlendOp = AC_SRC_OVER;
+    // blend.BlendFlags = 0;
+    // blend.SourceConstantAlpha = 255;
+    // blend.AlphaFormat = AC_SRC_ALPHA;
+    // POINT p = {0, 0};
+    // 
+    // HDC hdcDst = GetDC(nullptr);
+    // HDC hdcSrc = GetDC(hwnd_);
+    // HDC hdcMemSrc = CreateCompatibleDC(hdcSrc);
+    // UpdateLayeredWindow(hwnd_, hdcDst, nullptr, nullptr,
+    //         hdcMemSrc, &p, 0, &blend, ULW_ALPHA);
+    // DeleteDC(hdcMemSrc);
+    // ReleaseDC(hwnd_, hdcSrc);
+    // ReleaseDC(nullptr, hdcDst);
+
+    // SetWindowLongW(hwnd_, GWL_EXSTYLE, winExStyle ^ WS_EX_TRANSPARENT);
+    // SetWindowPos
 }
+
+// void AppMain::updateFramebufferTransparency() {
+//     BOOL composition, opaque;
+//     DWORD color;
+// 
+//     if (FAILED(DwmIsCompositionEnabled(&composition)) || !composition)
+//        return;
+// 
+//     if (SUCCEEDED(DwmGetColorizationColor(&color, &opaque)) && !opaque)
+//     {
+//         HRGN region = CreateRectRgn(0, 0, -1, -1);
+//         DWM_BLURBEHIND bb = {};
+//         bb.dwFlags = DWM_BB_ENABLE | DWM_BB_BLURREGION;
+//         bb.hRgnBlur = region;
+//         bb.fEnable = TRUE;
+// 
+//         DwmEnableBlurBehindWindow(hwnd_, &bb);
+//         DeleteObject(region);
+//     }
+// }
 
 void AppMain::createDrawable() {
     if (!hwnd_) {
@@ -189,7 +246,8 @@ void AppMain::createDrawable() {
         .Windowed = true,
         .SwapEffect = DXGI_SWAP_EFFECT_DISCARD,
     };
-    UINT createFlags = D3D11_CREATE_DEVICE_SINGLETHREADED;
+    UINT createFlags = D3D11_CREATE_DEVICE_SINGLETHREADED |
+        D3D11_CREATE_DEVICE_BGRA_SUPPORT;
     #ifdef _DEBUG
         createFlags |= D3D11_CREATE_DEVICE_DEBUG;
     #endif
@@ -208,7 +266,7 @@ void AppMain::createDrawable() {
         &feature_level,             // pFeatureLevel
         &deviceContext_);           // ppImmediateContext
 
-    if (hr < 0)
+    if (FAILED(hr))
         Err::Exit("Failed to create device and swap chain.");
 
     swapChain_->GetBuffer(
@@ -281,6 +339,11 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
         PostQuitMessage(0);
         isRunning_ = false;
         return 0;
+    // case WM_DWMCOMPOSITIONCHANGED:
+    // case WM_DWMCOLORIZATIONCOLORCHANGED:
+    //     Info::Log("dwm msg");
+    //     // updateFramebufferTransparency();
+    //     return 0;
     case WM_LBUTTONDOWN:
         routine_.OnMouseDown();
         return 0;
@@ -290,15 +353,16 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
         }
         return 0;
     case WM_MOUSEWHEEL: {
-        const int deltaDeg = GET_WHEEL_DELTA_WPARAM(wParam) * WHEEL_DELTA;
-        const float delta = static_cast<float>(deltaDeg) / 360.0f;
-        routine_.OnWheelScrolled(delta);
-        return 0;
-    }
+            const int deltaDeg =
+                GET_WHEEL_DELTA_WPARAM(wParam) * WHEEL_DELTA;
+            const float delta =
+                static_cast<float>(deltaDeg) / 360.0f;
+            routine_.OnWheelScrolled(delta);
+            return 0;
+        }
     default:
         return DefWindowProc(hwnd_, uMsg, wParam, lParam);
     }
-    return TRUE;
 }
 
 namespace Context {
@@ -362,7 +426,7 @@ int WINAPI WinMain(
     constexpr double millSecPerFrame = 1000.0 / Constant::FPS;
     uint64_t timeLastFrame = stm_now();
     for (;;) {
-        while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
+        while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
             TranslateMessage(&msg);
             DispatchMessageW(&msg);
         }

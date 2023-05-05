@@ -5,4 +5,4 @@ yommd.exe
 obj/
 dist/
 misc/
-tool/sokol-shdc
+tool/sokol-shdc*

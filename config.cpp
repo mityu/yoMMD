@@ -17,7 +17,7 @@ Config Config::Parse(const std::filesystem::path& configFile) {
     try {
         const auto entire = toml::parse(configFile);
 
-        config.model = fs::path(toml::find<std::string>(entire, "model"));
+        config.model = fs::u8path(toml::find<std::string>(entire, "model"));
         if (config.model.is_relative())
             config.model = configDir / config.model;
 
@@ -25,7 +25,7 @@ Config Config::Parse(const std::filesystem::path& configFile) {
         for (const auto& motion : motions) {
             bool enabled = toml::find_or(motion, "enabled", true);
             auto weight = toml::find_or<decltype(Motion::weight)>(motion, "weight", 1);
-            auto path = fs::path(toml::find<std::string>(motion, "path"));
+            auto path = fs::u8path(toml::find<std::string>(motion, "path"));
             if (path.is_relative())
                 path = configDir / path;
             config.motions.push_back(Motion{
@@ -45,9 +45,9 @@ Config Config::Parse(const std::filesystem::path& configFile) {
     } catch (std::runtime_error& e) {
         // File open error, file read error, etc...
         Err::Exit(e.what());
-    } catch (std::exception& e) {
-        Err::Log(e.what());
     } catch (std::out_of_range& e) {
+        Err::Log(e.what());
+    } catch (std::exception& e) {
         Err::Log(e.what());
     }
 

@@ -101,7 +101,7 @@ struct Config {
     static Config Parse(const std::filesystem::path& configFile);
 };
 
-// main_osx.mm
+// main_osx.mm main_windows.cpp
 namespace Context {
 sg_context_desc getSokolContext();
 glm::vec2 getWindowSize();

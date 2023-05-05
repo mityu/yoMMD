@@ -2,6 +2,11 @@
 #include <string_view>
 #include "stb_image.h"
 #include "yommd.hpp"
+#include "platform.hpp"
+
+#ifdef PLATFORM_WINDOWS
+#  include <windows.h>
+#endif
 
 class File : private NonCopyable {
 public:
@@ -24,7 +29,19 @@ File::File(const std::string_view path) {
 }
 
 void File::Open(const std::string_view path) {
-    fp = std::fopen(path.data(), "r");
+#ifdef PLATFORM_WINDOWS
+    std::wstring wpath;
+    int size = MultiByteToWideChar(
+            CP_UTF8, MB_COMPOSITE, path.data(), -1, nullptr, 0);
+    wpath.resize(size-1, '\0');
+    int status = MultiByteToWideChar(
+            CP_UTF8, MB_COMPOSITE, path.data(), -1, wpath.data(), size);
+    if (!status)
+        Err::Exit("String conversion failed: from:", path);
+    fp = _wfopen(wpath.c_str(), L"rb");
+#else
+    fp = std::fopen(path.data(), "rb");
+#endif
 }
 
 void File::Close() {
@@ -65,13 +82,17 @@ bool Image::loadFromFile(const std::string_view path) {
     stbi_set_flip_vertically_on_load(true);
     File file(path);
 
-    if (!file)
+    if (!file) {
+        Err::Log("Failed to open file:", path);
         return false;
+    }
 
     int comp = 0;
     int ret = stbi_info_from_file(file, &width, &height, &comp);
-    if (ret == 0)
+    if (ret == 0) {
+        Err::Log("Failed to read info:", path, ':', stbi_failure_reason());
         return false;
+    }
 
     if (comp == 4)
         hasAlpha = true;

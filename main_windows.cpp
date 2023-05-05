@@ -18,8 +18,8 @@ class AppMain {
 public:
     AppMain();
     ~AppMain();
-    void Setup();
-    void PresentDisplay();
+    void Setup(const CmdArgs& cmdArgs);
+    void UpdateDisplay();
     void Terminate();
     bool IsRunning() const;
     sg_context_desc GetSokolContext() const;
@@ -40,6 +40,7 @@ private:
     static constexpr PCWSTR windowClassName_ = L"yoMMD AppMain";
 
     bool isRunning_;
+    Routine routine_;
     HWND hwnd_;
     DXGI_SWAP_CHAIN_DESC swapChainDesc_;
     IDXGISwapChain *swapChain_;
@@ -70,17 +71,21 @@ AppMain::~AppMain() {
     Terminate();
 }
 
-void AppMain::Setup() {
+void AppMain::Setup(const CmdArgs& cmdArgs) {
     createWindow();
     ShowWindow(hwnd_, SW_SHOW);
     createDrawable();
+    routine_.Init(cmdArgs);
 }
 
-void AppMain::PresentDisplay() {
+void AppMain::UpdateDisplay() {
+    routine_.Update();
+    routine_.Draw();
     swapChain_->Present(1, 0);
 }
 
 void AppMain::Terminate() {
+    routine_.Terminate();
     destroyDrawable();
     safeRelease(&swapChain_);
     safeRelease(&deviceContext_);
@@ -275,7 +280,21 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
     case WM_DESTROY:
         PostQuitMessage(0);
         isRunning_ = false;
-        return FALSE;
+        return 0;
+    case WM_LBUTTONDOWN:
+        routine_.OnMouseDown();
+        return 0;
+    case WM_MOUSEMOVE:
+        if (wParam & MK_LBUTTON) {
+            routine_.OnMouseDragged();
+        }
+        return 0;
+    case WM_MOUSEWHEEL: {
+        const int deltaDeg = GET_WHEEL_DELTA_WPARAM(wParam) * WHEEL_DELTA;
+        const float delta = static_cast<float>(deltaDeg) / 360.0f;
+        routine_.OnWheelScrolled(delta);
+        return 0;
+    }
     default:
         return DefWindowProc(hwnd_, uMsg, wParam, lParam);
     }
@@ -296,7 +315,8 @@ glm::vec2 getMousePosition() {
     POINT pos;
     if (!GetCursorPos(&pos))
         return glm::vec2();
-    return glm::vec2(pos.x, pos.y);
+    glm::vec2 size(getWindowSize());
+    return glm::vec2(pos.x, size.y - pos.y);  // Make origin bottom-left.
 }
 }
 
@@ -336,10 +356,7 @@ int WINAPI WinMain(
 
     args.clear();
 
-    Routine routine;
-    globals::appMain.Setup();
-
-    routine.Init(cmdArgs);
+    globals::appMain.Setup(cmdArgs);
 
     MSG msg = {};
     constexpr double millSecPerFrame = 1000.0 / Constant::FPS;
@@ -352,9 +369,7 @@ int WINAPI WinMain(
         if (!globals::appMain.IsRunning())
             break;
 
-        routine.Update();
-        routine.Draw();
-        globals::appMain.PresentDisplay();
+        globals::appMain.UpdateDisplay();
 
         const double elapsedMillSec = stm_ms(stm_since(timeLastFrame));
         const auto shouldSleepFor = millSecPerFrame - elapsedMillSec;
@@ -365,7 +380,6 @@ int WINAPI WinMain(
             Sleep(static_cast<DWORD>(shouldSleepFor));
         }
     }
-    routine.Terminate();
     globals::appMain.Terminate();
 
     return 0;

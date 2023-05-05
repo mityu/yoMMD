@@ -4,7 +4,7 @@ TARGET:=yommd
 OBJDIR:=./obj
 SRC:=viewer.cpp config.cpp image.cpp util.cpp libs.mm
 OBJ=$(addsuffix .o,$(addprefix $(OBJDIR)/,$(SRC)))
-CFLAGS:=-Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb -Ilib/toml11 -Wall -Wextra -pedantic
+CFLAGS:=-O2 -Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb -Ilib/toml11 -Wall -Wextra -pedantic
 CPPFLAGS=-std=c++20
 OBJCFLAGS=
 LDFLAGS:=-Llib/saba/build/src -lSaba
@@ -46,7 +46,10 @@ $(TARGET): $(OBJDIR) yommd.glsl.h $(LIB_SABA) $(OBJ)
 	$(CXX) -o $@ $(OBJ) $(LDFLAGS)
 
 debug: CFLAGS+=-g -O0
-debug: clean $(TARGET)
+debug: OBJDIR:=$(OBJDIR)/debug
+debug: TARGET:=$(TARGET)-debug
+debug:
+	$(MAKE) CFLAGS="$(CFLAGS)" OBJDIR="$(OBJDIR)" TARGET="$(TARGET)"
 
 $(OBJDIR)/viewer.cpp.o: viewer.cpp yommd.glsl.h yommd.hpp
 	$(CXX) -o $@ $(CPPFLAGS) $(CFLAGS) -c $<
@@ -72,7 +75,8 @@ run: $(TARGET)
 	./$(TARGET)
 
 clean:
-	$(RM) $(OBJDIR)/* $(TARGET) yommd.glsl.h
+	$(RM) $(TARGET)-debug $(OBJDIR)/debug/*.o
+	$(RM) $(OBJDIR)/*.o $(TARGET) yommd.glsl.h
 
 all: clean $(TARGET);
 
@@ -102,4 +106,4 @@ update-sokol-shdc:
 init-submodule:
 	git submodule update --init
 
-.PHONY: help run clean dist update-sokol-shdc init-submodule
+.PHONY: debug help run clean dist update-sokol-shdc init-submodule

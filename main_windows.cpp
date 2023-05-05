@@ -138,7 +138,7 @@ void AppMain::createWindow() {
 
     wc.style         = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
     wc.lpfnWndProc   = windowProc,
-    wc.hInstance     = GetModuleHandle(nullptr);
+    wc.hInstance     = GetModuleHandleW(nullptr);
     wc.lpszClassName = windowClassName_;
     wc.hIcon         = LoadIcon(nullptr, IDI_WINLOGO);
     wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
@@ -150,7 +150,7 @@ void AppMain::createWindow() {
         CW_USEDEFAULT, CW_USEDEFAULT,
         width, height,
         nullptr, nullptr,
-        GetModuleHandle(nullptr), this);
+        GetModuleHandleW(nullptr), this);
 
     if (!hwnd_)
         Err::Exit("Failed to create window.");
@@ -266,7 +266,7 @@ LRESULT CALLBACK AppMain::windowProc(
     if (pThis) {
         return pThis->handleMessage(uMsg, wParam, lParam);
     } else {
-        return DefWindowProc(hwnd, uMsg, wParam, lParam);
+        return DefWindowProcW(hwnd, uMsg, wParam, lParam);
     }
 }
 
@@ -347,7 +347,7 @@ int WINAPI WinMain(
     for (;;) {
         while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
             TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            DispatchMessageW(&msg);
         }
         if (!globals::appMain.IsRunning())
             break;

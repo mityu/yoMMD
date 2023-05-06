@@ -31,7 +31,7 @@ std::size_t View::length() const {
 }
 
 View getToonData(std::string_view path) {
-    const std::string basename = fs::u8path(path).filename();
+    const std::string basename = fs::u8path(path).filename().string();
     if (basename == "toon01.bmp") {
         return {_Toon01Data, _Toon01Size};
     } else if (basename == "toon02.bmp") {

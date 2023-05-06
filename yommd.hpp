@@ -165,28 +165,6 @@ private:
     std::unique_ptr<saba::VMDCameraAnimation> cameraAnimation;
 };
 
-// class TransparentFBO {
-// public:
-//     TransparentFBO();
-//     ~TransparentFBO();
-//     void Init();
-//     void Draw();
-//     void Terminate();
-// private:
-//     bool shouldTerminate;
-//     sg_pass transparentFbo;
-//     sg_pass transparentMSAAFbo;
-//     sg_image transparentFboColorTex;
-//     sg_image transparentFboMSAAColorRB;
-//     sg_image transparentFboMSAADepthRB;
-//     sg_shader shaderCopy;
-// #ifdef PLATFORM_WINDOWS
-//     sg_shader shaderCopyTransparentWindow;  // TODO: Use shaderCopy too.
-// #endif
-//     sg_pipeline pipeline;
-//     sg_bindings binds;
-// };
-
 class UserViewport {
 public:
     UserViewport();
@@ -248,7 +226,6 @@ private:
     glm::mat4 viewMatrix;
     glm::mat4 projectionMatrix;
     MMD mmd;
-    // TransparentFBO transparentFBO;
 
     sg_image dummyTex;
     ImageMap texImages;

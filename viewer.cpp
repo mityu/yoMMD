@@ -148,7 +148,8 @@ Routine::~Routine() {
 
 void Routine::Init(const CmdArgs& args) {
     namespace fs = std::filesystem;
-    fs::path resourcePath = args.cwd / "./misc/resource/mmd";
+    // fs::path resourcePath = args.cwd / "toons";
+    fs::path resourcePath = "<embedded-toons>";
     std::vector<const fs::path *> motionPaths;
     const Config config = Config::Parse(args.configFile);
     for (const auto& motion : config.motions) {
@@ -627,13 +628,16 @@ std::optional<Routine::ImageMap::const_iterator> Routine::loadImage(const std::s
     auto itr = texImages.find(path);
     if (itr == texImages.cend()) {
         Image img;
-        if (img.loadFromFile(path)) {
+        if (path.starts_with("<embedded-toons>")) {
+            if (img.loadFromMemory(Resource::getToonData(path))) {
+                texImages.emplace(path, std::move(img));
+                return texImages.find(path);
+            }
+        } else if (img.loadFromFile(path)) {
             texImages.emplace(path, std::move(img));
             return texImages.find(path);
-        } else {
-            Err::Log("Failed to load image:", path);
-            return std::nullopt;
         }
+        return std::nullopt;
     } else {
         return itr;
     }

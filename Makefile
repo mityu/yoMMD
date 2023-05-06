@@ -2,9 +2,9 @@ CXX:=g++
 CC:=gcc
 TARGET:=yommd
 OBJDIR:=./obj
-SRC:=viewer.cpp config.cpp image.cpp util.cpp libs.mm
+SRC:=viewer.cpp config.cpp resources.cpp image.cpp util.cpp libs.mm
 OBJ=$(addsuffix .o,$(addprefix $(OBJDIR)/,$(SRC)))
-CFLAGS:=-O2 -Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb -Ilib/toml11 -Wall -Wextra -pedantic
+CFLAGS:=-O2 -Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb -Ilib/toml11 -Ilib/incbin -Wall -Wextra -pedantic
 CPPFLAGS=-std=c++20
 OBJCFLAGS=
 LDFLAGS:=-Llib/saba/build/src -lSaba

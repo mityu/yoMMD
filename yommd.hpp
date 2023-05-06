@@ -109,6 +109,18 @@ glm::vec2 getDrawableSize();
 glm::vec2 getMousePosition();
 }
 
+// resources.cpp
+namespace Resource {
+class View : private std::pair<const unsigned char *, std::size_t> {
+public:
+    using pair::pair;
+    const unsigned char *data() const;
+    std::size_t length() const;
+private:
+};
+View getToonData(std::string_view path);
+}
+
 // image.cpp
 class Image : private NonCopyable {
 public:
@@ -122,6 +134,7 @@ public:
     Image(Image&& image);
     Image &operator=(Image &&rhs);
     bool loadFromFile(const std::string_view path);
+    bool loadFromMemory(const Resource::View& resource);
 private:
 };
 

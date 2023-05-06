@@ -107,3 +107,27 @@ bool Image::loadFromFile(const std::string_view path) {
 
     return true;
 }
+
+bool Image::loadFromMemory(const Resource::View& resource) {
+    stbi_set_flip_vertically_on_load(true);
+
+    int comp = 0;
+    int ret = stbi_info_from_memory(resource.data(), resource.length(), &width, &height, &comp);
+    if (ret == 0) {
+        Err::Log("Failed to read info:", __func__, ':', stbi_failure_reason());
+        return false;
+    }
+
+    if (comp == 4)
+        hasAlpha = true;
+    else
+        hasAlpha = false;
+
+    uint8_t *image = stbi_load_from_memory(resource.data(), resource.length(), &width, &height, &comp, STBI_rgb_alpha);
+    dataSize = width * height * 4;
+    pixels.resize(dataSize);
+    std::copy(image, image + dataSize, pixels.data());
+    stbi_image_free(image);
+
+    return true;
+}

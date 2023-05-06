@@ -19,7 +19,7 @@ ifeq ($(OS),Windows_NT)
 TARGET:=$(TARGET).exe
 SRC+=main_windows.cpp
 CFLAGS+=-I/mingw64/include/bullet
-LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi
+LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi -mwindows
 SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/win32/sokol-shdc.exe
 SOKOL_SHDC:=$(SOKOL_SHDC).exe
 PKGNAME_PLATFORM:=win-x86_64

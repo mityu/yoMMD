@@ -13,13 +13,16 @@ LDFLAGS:=-Llib/saba/build/src -lSaba -Llib/bullet3/build/lib \
 		 -lBulletDynamics -lBulletCollision -lBulletSoftBody -lLinearMath
 SOKOL_SHDC:=tool/sokol-shdc
 SOKOL_SHDC_URL=
+PKGNAME_PLATFORM:=
 
 ifeq ($(OS),Windows_NT)
+TARGET:=$(TARGET).exe
 SRC+=main_windows.cpp
 CFLAGS+=-I/mingw64/include/bullet
 LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi
 SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/win32/sokol-shdc.exe
 SOKOL_SHDC:=$(SOKOL_SHDC).exe
+PKGNAME_PLATFORM:=win-x86_64
 else ifeq ($(shell uname),Darwin)
 # TODO: Support intel mac?
 CXX:=clang++
@@ -29,6 +32,7 @@ CFLAGS+=-I/opt/homebrew/include # -I/opt/homebrew/include/bullet
 LDFLAGS+=-framework Foundation -framework Cocoa -framework Metal -framework MetalKit -framework QuartzCore
 OBJCFLAGS=-fobjc-arc
 SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/osx_arm64/sokol-shdc
+PKGNAME_PLATFORM:=darwin-arm64
 endif
 
 $(TARGET): $(OBJDIR) yommd.glsl.h $(OBJ)
@@ -73,8 +77,16 @@ $(OBJDIR) tool/:
 	mkdir -p $@
 
 # Make distribution package
-dist:
-	echo 'TODO: Make distribution package'
+PKGNAME:=yoMMD-$(PKGNAME_PLATFORM)-$(shell date '+%Y%m%d%H%M').zip
+package-tiny:
+	@[ -d "package" ] || mkdir package
+	zip package/$(PKGNAME) $(TARGET)
+
+package: package-tiny
+	@[ -d "default-attachments" ] && cd default-attachments && \
+		zip -ur ../package/$(PKGNAME) \
+		$(notdir $(wildcard default-attachments/*)) -x "*/.*"
+
 
 # Build bullet physics library
 LIB_BULLET_BUILDER=make -j4 && make install
@@ -134,4 +146,20 @@ init-submodule:
 	$(MAKE) build-bullet
 	$(MAKE) build-saba
 
-.PHONY: debug help run clean dist build-bullet build-saba update-sokol-shdc init-submodule
+help:
+	@echo "Available targets:"
+	@echo "$(TARGET)		Build executable binary (The default target)"
+	@echo "debug		Debug build"
+	@echo "run		Build and run binary"
+	@echo "clean		Clean build related files"
+	@echo "package-tiny	Make distribution package without any MMD models/motions"
+	@echo "package		Make distribution package with default config,"
+	@echo "		MMD model and motions included"
+	@echo "build-bullet	Build bullet physics library"
+	@echo "build-saba	Build saba library"
+	@echo "update-sokol-shdc	Update sokol-shdc tool"
+	@echo "init-submodule	Init submodule, and build bullet and saba library"
+	@echo "help		Show this help"
+
+.PHONY: debug help run clean package package-tiny
+.PHONY: build-bullet build-saba update-sokol-shdc init-submodule

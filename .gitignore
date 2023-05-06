@@ -3,6 +3,7 @@ config.toml
 yommd
 yommd.exe
 obj/
-dist/
+package/
+default-attachments/
 misc/
 tool/sokol-shdc*

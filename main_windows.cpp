@@ -5,7 +5,6 @@
 #include <windowsx.h>
 #include <d3d11.h>
 #include <dxgi.h>
-// #include <dwmapi.h>
 #include "sokol_gfx.h"
 #include "sokol_time.h"
 #include "glm/glm.hpp"
@@ -34,7 +33,6 @@ private:
             HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
     void createWindow();
-    // void updateFramebufferTransparency();
     void createDrawable();
     void destroyDrawable();
     LRESULT handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -144,8 +142,6 @@ const ID3D11DepthStencilView *AppMain::GetDepthStencilView() const {
 }
 
 void AppMain::createWindow() {
-    // updateFramebufferTransparency();
-
     DWORD winStyle = WS_OVERLAPPEDWINDOW;
     DWORD winExStyle = WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST;
     LONG width = CW_USEDEFAULT;
@@ -178,45 +174,9 @@ void AppMain::createWindow() {
     SetWindowLong(hwnd_, GWL_EXSTYLE, winExStyle);
     SetLayeredWindowAttributes(hwnd_, RGB(0, 0, 0), 255, LWA_ALPHA | LWA_COLORKEY);
 
-    // BLENDFUNCTION blend;
-    // blend.BlendOp = AC_SRC_OVER;
-    // blend.BlendFlags = 0;
-    // blend.SourceConstantAlpha = 255;
-    // blend.AlphaFormat = AC_SRC_ALPHA;
-    // POINT p = {0, 0};
-    // 
-    // HDC hdcDst = GetDC(nullptr);
-    // HDC hdcSrc = GetDC(hwnd_);
-    // HDC hdcMemSrc = CreateCompatibleDC(hdcSrc);
-    // UpdateLayeredWindow(hwnd_, hdcDst, nullptr, nullptr,
-    //         hdcMemSrc, &p, 0, &blend, ULW_ALPHA);
-    // DeleteDC(hdcMemSrc);
-    // ReleaseDC(hwnd_, hdcSrc);
-    // ReleaseDC(nullptr, hdcDst);
-
     // SetWindowLongW(hwnd_, GWL_EXSTYLE, winExStyle ^ WS_EX_TRANSPARENT);
     // SetWindowPos
 }
-
-// void AppMain::updateFramebufferTransparency() {
-//     BOOL composition, opaque;
-//     DWORD color;
-// 
-//     if (FAILED(DwmIsCompositionEnabled(&composition)) || !composition)
-//        return;
-// 
-//     if (SUCCEEDED(DwmGetColorizationColor(&color, &opaque)) && !opaque)
-//     {
-//         HRGN region = CreateRectRgn(0, 0, -1, -1);
-//         DWM_BLURBEHIND bb = {};
-//         bb.dwFlags = DWM_BB_ENABLE | DWM_BB_BLURREGION;
-//         bb.hRgnBlur = region;
-//         bb.fEnable = TRUE;
-// 
-//         DwmEnableBlurBehindWindow(hwnd_, &bb);
-//         DeleteObject(region);
-//     }
-// }
 
 void AppMain::createDrawable() {
     if (!hwnd_) {
@@ -339,11 +299,6 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
         PostQuitMessage(0);
         isRunning_ = false;
         return 0;
-    // case WM_DWMCOMPOSITIONCHANGED:
-    // case WM_DWMCOLORIZATIONCOLORCHANGED:
-    //     Info::Log("dwm msg");
-    //     // updateFramebufferTransparency();
-    //     return 0;
     case WM_LBUTTONDOWN:
         routine_.OnMouseDown();
         return 0;

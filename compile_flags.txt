@@ -6,9 +6,8 @@
 -Ilib/stb
 -Ilib/toml11
 -Ilib/incbin
+-Ilib/bullet3/build/include/bullet
 -I/opt/homebrew/include
--I/opt/homebrew/include/bullet
--IC:\msys64\mingw64\include\bullet
 -Wall
 -Wdeprecated
 -Wextra

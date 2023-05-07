@@ -65,6 +65,17 @@ template <typename... Args> [[noreturn]] void Exit(Args&&... args) {
 }
 }
 
+namespace Yommd {
+template <typename T>
+inline std::u8string toUtf8String(const std::basic_string<T>& str) {
+    return std::u8string(str.cbegin(), str.cend());
+}
+template <typename T>
+inline std::u8string toUtf8String(const std::basic_string_view<T> str) {
+    return std::u8string(str.cbegin(), str.cend());
+}
+}
+
 // util.cpp
 struct CmdArgs {
     using Path = std::filesystem::path;

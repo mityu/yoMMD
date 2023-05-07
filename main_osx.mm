@@ -28,6 +28,7 @@
 -(void)createStatusItem;
 -(void)actionQuit:(NSMenuItem *)sender;
 -(void)actionToggleHandleMouse:(NSMenuItem *)sender;
+-(void)actionResetModelPosition:(NSMenuItem *)sender;
 -(const NSMenu *)getAppMenu;
 -(sg_context_desc)getSokolContext;
 -(id<CAMetalDrawable>)getDrawable;
@@ -177,11 +178,19 @@ const void *getSokolRenderpassDescriptor(void);
     [enableMouse setTarget:self];
     [enableMouse setState:NSControlStateValueOff];
 
+
+    NSMenuItem *resetModelPosition = [[NSMenuItem alloc]
+                        initWithTitle:@"Reset Position"
+                               action:@selector(actionResetModelPosition:)
+                        keyEquivalent:@""];
+    [resetModelPosition setTarget:self];
+
     NSMenuItem *quit = [[NSMenuItem alloc]
             initWithTitle:@"Quit" action:@selector(actionQuit:) keyEquivalent:@""];
     [quit setTarget:self];
 
     [appMenu addItem:enableMouse];
+    [appMenu addItem:resetModelPosition];
     [appMenu addItem:[NSMenuItem separatorItem]];
     [appMenu addItem:quit];
     [statusItem setMenu:appMenu];
@@ -212,6 +221,9 @@ const void *getSokolRenderpassDescriptor(void);
         }
         alterApp = NULL;
     }
+}
+-(void)actionResetModelPosition:(NSMenuItem *)sender {
+    routine.ResetModelPosition();
 }
 -(const NSMenu *)getAppMenu {
     return appMenu;

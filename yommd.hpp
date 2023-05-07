@@ -175,6 +175,7 @@ public:
     void OnWheelScrolled(float delta);
     void SetDefaultTranslation(glm::vec2 pos);
     void SetDefaultScaling(float scale);
+    void ResetPosition();
 private:
     struct DragHelper {
         glm::vec2 firstMousePosition;
@@ -183,6 +184,8 @@ private:
 
     float scale_;
     glm::vec3 translate_;
+    float defaultScale_;
+    glm::vec3 defaultTranslate_;
     DragHelper dragHelper_;
 };
 
@@ -197,6 +200,7 @@ public:
     void OnMouseDragged();
     void OnMouseDown();
     void OnWheelScrolled(float delta);
+    void ResetModelPosition();
 private:
     using ImageMap = std::map<std::string, Image>;
     void initBuffers();

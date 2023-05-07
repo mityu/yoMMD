@@ -92,7 +92,8 @@ const std::unique_ptr<saba::VMDCameraAnimation>& MMD::GetCameraAnimation() const
 }
 
 UserViewport::UserViewport() :
-    scale_(1.0f), translate_(0.0f, 0.0f, 0.0f)
+    scale_(1.0f), translate_(0.0f, 0.0f, 0.0f),
+    defaultScale_(scale_), defaultTranslate_(translate_)
 {}
 
 glm::mat4 UserViewport::GetMatrix() const {
@@ -129,10 +130,17 @@ void UserViewport::OnWheelScrolled(float delta) {
 void UserViewport::SetDefaultTranslation(glm::vec2 pos) {
     translate_.x = pos.x;
     translate_.y = -pos.y;
+    defaultTranslate_ = translate_;
 }
 
 void UserViewport::SetDefaultScaling(float scale) {
     scale_ = scale;
+    defaultScale_ = scale;
+}
+
+void UserViewport::ResetPosition() {
+    scale_ = defaultScale_;
+    translate_ = defaultTranslate_;
 }
 
 Routine::Routine() :
@@ -622,6 +630,10 @@ void Routine::OnMouseDragged() {
 
 void Routine::OnWheelScrolled(float delta) {
     userViewport_.OnWheelScrolled(delta);
+}
+
+void Routine::ResetModelPosition() {
+    userViewport_.ResetPosition();
 }
 
 std::optional<Routine::ImageMap::const_iterator> Routine::loadImage(const std::string& path) {

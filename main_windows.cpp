@@ -31,6 +31,7 @@ public:
 private:
     static LRESULT CALLBACK windowProc(
             HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    static DWORD WINAPI showMenu(LPVOID param);
 
     void createWindow();
     void createDrawable();
@@ -39,6 +40,7 @@ private:
     template <typename T> void safeRelease(T **obj);
 private:
     static constexpr PCWSTR windowClassName_ = L"yoMMD AppMain";
+    static constexpr UINT YOMMD_WM_TOGGLE_ENABLE_MOUSE = WM_APP;
 
     bool isRunning_;
     Routine routine_;
@@ -51,6 +53,8 @@ private:
     ID3D11DeviceContext *deviceContext_;
     ID3D11Texture2D *depthStencilBuffer_;
     ID3D11DepthStencilView *depthStencilView_;
+
+    HANDLE hMenuThread_;
 };
 
 namespace {
@@ -82,7 +86,7 @@ void AppMain::Setup(const CmdArgs& cmdArgs) {
     // glm::vec2{0, 0} and it misses assersion done in glm library.)
     SetWindowLongW(hwnd_, GWL_STYLE, WS_POPUP);
     SetWindowPos(hwnd_, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED ) ;
-    ShowWindow(hwnd_, SW_SHOWNORMAL);
+    ShowWindow(hwnd_, SW_SHOWMAXIMIZED);
 }
 
 void AppMain::UpdateDisplay() {
@@ -100,6 +104,13 @@ void AppMain::Terminate() {
     DestroyWindow(hwnd_);
     hwnd_ = nullptr;
     UnregisterClassW(windowClassName_, GetModuleHandleW(nullptr));
+
+    DWORD exitCode;
+    if (GetExitCodeThread(hMenuThread_, &exitCode) &&
+            exitCode == STILL_ACTIVE) {
+        Info::Log("Thread is still running. Wait finishing.");
+        WaitForSingleObject(hMenuThread_, INFINITE);
+    }
 }
 
 bool AppMain::IsRunning() const {
@@ -142,8 +153,8 @@ const ID3D11DepthStencilView *AppMain::GetDepthStencilView() const {
 }
 
 void AppMain::createWindow() {
-    DWORD winStyle = WS_OVERLAPPEDWINDOW;
-    DWORD winExStyle = WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST;
+    DWORD winStyle = WS_OVERLAPPEDWINDOW | WS_MAXIMIZE;
+    DWORD winExStyle = WS_EX_LAYERED | /* WS_EX_TRANSPARENT |*/ WS_EX_TOPMOST;
     LONG width = CW_USEDEFAULT;
     LONG height = CW_USEDEFAULT;
 
@@ -171,11 +182,8 @@ void AppMain::createWindow() {
 
     // NOTE: Don't call ShowWindow() here.  It's called later.
 
-    SetWindowLong(hwnd_, GWL_EXSTYLE, winExStyle);
+    SetWindowLongW(hwnd_, GWL_EXSTYLE, winExStyle);
     SetLayeredWindowAttributes(hwnd_, RGB(0, 0, 0), 255, LWA_ALPHA | LWA_COLORKEY);
-
-    // SetWindowLongW(hwnd_, GWL_EXSTYLE, winExStyle ^ WS_EX_TRANSPARENT);
-    // SetWindowPos
 }
 
 void AppMain::createDrawable() {
@@ -263,6 +271,93 @@ void AppMain::destroyDrawable() {
     safeRelease(&depthStencilView_);
 }
 
+DWORD WINAPI AppMain::showMenu(LPVOID param) {
+    constexpr DWORD winStyle = WS_CHILD;
+    constexpr PCWSTR wcName = L"yoMMD-menu-window";
+    const HWND parentWin = *reinterpret_cast<const HWND *>(param);
+    HWND hwnd;
+
+    const LONG parentWinExStyle = GetWindowLongW(parentWin, GWL_EXSTYLE);
+    if (parentWinExStyle == 0) {
+        Info::Log("Failed to get parent window's style");
+    }
+
+    // TODO: Register once
+    WNDCLASSW wc = {};
+
+    wc.style         = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+    wc.lpfnWndProc   = DefWindowProcW,
+    wc.hInstance     = GetModuleHandleW(nullptr);
+    wc.lpszClassName = wcName;
+    wc.hIcon         = LoadIcon(nullptr, IDI_WINLOGO);
+    wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
+
+    RegisterClassW(&wc);
+
+    hwnd = CreateWindowExW(
+            0, wcName, L"", winStyle, 0, 0, 0, 0, parentWin, nullptr,
+            GetModuleHandleW(nullptr), parentWin
+            );
+    if (!hwnd) {
+        Err::Log("Failed to create dummy window for menu.");
+        return 1;
+    }
+
+    POINT point;
+    if (!GetCursorPos(&point)) {
+        Err::Log("Failed to get mouse point");
+        DestroyWindow(hwnd);
+        UnregisterClassW(wcName, GetModuleHandleW(nullptr));
+        return 1;
+    }
+
+#define Cmd(identifier) static_cast<std::underlying_type<Command>::type>(Command::identifier)
+    enum class Command : UINT_PTR {
+        None,
+        EnableMouse,
+        Quit,
+    };
+
+    HMENU hmenu = CreatePopupMenu();
+    AppendMenuW(hmenu, MF_STRING, Cmd(EnableMouse), L"&Enable Mouse");
+    AppendMenuW(hmenu, MF_SEPARATOR, Cmd(None), L"");
+    AppendMenuW(hmenu, MF_STRING, Cmd(Quit), L"&Quit");
+
+    if (parentWinExStyle == 0) {
+        EnableMenuItem(hmenu, Cmd(EnableMouse), MF_DISABLED);
+    } else if (parentWinExStyle & WS_EX_TRANSPARENT) {
+        CheckMenuItem(hmenu, Cmd(EnableMouse), MF_UNCHECKED);
+    } else {
+        CheckMenuItem(hmenu, Cmd(EnableMouse), MF_CHECKED);
+    }
+
+    UINT menuFlags = TPM_RIGHTBUTTON | TPM_NONOTIFY | TPM_RETURNCMD;
+
+    SetForegroundWindow(hwnd);
+    auto cmdID = TrackPopupMenu(
+            hmenu, menuFlags, point.x, point.y, 0, hwnd, NULL);
+
+    switch (cmdID) {
+    case Cmd(EnableMouse):
+        if (parentWinExStyle != 0) {
+            SetWindowLongW(parentWin, GWL_EXSTYLE,
+                    parentWinExStyle ^ WS_EX_TRANSPARENT);
+            // Call SetWindowPos() function?
+        }
+        break;
+    case Cmd(Quit):
+        SendMessageW(parentWin, WM_DESTROY, 0, 0);
+        break;
+    }
+
+    DestroyWindow(hwnd);
+#undef Cmd
+
+    UnregisterClassW(wcName, GetModuleHandleW(nullptr));
+    DestroyMenu(hmenu);
+    return 0;
+}
+
 template <typename T> void AppMain::safeRelease(T **obj) {
     if (*obj) {
         (*obj)->Release();
@@ -307,12 +402,26 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
             routine_.OnMouseDragged();
         }
         return 0;
-    case WM_MOUSEWHEEL: {
+    case WM_MOUSEWHEEL:
+        {
             const int deltaDeg =
                 GET_WHEEL_DELTA_WPARAM(wParam) * WHEEL_DELTA;
             const float delta =
                 static_cast<float>(deltaDeg) / 360.0f;
             routine_.OnWheelScrolled(delta);
+            return 0;
+        }
+    case WM_RBUTTONDOWN:
+        {
+            DWORD exitCode;
+            if (GetExitCodeThread(hMenuThread_, &exitCode) &&
+                    exitCode == STILL_ACTIVE) {
+                Info::Log("Thread is running");
+                return 0;
+            }
+
+            hMenuThread_ = CreateThread(
+                    NULL, 0, AppMain::showMenu, &hwnd_, 0, NULL);
             return 0;
         }
     default:

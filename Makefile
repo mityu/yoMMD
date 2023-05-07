@@ -18,7 +18,7 @@ PKGNAME_PLATFORM:=
 ifeq ($(OS),Windows_NT)
 TARGET:=$(TARGET).exe
 SRC+=main_windows.cpp
-CFLAGS+=-I/mingw64/include/bullet
+CFLAGS+=-I/mingw64/include/bullet -Wno-missing-field-initializers
 LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi
 SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/win32/sokol-shdc.exe
 SOKOL_SHDC:=$(SOKOL_SHDC).exe
@@ -64,6 +64,7 @@ $(OBJDIR)/%.cpp.o: %.cpp yommd.hpp
 	$(CXX) -o $@ $(CPPFLAGS) $(CFLAGS) -c $<
 
 ifneq ($(shell uname),Darwin)
+# When not on macOS, compile libs.mm as C program.
 $(OBJDIR)/libs.mm.o: libs.mm platform.hpp
 	$(CC) -o $@ $(CFLAGS) -c -x c $<
 endif
@@ -167,6 +168,7 @@ init-submodule:
 help:
 	@echo "Available targets:"
 	@echo "$(TARGET)		Build executable binary (The default target)"
+	@echo "release		Release build (Only available on Windows)"
 	@echo "debug		Debug build"
 	@echo "run		Build and run binary"
 	@echo "clean		Clean build related files"

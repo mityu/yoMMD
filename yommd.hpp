@@ -68,15 +68,18 @@ template <typename... Args> [[noreturn]] void Exit(Args&&... args) {
 namespace String {
 template <typename T>
 inline std::u8string tou8(const std::basic_string<T>& str) {
+    static_assert(sizeof(T) == sizeof(char8_t), "Invalid conversion.");
     return std::u8string(str.cbegin(), str.cend());
 }
 template <typename T>
 inline std::u8string tou8(const std::basic_string_view<T> str) {
+    static_assert(sizeof(T) == sizeof(char8_t), "Invalid conversion.");
     return std::u8string(str.cbegin(), str.cend());
 }
 #ifdef PLATFORM_WINDOWS
 template <typename T>
 inline std::basic_string<T> wideToMulti(const std::wstring_view wstr) {
+    static_assert(sizeof(T) == sizeof(char), "Invalid conversion.");
     std::basic_string<T> str;
     int size = WideCharToMultibyte(
             CP_ACP, 0, wstr.data(), -1, nullptr, 0, nullptr, nullptr);

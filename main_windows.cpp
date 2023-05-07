@@ -471,13 +471,7 @@ int WINAPI WinMain(
 
     std::vector<std::string> args;
     for (int i = 0; i < argc; ++i) {
-        int size = WideCharToMultiByte(
-                CP_ACP, 0, argv[i], -1, nullptr, 0, nullptr, nullptr);
-        std::string str;
-        str.resize(size - 1);  // "size" includes padding for '\0'.
-        WideCharToMultiByte(CP_ACP, 0, argv[i], -1,
-                str.data(), size, nullptr, nullptr);
-        args.push_back(std::move(str));
+        args.push_back(String::wideToMulti<char>(argv[i]));
     }
 
     const auto cmdArgs = CmdArgs::Parse(args);

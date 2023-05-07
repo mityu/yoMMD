@@ -4,8 +4,10 @@
 #include <iostream>
 #include <cstdlib>
 #include "yommd.hpp"
+#include "platform.hpp"
 
 namespace {
+std::filesystem::path getHomePath();
 namespace globals {
 static constexpr char usage[] = R"(
 Usage: yommd <options>
@@ -15,6 +17,7 @@ options:
     --logfile <file>    Output logs to <file>
     -h|--help           Show this help
 )";
+const std::filesystem::path homePath = getHomePath();
 }
 }
 
@@ -64,11 +67,10 @@ CmdArgs CmdArgs::Parse(const std::vector<std::string>& args) {
         cmdArgs.logFile = Constant::DefaultLogFilePath;
 
     // Make absolute if necessary.
-    if (!cmdArgs.configFile.is_absolute())
-        cmdArgs.configFile = cmdArgs.cwd / cmdArgs.configFile;
+    Yommd::makeAbsolute(cmdArgs.configFile, cmdArgs.cwd);
 
-    if (!(cmdArgs.logFile.empty() || cmdArgs.logFile.is_absolute()))
-        cmdArgs.logFile = cmdArgs.cwd / cmdArgs.logFile;
+    if (!cmdArgs.logFile.empty())
+        Yommd::makeAbsolute(cmdArgs.logFile, cmdArgs.cwd);
 
     Info::Log(cmdArgs.configFile, cmdArgs.logFile);
 
@@ -114,5 +116,31 @@ void slogFunc(const char *tag, uint32_t logLevel, uint32_t logItem, const char *
     } else {
         Err::Log(ss.str());
     }
+}
+
+void makeAbsolute(std::filesystem::path& path, const std::filesystem::path& cwd) {
+    if (path.is_absolute())
+        return;
+    else if (const auto u8path = path.generic_u8string(); u8path.starts_with(u8"~/"))
+        path = globals::homePath / std::filesystem::path(u8path.substr(2));
+    else
+        path = cwd / path;
+}
+
+}
+
+namespace {
+std::filesystem::path getHomePath() {
+#ifdef PLATFORM_WINDOWS
+    const std::wstring_view wpath = _wgetenv(L"USERPROFILE");
+    if (wpath.empty())
+        Err::Exit("%USERPROFILE% is not set");
+    return std::filesystem::path(String::wideToMulti<char8_t>(wpath));
+#else
+    const std::string_view path = std::getenv("HOME");
+    if (path.empty())
+        Err::Exit("$HOME is not set");
+    return std::filesystem::path(String::tou8(path));
+#endif
 }
 }

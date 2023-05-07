@@ -31,7 +31,7 @@ std::size_t View::length() const {
 }
 
 View getToonData(std::string_view path) {
-    const std::string basename = fs::path(Yommd::toUtf8String(path)).filename().string();
+    const std::string basename = fs::path(String::tou8(path)).filename().string();
     if (basename == "toon01.bmp") {
         return {_Toon01Data, _Toon01Size};
     } else if (basename == "toon02.bmp") {

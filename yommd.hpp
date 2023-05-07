@@ -21,8 +21,8 @@
 
 #include "platform.hpp"
 
-#if defined(PLATFORM_WINDOWS) && !defined(_WIN32)
-#  define _WIN32
+#ifdef PLATFORM_WINDOWS
+#include <windows.h>
 #endif
 
 namespace Constant {
@@ -65,15 +65,27 @@ template <typename... Args> [[noreturn]] void Exit(Args&&... args) {
 }
 }
 
-namespace Yommd {
+namespace String {
 template <typename T>
-inline std::u8string toUtf8String(const std::basic_string<T>& str) {
+inline std::u8string tou8(const std::basic_string<T>& str) {
     return std::u8string(str.cbegin(), str.cend());
 }
 template <typename T>
-inline std::u8string toUtf8String(const std::basic_string_view<T> str) {
+inline std::u8string tou8(const std::basic_string_view<T> str) {
     return std::u8string(str.cbegin(), str.cend());
 }
+#ifdef PLATFORM_WINDOWS
+template <typename T>
+inline std::basic_string<T> wideToMulti(const std::wstring_view wstr) {
+    std::basic_string<T> str;
+    int size = WideCharToMultibyte(
+            CP_ACP, 0, wstr.data(), -1, nullptr, 0, nullptr, nullptr);
+    path.resize(size - 1);  // "size" includes padding for '\0'
+    WideCharToMultiByte(CP_ACP, 0, wstr.data(), -1,
+            str.data(), size, nullptr, nullptr);
+    return str;
+}
+#endif
 }
 
 // util.cpp
@@ -89,6 +101,7 @@ struct CmdArgs {
 namespace Yommd {
 void slogFunc(const char *tag, uint32_t logLevel, uint32_t logItem,
         const char *message, uint32_t linenr, const char *filename, void *user_data);
+void makeAbsolute(std::filesystem::path& path, const std::filesystem::path& cwd);
 }
 
 // config.cpp

@@ -19,7 +19,7 @@ ifeq ($(OS),Windows_NT)
 TARGET:=$(TARGET).exe
 SRC+=main_windows.cpp
 CFLAGS+=-I/mingw64/include/bullet
-LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi -mwindows
+LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi
 SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/win32/sokol-shdc.exe
 SOKOL_SHDC:=$(SOKOL_SHDC).exe
 PKGNAME_PLATFORM:=win-x86_64
@@ -37,6 +37,19 @@ endif
 
 $(TARGET): $(OBJDIR) yommd.glsl.h $(OBJ)
 	$(CXX) -o $@ $(OBJ) $(LDFLAGS)
+
+ifeq ($(OS),Windows_NT)
+release:
+	@[ -f "$(TARGET)" ] && rm $(TARGET)
+	@$(MAKE) CFLAGS="$(CFLAGS) -mwindows"
+
+may-create-release-build:
+	@(read -p "Make release build? [Y/n] " yn && [ $${yn:-N} = y ]) \
+		|| exit 0 && $(MAKE) release
+else
+may-create-release-build:
+	@ # Nothing to do.
+endif
 
 debug: CFLAGS+=-g -O0
 debug: OBJDIR:=$(OBJDIR)/debug
@@ -83,7 +96,7 @@ $(OBJDIR) tool/:
 
 # Make distribution package
 PKGNAME:=yoMMD-$(PKGNAME_PLATFORM)-$(shell date '+%Y%m%d%H%M').zip
-package-tiny:
+package-tiny: may-create-release-build
 	@[ -d "package" ] || mkdir package
 	zip package/$(PKGNAME) $(TARGET)
 
@@ -166,5 +179,6 @@ help:
 	@echo "init-submodule	Init submodule, and build bullet and saba library"
 	@echo "help		Show this help"
 
-.PHONY: debug help run clean package package-tiny
+.PHONY: release debug help run clean package package-tiny
+.PHONY: may-create-release-build
 .PHONY: build-bullet build-saba update-sokol-shdc init-submodule

@@ -42,6 +42,7 @@ Config Config::Parse(const std::filesystem::path& configFile) {
         }
         config.defaultScale = toml::find_or(entire, "default-scale", config.defaultScale);
         config.simulationFPS = toml::find_or(entire, "simulation-fps", config.simulationFPS);
+        config.gravity = toml::find_or(entire, "gravity", config.gravity);
     } catch (std::runtime_error& e) {
         // File open error, file read error, etc...
         Err::Exit(e.what());

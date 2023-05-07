@@ -195,7 +195,7 @@ void Routine::Init(const CmdArgs& args) {
     randDist.param(decltype(randDist)::param_type(0, distSup - 1));
 
     auto physics = mmd.GetModel()->GetMMDPhysics();
-    physics->GetDynamicsWorld()->setGravity(btVector3(0, -9.8f * 5.0f, 0));
+    physics->GetDynamicsWorld()->setGravity(btVector3(0, -config.gravity * 5.0f, 0));
     physics->SetMaxSubStepCount(INT_MAX);
     physics->SetFPS(config.simulationFPS);
 

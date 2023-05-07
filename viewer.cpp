@@ -231,38 +231,27 @@ void Routine::initBuffers() {
 
 
     // Prepare Index buffer object.
-    std::function<uint32_t(size_t)> getInduceAt;
+    const auto copyInduces = [&model, this](const auto *mmdInduces) {
+        const size_t subMeshCount = model->GetSubMeshCount();
+        for (size_t i = 0; i < subMeshCount; ++i) {
+            const auto subMesth = model->GetSubMeshes()[i];
+            for (int j = 0; j < subMesth.m_vertexCount; ++j)
+                induces.push_back(
+                        static_cast<uint32_t>(mmdInduces[subMesth.m_beginIndex + j]));
+        }
+    };
     switch (indexSize) {
-    case 1: {
-        const uint8_t *mmdInduces = static_cast<const uint8_t *>(model->GetIndices());
-        getInduceAt = [mmdInduces](size_t i) -> uint32_t {
-            return static_cast<uint32_t>(mmdInduces[i]);
-        };
+    case 1:
+        copyInduces(static_cast<const uint8_t *>(model->GetIndices()));
         break;
-    }
-    case 2: {
-        const uint16_t *mmdInduces = static_cast<const uint16_t *>(model->GetIndices());
-        getInduceAt = [mmdInduces](size_t i) -> uint32_t {
-            return static_cast<uint32_t>(mmdInduces[i]);
-        };
+    case 2:
+        copyInduces(static_cast<const uint16_t *>(model->GetIndices()));
         break;
-    }
-    case 4: {
-        const uint32_t *mmdInduces = static_cast<const uint32_t *>(model->GetIndices());
-        getInduceAt = [mmdInduces](size_t i) -> uint32_t {
-            return mmdInduces[i];
-        };
+    case 4:
+        copyInduces(static_cast<const uint32_t *>(model->GetIndices()));
         break;
-    }
     default:
         Err::Exit("Maybe MMD data is broken: indexSize:", indexSize);
-    }
-
-    const size_t subMeshCount = model->GetSubMeshCount();
-    for (size_t i = 0; i < subMeshCount; ++i) {
-        const auto subMesth = model->GetSubMeshes()[i];
-        for (int j = 0; j < subMesth.m_vertexCount; ++j)
-            induces.push_back(getInduceAt(subMesth.m_beginIndex + j));
     }
 
     ibo = sg_make_buffer(sg_buffer_desc{

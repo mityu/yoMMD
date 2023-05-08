@@ -37,11 +37,13 @@ private:
     void createDrawable();
     void destroyDrawable();
     void createStatusIcon();
+    void createTaskbar();
     LRESULT handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
     template <typename T> void safeRelease(T **obj);
 private:
     static constexpr PCWSTR windowClassName_ = L"yoMMD AppMain";
     static constexpr UINT YOMMD_WM_TOGGLE_ENABLE_MOUSE = WM_APP;
+    static constexpr UINT YOMMD_WM_SHOW_TASKBAR_MENU = WM_APP + 1;
 
     bool isRunning_;
     Routine routine_;
@@ -56,7 +58,8 @@ private:
     ID3D11DepthStencilView *depthStencilView_;
 
     HANDLE hMenuThread_;
-    HICON hStatusIcon_;
+    HICON hTaskbarIcon_;
+    NOTIFYICONDATAW taskbarIconDesc_;
 };
 
 namespace {
@@ -72,7 +75,7 @@ AppMain::AppMain() :
     renderTarget_(nullptr), renderTargetView_(nullptr),
     device_(nullptr), deviceContext_(nullptr),
     depthStencilBuffer_(nullptr), depthStencilView_(nullptr),
-    hMenuThread_(nullptr), hStatusIcon_(nullptr)
+    hMenuThread_(nullptr), hTaskbarIcon_(nullptr)
 {}
 
 AppMain::~AppMain() {
@@ -82,7 +85,7 @@ AppMain::~AppMain() {
 void AppMain::Setup(const CmdArgs& cmdArgs) {
     createWindow();
     createDrawable();
-    createStatusIcon();
+    createTaskbar();
     routine_.Init(cmdArgs);
 
     // FIXME: Remove title bar here, because doing this in createWindow()
@@ -109,10 +112,12 @@ void AppMain::Terminate() {
     hwnd_ = nullptr;
     UnregisterClassW(windowClassName_, GetModuleHandleW(nullptr));
 
-    if (hStatusIcon_) {
-        DestroyIcon(hStatusIcon_);
-        hStatusIcon_ = nullptr;
+    if (hTaskbarIcon_) {
+        DestroyIcon(hTaskbarIcon_);
+        hTaskbarIcon_ = nullptr;
     }
+
+    Shell_NotifyIconW(NIM_DELETE, &taskbarIconDesc_);
 
     DWORD exitCode;
     if (GetExitCodeThread(hMenuThread_, &exitCode) &&
@@ -281,16 +286,30 @@ void AppMain::destroyDrawable() {
     safeRelease(&depthStencilView_);
 }
 
-void AppMain::createStatusIcon() {
+void AppMain::createTaskbar() {
     auto iconData = Resource::getStatusIconData();
-    hStatusIcon_ = CreateIconFromResource(
+    hTaskbarIcon_ = CreateIconFromResource(
             const_cast<PBYTE>(iconData.data()),
             iconData.length(),
             TRUE,
             0x00030000);
-    if (!hStatusIcon_) {
-        Err::Log("Failed to load icon.");
+    if (!hTaskbarIcon_) {
+        Err::Exit("Failed to load icon.");
+        // TODO: Fallback
     }
+
+    taskbarIconDesc_.cbSize = sizeof(taskbarIconDesc_);
+    taskbarIconDesc_.hWnd = hwnd_;
+    taskbarIconDesc_.uID = 100;  // TODO: What value should be here?
+    taskbarIconDesc_.hIcon = hTaskbarIcon_;
+    taskbarIconDesc_.uVersion = NOTIFYICON_VERSION_4;
+    taskbarIconDesc_.uCallbackMessage = YOMMD_WM_SHOW_TASKBAR_MENU;
+    wcscpy_s(taskbarIconDesc_.szTip,
+            sizeof(taskbarIconDesc_.szTip), L"yoMMD");
+    taskbarIconDesc_.uFlags =
+        NIF_ICON | NIF_TIP | NIF_SHOWTIP | NIF_MESSAGE;
+
+    Shell_NotifyIconW(NIM_ADD, &taskbarIconDesc_);
 }
 
 DWORD WINAPI AppMain::showMenu(LPVOID param) {
@@ -439,6 +458,11 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
             routine_.OnWheelScrolled(delta);
             return 0;
         }
+    case YOMMD_WM_SHOW_TASKBAR_MENU:
+        if (const auto msg = LOWORD(lParam);
+                !(msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN))
+            return 0;
+        // Fallthrough
     case WM_RBUTTONDOWN:
         {
             DWORD exitCode;

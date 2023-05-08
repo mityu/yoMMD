@@ -274,7 +274,8 @@ void AppMain::destroyDrawable() {
 DWORD WINAPI AppMain::showMenu(LPVOID param) {
     constexpr DWORD winStyle = WS_CHILD;
     constexpr PCWSTR wcName = L"yoMMD-menu-window";
-    const HWND parentWin = *reinterpret_cast<const HWND *>(param);
+    AppMain& app = *reinterpret_cast<AppMain*>(param);
+    const HWND& parentWin = app.hwnd_;
     HWND hwnd;
 
     const LONG parentWinExStyle = GetWindowLongW(parentWin, GWL_EXSTYLE);
@@ -315,11 +316,13 @@ DWORD WINAPI AppMain::showMenu(LPVOID param) {
     enum class Command : UINT_PTR {
         None,
         EnableMouse,
+        ResetPosition,
         Quit,
     };
 
     HMENU hmenu = CreatePopupMenu();
     AppendMenuW(hmenu, MF_STRING, Cmd(EnableMouse), L"&Enable Mouse");
+    AppendMenuW(hmenu, MF_STRING, Cmd(ResetPosition), L"&Reset Position");
     AppendMenuW(hmenu, MF_SEPARATOR, Cmd(None), L"");
     AppendMenuW(hmenu, MF_STRING, Cmd(Quit), L"&Quit");
 
@@ -344,6 +347,9 @@ DWORD WINAPI AppMain::showMenu(LPVOID param) {
                     parentWinExStyle ^ WS_EX_TRANSPARENT);
             // Call SetWindowPos() function?
         }
+        break;
+    case Cmd(ResetPosition):
+        app.routine_.ResetModelPosition();
         break;
     case Cmd(Quit):
         SendMessageW(parentWin, WM_DESTROY, 0, 0);
@@ -421,7 +427,7 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
             }
 
             hMenuThread_ = CreateThread(
-                    NULL, 0, AppMain::showMenu, &hwnd_, 0, NULL);
+                    NULL, 0, AppMain::showMenu, this, 0, NULL);
             return 0;
         }
     default:

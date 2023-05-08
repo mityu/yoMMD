@@ -1,6 +1,7 @@
 CXX:=g++
 CC:=gcc
 TARGET:=yommd
+TARGET_DEBUG:=yommd-debug
 OBJDIR:=./obj
 SRC:=viewer.cpp config.cpp resources.cpp image.cpp util.cpp libs.mm
 OBJ=$(addsuffix .o,$(addprefix $(OBJDIR)/,$(SRC)))
@@ -17,6 +18,7 @@ PKGNAME_PLATFORM:=
 
 ifeq ($(OS),Windows_NT)
 TARGET:=$(TARGET).exe
+TARGET_DEBUG:=$(TARGET_DEBUG).exe
 SRC+=main_windows.cpp
 CFLAGS+=-I/mingw64/include/bullet -Wno-missing-field-initializers
 LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi
@@ -28,7 +30,7 @@ else ifeq ($(shell uname),Darwin)
 CXX:=clang++
 CC:=clang
 SRC+=main_osx.mm
-CFLAGS+=-I/opt/homebrew/include # -I/opt/homebrew/include/bullet
+CFLAGS+=-I/opt/homebrew/include
 LDFLAGS+=-framework Foundation -framework Cocoa -framework Metal -framework MetalKit -framework QuartzCore
 OBJCFLAGS=-fobjc-arc
 SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/osx_arm64/sokol-shdc
@@ -53,9 +55,9 @@ endif
 
 debug: CFLAGS+=-g -O0
 debug: OBJDIR:=$(OBJDIR)/debug
-debug: TARGET:=$(TARGET)-debug
+debug: TARGET:=$(TARGET_DEBUG)
 debug:
-	$(MAKE) CFLAGS="$(CFLAGS)" OBJDIR="$(OBJDIR)" TARGET="$(TARGET)"
+	@$(MAKE) CFLAGS="$(CFLAGS)" OBJDIR="$(OBJDIR)" TARGET="$(TARGET)"
 
 $(OBJDIR)/viewer.cpp.o: viewer.cpp yommd.glsl.h yommd.hpp
 	$(CXX) -o $@ $(CPPFLAGS) $(CFLAGS) -c $<

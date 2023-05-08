@@ -19,12 +19,12 @@ yoMMD.icns: yoMMD.png
 	iconutil -c icns yoMMD.iconset
 
 statusicon.png: statusicon-base.png
-	convert -resize 28x28 statusicon-base.png statusicon.png
+	convert -resize -filter point 28x28 statusicon-base.png statusicon.png
 
 yoMMD.ico: yoMMD.png
 	convert -define icon:auto-resize $< $@
 
 statusicon.ico: statusicon-base.png
-	convert -define icon:auto-resize $< $@
+	convert -filter point -define icon:auto-resize $< $@
 
 .PHONY: all

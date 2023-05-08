@@ -81,11 +81,11 @@ template <typename T>
 inline std::basic_string<T> wideToMulti(const std::wstring_view wstr) {
     static_assert(sizeof(T) == sizeof(char), "Invalid conversion.");
     std::basic_string<T> str;
-    int size = WideCharToMultibyte(
+    int size = WideCharToMultiByte(
             CP_ACP, 0, wstr.data(), -1, nullptr, 0, nullptr, nullptr);
-    path.resize(size - 1);  // "size" includes padding for '\0'
+    str.resize(size-1, '\0');  // "size" includes padding for '\0'
     WideCharToMultiByte(CP_ACP, 0, wstr.data(), -1,
-            str.data(), size, nullptr, nullptr);
+            reinterpret_cast<char *>(str.data()), size, nullptr, nullptr);
     return str;
 }
 #endif

@@ -2,6 +2,7 @@
 config.toml
 yommd
 yommd.exe
+yommd-debug*
 obj/
 package/
 default-attachments/

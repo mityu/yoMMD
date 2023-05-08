@@ -146,6 +146,7 @@ public:
 private:
 };
 View getToonData(std::string_view path);
+View getStatusIconData();
 }
 
 // image.cpp

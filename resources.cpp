@@ -17,6 +17,7 @@ INCBIN(Toon07, "toons/toon07.bmp");
 INCBIN(Toon08, "toons/toon08.bmp");
 INCBIN(Toon09, "toons/toon09.bmp");
 INCBIN(Toon10, "toons/toon10.bmp");
+INCBIN(StatusIcon, "icons/statusicon.png");
 }
 
 namespace Resource {
@@ -56,5 +57,9 @@ View getToonData(std::string_view path) {
         Err::Log("Internal error:");
         return {nullptr, 0};
     }
+}
+
+View getStatusIconData() {
+    return {_StatusIconData, _StatusIconSize};
 }
 }

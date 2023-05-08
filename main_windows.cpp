@@ -36,6 +36,7 @@ private:
     void createWindow();
     void createDrawable();
     void destroyDrawable();
+    void createStatusIcon();
     LRESULT handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
     template <typename T> void safeRelease(T **obj);
 private:
@@ -55,6 +56,7 @@ private:
     ID3D11DepthStencilView *depthStencilView_;
 
     HANDLE hMenuThread_;
+    HICON hStatusIcon_;
 };
 
 namespace {
@@ -69,7 +71,8 @@ AppMain::AppMain() :
     swapChainDesc_({}), swapChain_(nullptr),
     renderTarget_(nullptr), renderTargetView_(nullptr),
     device_(nullptr), deviceContext_(nullptr),
-    depthStencilBuffer_(nullptr), depthStencilView_(nullptr)
+    depthStencilBuffer_(nullptr), depthStencilView_(nullptr),
+    hMenuThread_(nullptr), hStatusIcon_(nullptr)
 {}
 
 AppMain::~AppMain() {
@@ -79,6 +82,7 @@ AppMain::~AppMain() {
 void AppMain::Setup(const CmdArgs& cmdArgs) {
     createWindow();
     createDrawable();
+    createStatusIcon();
     routine_.Init(cmdArgs);
 
     // FIXME: Remove title bar here, because doing this in createWindow()
@@ -105,11 +109,17 @@ void AppMain::Terminate() {
     hwnd_ = nullptr;
     UnregisterClassW(windowClassName_, GetModuleHandleW(nullptr));
 
+    if (hStatusIcon_) {
+        DestroyIcon(hStatusIcon_);
+        hStatusIcon_ = nullptr;
+    }
+
     DWORD exitCode;
     if (GetExitCodeThread(hMenuThread_, &exitCode) &&
             exitCode == STILL_ACTIVE) {
         Info::Log("Thread is still running. Wait finishing.");
         WaitForSingleObject(hMenuThread_, INFINITE);
+        CloseHandle(hMenuThread_);
     }
 }
 
@@ -269,6 +279,18 @@ void AppMain::destroyDrawable() {
     safeRelease(&renderTargetView_);
     safeRelease(&depthStencilBuffer_);
     safeRelease(&depthStencilView_);
+}
+
+void AppMain::createStatusIcon() {
+    auto iconData = Resource::getStatusIconData();
+    hStatusIcon_ = CreateIconFromResource(
+            const_cast<PBYTE>(iconData.data()),
+            iconData.length(),
+            TRUE,
+            0x00030000);
+    if (!hStatusIcon_) {
+        Err::Log("Failed to load icon.");
+    }
 }
 
 DWORD WINAPI AppMain::showMenu(LPVOID param) {

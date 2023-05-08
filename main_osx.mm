@@ -9,9 +9,6 @@
 #define SOKOL_METAL
 #include "sokol_gfx.h"
 
-#define INCBIN_PREFIX _
-#include "incbin.h"
-
 #include "yommd.hpp"
 
 @interface AppDelegate: NSObject<NSApplicationDelegate>
@@ -47,10 +44,6 @@ AppMain *appMain;
 }
 const void *getSokolDrawable(void);
 const void *getSokolRenderpassDescriptor(void);
-}
-
-extern "C" {
-INCBIN(StatusIcon, "icons/statusicon.png");
 }
 
 @implementation AppDelegate
@@ -169,8 +162,10 @@ INCBIN(StatusIcon, "icons/statusicon.png");
     [[view layer] setOpaque:NO];  // Make transparent
 }
 -(void)createStatusItem {
-    NSData *iconData = [NSData dataWithBytes:_StatusIconData length:_StatusIconSize];
-    NSImage *icon = [[NSImage alloc] initWithData:iconData];
+    const auto iconData = Resource::getStatusIconData();
+    NSData *nsIconData = [NSData dataWithBytes:iconData.data()
+                                        length:iconData.length()];
+    NSImage *icon = [[NSImage alloc] initWithData:nsIconData];
     statusItem =
         [[NSStatusBar systemStatusBar] statusItemWithLength:NSSquareStatusItemLength];
     [statusItem.button setImage:icon];

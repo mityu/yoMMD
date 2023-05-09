@@ -161,11 +161,13 @@ void Routine::Init(const CmdArgs& args) {
     std::vector<const fs::path *> motionPaths;
     const Config config = Config::Parse(args.configFile);
     for (const auto& motion : config.motions) {
-        if (motion.enabled) {
+        if (!motion.disabled) {
             motionPaths.push_back(&motion.path);
             motionWeights.push_back(motion.weight);
         }
     }
+    defaultCamera_.eye = config.defaultCameraPosition;
+    defaultCamera_.center = config.defaultGazePosition;
     mmd.Load(config.model, motionPaths, resourcePath);
 
     sg_desc desc = {
@@ -199,7 +201,7 @@ void Routine::Init(const CmdArgs& args) {
     physics->SetMaxSubStepCount(INT_MAX);
     physics->SetFPS(config.simulationFPS);
 
-    userViewport_.SetDefaultTranslation(config.defaultPosition);
+    userViewport_.SetDefaultTranslation(config.defaultModelPosition);
     userViewport_.SetDefaultScaling(config.defaultScale);
 
     selectNextMotion();
@@ -392,7 +394,10 @@ void Routine::Update() {
         cameraAnimation->Evaluate(vmdFrame);
         const auto& mmdCamera = cameraAnimation->GetCamera();
         saba::MMDLookAtCamera lookAtCamera(mmdCamera);
-        viewMatrix = glm::lookAt(lookAtCamera.m_eye, lookAtCamera.m_center, lookAtCamera.m_up);
+        viewMatrix = glm::lookAt(
+                lookAtCamera.m_eye,
+                lookAtCamera.m_center,
+                lookAtCamera.m_up);
         projectionMatrix = glm::perspectiveFovRH(
                 mmdCamera.m_fov,
                 static_cast<float>(size.x),
@@ -400,7 +405,10 @@ void Routine::Update() {
                 1.0f,
                 10000.0f);
     } else {
-        viewMatrix = glm::lookAt(glm::vec3(0, 10, 50), glm::vec3(0, 10, 0), glm::vec3(0, 1, 0));
+        viewMatrix = glm::lookAt(
+                defaultCamera_.eye,
+                defaultCamera_.center,
+                glm::vec3(0, 1, 0));
         projectionMatrix = glm::perspectiveFovRH(
                 glm::radians(30.0f),
                 static_cast<float>(size.x),

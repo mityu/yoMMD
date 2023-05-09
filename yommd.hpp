@@ -122,8 +122,10 @@ struct Config {
     std::vector<Motion> motions;
     float simulationFPS;
     float gravity;
-    glm::vec2 defaultPosition;
+    glm::vec2 defaultModelPosition;
     float defaultScale;
+    glm::vec3 defaultCameraPosition;
+    glm::vec3 defaultGazePosition;
 
     static Config Parse(const std::filesystem::path& configFile);
 };
@@ -239,6 +241,10 @@ private:
     std::optional<sg_image> getTexture(const std::string& path);
     std::optional<sg_image> getToonTexture(const std::string& path);
 private:
+    struct Camera {
+        glm::vec3 eye;
+        glm::vec3 center;
+    };
     UserViewport userViewport_;
 
     bool shouldTerminate;
@@ -264,6 +270,8 @@ private:
     std::map<std::string, sg_image> textures;  // For "texture" and "spTexture".
     std::map<std::string, sg_image> toonTextures;
     std::vector<Material> materials;
+
+    Camera defaultCamera_;
 
     // Timers for animation.
     uint64_t timeBeginAnimation;

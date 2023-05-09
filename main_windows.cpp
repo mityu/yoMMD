@@ -294,8 +294,11 @@ void AppMain::createTaskbar() {
             TRUE,
             0x00030000);
     if (!hTaskbarIcon_) {
-        Err::Exit("Failed to load icon.");
-        // TODO: Fallback
+        Err::Log("Failed to load icon. Fallback to Windows' default application icon.");
+        hTaskbarIcon_ = LoadIconA(nullptr, IDI_APPLICATION);
+        if (!hTaskbarIcon_) {
+            Err::Exit("Icon fallback failed.");
+        }
     }
 
     taskbarIconDesc_.cbSize = sizeof(taskbarIconDesc_);

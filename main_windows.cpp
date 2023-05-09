@@ -186,16 +186,18 @@ void AppMain::createWindow() {
     SystemParametersInfoW(SPI_GETWORKAREA, 0, &rect, 0);
 
 
-    WNDCLASSW wc = {};
+    WNDCLASSEXW wc = {};
 
-    wc.style         = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+    wc.cbSize        = sizeof(wc);
+    wc.style         = 0;
     wc.lpfnWndProc   = windowProc,
     wc.hInstance     = hInstance;
     wc.lpszClassName = windowClassName_;
     wc.hIcon         = appIcon;
+    wc.hIconSm       = appIcon;
     wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
 
-    RegisterClassW(&wc);
+    RegisterClassExW(&wc);
 
     hwnd_ = CreateWindowExW(
         winExStyle, windowClassName_, L"yoMMD", winStyle,

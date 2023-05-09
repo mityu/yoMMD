@@ -22,12 +22,12 @@ Config Config::Parse(const std::filesystem::path& configFile) {
 
         const toml::array motions = toml::find_or(entire, "motion", toml::array());
         for (const auto& motion : motions) {
-            bool enabled = toml::find_or(motion, "enabled", true);
+            bool disabled = toml::find_or(motion, "disabled", false);
             auto weight = toml::find_or<decltype(Motion::weight)>(motion, "weight", 1);
             auto path = fs::path(String::tou8(toml::find<std::string>(motion, "path")));
             Yommd::makeAbsolute(path, configDir);
             config.motions.push_back(Motion{
-                .enabled = enabled,
+                .disabled = disabled,
                 .weight = weight,
                 .path = path,
             });

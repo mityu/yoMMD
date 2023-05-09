@@ -112,7 +112,7 @@ struct Config {
     using Path = std::filesystem::path;
 
     struct Motion {
-        bool enabled;
+        bool disabled;
         unsigned int weight;
         Path path;
     };

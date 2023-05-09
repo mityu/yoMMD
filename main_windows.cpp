@@ -1,4 +1,4 @@
-#define WINVER 0x0602
+#define WINVER 0x0602  // Make WS_EX_NOREDIRECTIONBITMAP available
 #include <string>
 #include <vector>
 #include <string_view>
@@ -120,6 +120,8 @@ void AppMain::Terminate() {
     if (GetExitCodeThread(hMenuThread_, &exitCode) &&
             exitCode == STILL_ACTIVE) {
         Info::Log("Thread is still running. Wait finishing.");
+        // Right click menu/toolbar menu must not appear so long.
+        // We should be able to wait for it is closed.
         WaitForSingleObject(hMenuThread_, INFINITE);
         CloseHandle(hMenuThread_);
     }
@@ -134,7 +136,8 @@ sg_context_desc AppMain::GetSokolContext() const {
         .sample_count = Constant::SampleCount,
         .d3d11 = {
             .device = reinterpret_cast<const void *>(d3Device_.Get()),
-            .device_context = reinterpret_cast<const void *>(deviceContext_.Get()),
+            .device_context = reinterpret_cast<const void *>(
+                    deviceContext_.Get()),
             .render_target_view_cb = getRenderTargetView,
             .depth_stencil_view_cb = getDepthStencilView,
         }
@@ -145,7 +148,7 @@ glm::vec2 AppMain::GetWindowSize() const {
     RECT rect;
     if (!GetClientRect(hwnd_, &rect)) {
         Err::Log("Failed to get window rect");
-        return glm::vec2();
+        return glm::vec2(1.0f, 1.0f);  // glm::vec2(0, 0) cause error.
     }
     return glm::vec2(rect.right - rect.left, rect.bottom - rect.top);
 }
@@ -229,7 +232,7 @@ void AppMain::createDrawable() {
             D3D_DRIVER_TYPE_HARDWARE,
             nullptr,
             createFlags,
-            nullptr, 0, // Highest available feature level
+            nullptr, 0, // Use highest available feature level
             D3D11_SDK_VERSION,
             d3Device_.GetAddressOf(),
             nullptr,

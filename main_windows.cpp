@@ -519,8 +519,8 @@ glm::vec2 getMousePosition() {
     POINT pos;
     if (!GetCursorPos(&pos))
         return glm::vec2();
-    glm::vec2 size(getWindowSize());
-    return glm::vec2(pos.x, size.y - pos.y);  // Make origin bottom-left.
+    int sizeY = GetSystemMetrics(SM_CYSCREEN);
+    return glm::vec2(pos.x, sizeY - pos.y);  // Make origin bottom-left.
 }
 }
 

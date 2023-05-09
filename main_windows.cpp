@@ -92,7 +92,7 @@ void AppMain::Setup(const CmdArgs& cmdArgs) {
     // cause crash. (Somehow GetWindowSize() is called but it returns
     // glm::vec2{0, 0} and it misses assersion done in glm library.)
     SetWindowLongW(hwnd_, GWL_STYLE, WS_POPUP);
-    SetWindowPos(hwnd_, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED ) ;
+    SetWindowPos(hwnd_, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED) ;
     ShowWindow(hwnd_, SW_SHOWMAXIMIZED);
 }
 
@@ -168,8 +168,8 @@ const ID3D11DepthStencilView *AppMain::GetDepthStencilView() const {
 }
 
 void AppMain::createWindow() {
-    DWORD winStyle = WS_OVERLAPPEDWINDOW | WS_MAXIMIZE;
-    DWORD winExStyle = WS_EX_LAYERED | /* WS_EX_TRANSPARENT |*/ WS_EX_TOPMOST;
+    constexpr DWORD winStyle = WS_OVERLAPPEDWINDOW | WS_MAXIMIZE;
+    constexpr DWORD winExStyle = WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST;
     LONG width = CW_USEDEFAULT;
     LONG height = CW_USEDEFAULT;
 
@@ -197,7 +197,6 @@ void AppMain::createWindow() {
 
     // NOTE: Don't call ShowWindow() here.  It's called later.
 
-    SetWindowLongW(hwnd_, GWL_EXSTYLE, winExStyle);
     SetLayeredWindowAttributes(hwnd_, RGB(0, 0, 0), 255, LWA_ALPHA | LWA_COLORKEY);
 }
 

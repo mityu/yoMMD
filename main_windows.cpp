@@ -172,13 +172,19 @@ void AppMain::createWindow() {
     constexpr DWORD winExStyle =
         WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_NOACTIVATE;
 
+    const HINSTANCE hInstance = GetModuleHandleW(nullptr);
+    const HICON appIcon = LoadIconW(hInstance, L"YOMMD_APPICON_ID");
+    if (!appIcon) {
+        Err::Log("Failed to load application icon.");
+    }
+
     WNDCLASSW wc = {};
 
     wc.style         = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
     wc.lpfnWndProc   = windowProc,
-    wc.hInstance     = GetModuleHandleW(nullptr);
+    wc.hInstance     = hInstance;
     wc.lpszClassName = windowClassName_;
-    wc.hIcon         = LoadIcon(nullptr, IDI_WINLOGO);
+    wc.hIcon         = appIcon;
     wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
 
     RegisterClassW(&wc);

@@ -19,7 +19,7 @@ PKGNAME_PLATFORM:=
 ifeq ($(OS),Windows_NT)
 TARGET:=$(TARGET).exe
 TARGET_DEBUG:=$(TARGET_DEBUG).exe
-SRC+=main_windows.cpp
+SRC+=main_windows.cpp appicon_windows.rc
 CFLAGS+=-I/mingw64/include/bullet -Wno-missing-field-initializers
 LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi
 SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/win32/sokol-shdc.exe
@@ -76,6 +76,9 @@ $(OBJDIR)/%.m.o: %.m yommd.hpp
 
 $(OBJDIR)/%.mm.o: %.mm yommd.hpp
 	$(CXX) -o $@ $(CPPFLAGS) $(OBJCFLAGS) $(CFLAGS) -c $<
+
+$(OBJDIR)/%.rc.o: %.rc
+	windres -o $@ $^
 
 yommd.glsl.h: yommd.glsl $(SOKOL_SHDC)
 	$(SOKOL_SHDC) --input $< --output $@ --slang metal_macos:hlsl5

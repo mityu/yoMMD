@@ -24,7 +24,4 @@ statusicon.png: statusicon-base.png
 yoMMD.ico: yoMMD.png
 	convert -define icon:auto-resize $< $@
 
-statusicon.ico: statusicon-base.png
-	convert -filter point -define icon:auto-resize $< $@
-
 .PHONY: all

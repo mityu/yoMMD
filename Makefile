@@ -43,7 +43,7 @@ $(TARGET): $(OBJDIR) yommd.glsl.h $(OBJ)
 ifeq ($(OS),Windows_NT)
 release:
 	@[ -f "$(TARGET)" ] && rm $(TARGET)
-	@$(MAKE) CFLAGS="$(CFLAGS) -mwindows"
+	@$(MAKE) LDFLAGS="$(LDFLAGS) -mwindows"
 
 may-create-release-build:
 	@(read -p "Make release build? [Y/n] " yn && [ $${yn:-N} = y ]) \

@@ -169,9 +169,8 @@ const ID3D11DepthStencilView *AppMain::GetDepthStencilView() const {
 
 void AppMain::createWindow() {
     constexpr DWORD winStyle = WS_OVERLAPPEDWINDOW | WS_MAXIMIZE;
-    constexpr DWORD winExStyle = WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST;
-    LONG width = CW_USEDEFAULT;
-    LONG height = CW_USEDEFAULT;
+    constexpr DWORD winExStyle =
+        WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_NOACTIVATE;
 
     WNDCLASSW wc = {};
 
@@ -187,7 +186,7 @@ void AppMain::createWindow() {
     hwnd_ = CreateWindowExW(
         winExStyle, windowClassName_, L"yoMMD", winStyle,
         CW_USEDEFAULT, CW_USEDEFAULT,
-        width, height,
+        CW_USEDEFAULT, CW_USEDEFAULT,
         nullptr, nullptr,
         GetModuleHandleW(nullptr), this);
 

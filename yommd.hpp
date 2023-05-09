@@ -190,9 +190,9 @@ public:
     const std::vector<std::unique_ptr<saba::VMDAnimation>>& GetAnimations() const;
     const std::unique_ptr<saba::VMDCameraAnimation>& GetCameraAnimation() const;
 private:
-    std::shared_ptr<saba::MMDModel> model;
-    std::vector<std::unique_ptr<saba::VMDAnimation>> animations;
-    std::unique_ptr<saba::VMDCameraAnimation> cameraAnimation;
+    std::shared_ptr<saba::MMDModel> model_;
+    std::vector<std::unique_ptr<saba::VMDAnimation>> animations_;
+    std::unique_ptr<saba::VMDCameraAnimation> cameraAnimation_;
 };
 
 class UserViewport {
@@ -247,42 +247,42 @@ private:
     };
     UserViewport userViewport_;
 
-    bool shouldTerminate;
+    bool shouldTerminate_;
 
-    const sg_pass_action passAction;
-    sg_shader shaderMMD;
+    const sg_pass_action passAction_;
+    sg_shader shaderMMD_;
 
-    std::vector<uint32_t> induces;
-    sg_buffer posVB;  // VB stands for vertex buffer
-    sg_buffer normVB;
-    sg_buffer uvVB;
-    sg_buffer ibo;
-    sg_pipeline pipeline_frontface;
-    sg_pipeline pipeline_bothface;
-    sg_bindings binds;
+    std::vector<uint32_t> induces_;
+    sg_buffer posVB_;  // VB stands for vertex buffer
+    sg_buffer normVB_;
+    sg_buffer uvVB_;
+    sg_buffer ibo_;
+    sg_pipeline pipeline_frontface_;
+    sg_pipeline pipeline_bothface_;
+    sg_bindings binds_;
 
-    glm::mat4 viewMatrix;
-    glm::mat4 projectionMatrix;
-    MMD mmd;
+    glm::mat4 viewMatrix_;
+    glm::mat4 projectionMatrix_;
+    MMD mmd_;
 
-    sg_image dummyTex;
-    ImageMap texImages;
-    std::map<std::string, sg_image> textures;  // For "texture" and "spTexture".
-    std::map<std::string, sg_image> toonTextures;
-    std::vector<Material> materials;
+    sg_image dummyTex_;
+    ImageMap texImages_;
+    std::map<std::string, sg_image> textures_;  // For "texture" and "spTexture".
+    std::map<std::string, sg_image> toonTextures_;
+    std::vector<Material> materials_;
 
     Camera defaultCamera_;
 
     // Timers for animation.
-    uint64_t timeBeginAnimation;
-    uint64_t timeLastFrame;
+    uint64_t timeBeginAnimation_;
+    uint64_t timeLastFrame_;
 
-    size_t motionID;
-    bool needBridgeMotions;
-    std::vector<unsigned int> motionWeights;
+    size_t motionID_;
+    bool needBridgeMotions_;
+    std::vector<unsigned int> motionWeights_;
 
-    std::mt19937 rand;
-    std::uniform_int_distribution<size_t> randDist;
+    std::mt19937 rand_;
+    std::uniform_int_distribution<size_t> randDist_;
 };
 
 #endif  // YOMMD_HPP_

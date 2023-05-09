@@ -39,22 +39,22 @@ void MMD::Load(
         if (!pmx->Load(modelPath.string(), resourcePath.string())) {
             Err::Exit("Failed to load PMX:", modelPath);
         }
-        model = std::move(pmx);
+        model_ = std::move(pmx);
     } else if (ext == ".pmd") {
         auto pmd = std::make_unique<saba::PMDModel>();
         if (!pmd->Load(modelPath.string(), resourcePath.string())) {
             Err::Exit("Failed to load PMD:", modelPath);
         }
-        model = std::move(pmd);
+        model_ = std::move(pmd);
     } else {
         Err::Exit("Unsupported MMD file:", modelPath);
     }
 
-    model->InitializeAnimation();
+    model_->InitializeAnimation();
 
     for (const auto& motionPath : motionPaths) {
         auto vmdAnim = std::make_unique<saba::VMDAnimation>();
-        if (!vmdAnim->Create(model)) {
+        if (!vmdAnim->Create(model_)) {
             Err::Exit("Failed to create VMDAnimation:", motionPath);
         }
         saba::VMDFile vmdFile;
@@ -66,29 +66,29 @@ void MMD::Load(
         }
 
         if (!vmdFile.m_cameras.empty()) {
-            cameraAnimation = std::make_unique<saba::VMDCameraAnimation>();
-            if (!cameraAnimation->Create(vmdFile))
+            cameraAnimation_ = std::make_unique<saba::VMDCameraAnimation>();
+            if (!cameraAnimation_->Create(vmdFile))
                 Err::Log("Failed to create VMDCameraAnimation:", motionPath);
         }
 
-        animations.push_back(std::move(vmdAnim));
+        animations_.push_back(std::move(vmdAnim));
     }
 }
 
 bool MMD::IsLoaded() const {
-    return static_cast<bool>(model);
+    return static_cast<bool>(model_);
 }
 
 const std::shared_ptr<saba::MMDModel> MMD::GetModel() const {
-    return model;
+    return model_;
 }
 
 const std::vector<std::unique_ptr<saba::VMDAnimation>>& MMD::GetAnimations() const {
-    return animations;
+    return animations_;
 }
 
 const std::unique_ptr<saba::VMDCameraAnimation>& MMD::GetCameraAnimation() const {
-    return cameraAnimation;
+    return cameraAnimation_;
 }
 
 UserViewport::UserViewport() :
@@ -144,10 +144,10 @@ void UserViewport::ResetPosition() {
 }
 
 Routine::Routine() :
-    passAction({.colors = {{.action = SG_ACTION_CLEAR, .value = {0, 0, 0, 0}}}}),
-    binds({}),
-    timeBeginAnimation(0), timeLastFrame(0), motionID(0), needBridgeMotions(false),
-    rand(static_cast<int>(std::time(nullptr)))
+    passAction_({.colors = {{.action = SG_ACTION_CLEAR, .value = {0, 0, 0, 0}}}}),
+    binds_({}),
+    timeBeginAnimation_(0), timeLastFrame_(0), motionID_(0), needBridgeMotions_(false),
+    rand_(static_cast<int>(std::time(nullptr)))
 {}
 
 Routine::~Routine() {
@@ -163,12 +163,12 @@ void Routine::Init(const CmdArgs& args) {
     for (const auto& motion : config.motions) {
         if (!motion.disabled) {
             motionPaths.push_back(&motion.path);
-            motionWeights.push_back(motion.weight);
+            motionWeights_.push_back(motion.weight);
         }
     }
     defaultCamera_.eye = config.defaultCameraPosition;
     defaultCamera_.center = config.defaultGazePosition;
-    mmd.Load(config.model, motionPaths, resourcePath);
+    mmd_.Load(config.model, motionPaths, resourcePath);
 
     sg_desc desc = {
         .logger = {
@@ -180,23 +180,23 @@ void Routine::Init(const CmdArgs& args) {
     stm_setup();
 
     const sg_backend backend = sg_query_backend();
-    shaderMMD = sg_make_shader(mmd_shader_desc(backend));
+    shaderMMD_ = sg_make_shader(mmd_shader_desc(backend));
 
     initBuffers();
     initTextures();
     initPipeline();
 
-    binds.index_buffer = ibo;
-    binds.vertex_buffers[ATTR_mmd_vs_in_Pos] = posVB;
-    binds.vertex_buffers[ATTR_mmd_vs_in_Nor] = normVB;
-    binds.vertex_buffers[ATTR_mmd_vs_in_UV] = uvVB;
+    binds_.index_buffer = ibo_;
+    binds_.vertex_buffers[ATTR_mmd_vs_in_Pos] = posVB_;
+    binds_.vertex_buffers[ATTR_mmd_vs_in_Nor] = normVB_;
+    binds_.vertex_buffers[ATTR_mmd_vs_in_UV] = uvVB_;
 
-    const auto distSup = std::reduce(motionWeights.cbegin(), motionWeights.cend(), 0u);
-    if (!motionWeights.empty() && distSup == 0)
+    const auto distSup = std::reduce(motionWeights_.cbegin(), motionWeights_.cend(), 0u);
+    if (!motionWeights_.empty() && distSup == 0)
         Err::Exit("Sum of motion weights is 0.");
-    randDist.param(decltype(randDist)::param_type(0, distSup - 1));
+    randDist_.param(decltype(randDist_)::param_type(0, distSup - 1));
 
-    auto physics = mmd.GetModel()->GetMMDPhysics();
+    auto physics = mmd_.GetModel()->GetMMDPhysics();
     physics->GetDynamicsWorld()->setGravity(btVector3(0, -config.gravity * 5.0f, 0));
     physics->SetMaxSubStepCount(INT_MAX);
     physics->SetFPS(config.simulationFPS);
@@ -205,27 +205,27 @@ void Routine::Init(const CmdArgs& args) {
     userViewport_.SetDefaultScaling(config.defaultScale);
 
     selectNextMotion();
-    needBridgeMotions = false;
-    timeBeginAnimation = timeLastFrame = stm_now();
-    shouldTerminate = true;
+    needBridgeMotions_ = false;
+    timeBeginAnimation_ = timeLastFrame_ = stm_now();
+    shouldTerminate_ = true;
 }
 
 void Routine::initBuffers() {
-    const auto model = mmd.GetModel();
+    const auto model = mmd_.GetModel();
     const size_t vertCount = model->GetVertexCount();
     const size_t indexSize = model->GetIndexElementSize();
 
-    posVB = sg_make_buffer(sg_buffer_desc{
+    posVB_ = sg_make_buffer(sg_buffer_desc{
                 .size = vertCount * sizeof(glm::vec3),
                 .type = SG_BUFFERTYPE_VERTEXBUFFER,
                 .usage = SG_USAGE_DYNAMIC,
             });
-    normVB = sg_make_buffer(sg_buffer_desc{
+    normVB_ = sg_make_buffer(sg_buffer_desc{
                 .size = vertCount * sizeof(glm::vec3),
                 .type = SG_BUFFERTYPE_VERTEXBUFFER,
                 .usage = SG_USAGE_DYNAMIC,
             });
-    uvVB = sg_make_buffer(sg_buffer_desc{
+    uvVB_ = sg_make_buffer(sg_buffer_desc{
                 .size = vertCount * sizeof(glm::vec2),
                 .type = SG_BUFFERTYPE_VERTEXBUFFER,
                 .usage = SG_USAGE_DYNAMIC,
@@ -238,7 +238,7 @@ void Routine::initBuffers() {
         for (size_t i = 0; i < subMeshCount; ++i) {
             const auto subMesth = model->GetSubMeshes()[i];
             for (int j = 0; j < subMesth.m_vertexCount; ++j)
-                induces.push_back(
+                induces_.push_back(
                         static_cast<uint32_t>(mmdInduces[subMesth.m_beginIndex + j]));
         }
     };
@@ -256,12 +256,12 @@ void Routine::initBuffers() {
         Err::Exit("Maybe MMD data is broken: indexSize:", indexSize);
     }
 
-    ibo = sg_make_buffer(sg_buffer_desc{
+    ibo_ = sg_make_buffer(sg_buffer_desc{
                 .type = SG_BUFFERTYPE_INDEXBUFFER,
                 .usage = SG_USAGE_IMMUTABLE,
                 .data = {
-                    .ptr = induces.data(),
-                    .size = induces.size() * sizeof(uint32_t),
+                    .ptr = induces_.data(),
+                    .size = induces_.size() * sizeof(uint32_t),
                 },
             });
 }
@@ -269,7 +269,7 @@ void Routine::initBuffers() {
 void Routine::initTextures() {
     static constexpr uint8_t dummyPixel[4] = {0, 0, 0, 0};
 
-    dummyTex = sg_make_image(sg_image_desc{
+    dummyTex_ = sg_make_image(sg_image_desc{
         .width = 1,
         .height = 1,
         .data = {
@@ -277,7 +277,7 @@ void Routine::initTextures() {
         },
     });
 
-    const auto& model = mmd.GetModel();
+    const auto& model = mmd_.GetModel();
     const size_t subMeshCount = model->GetSubMeshCount();
     for (size_t i = 0; i < subMeshCount; ++i) {
         const auto& mmdMaterial = model->GetMaterials()[i];
@@ -285,7 +285,7 @@ void Routine::initTextures() {
         if (!mmdMaterial.m_texture.empty()) {
             material.texture = getTexture(mmdMaterial.m_texture);
             if (material.texture) {
-                material.textureHasAlpha = texImages[mmdMaterial.m_texture].hasAlpha;
+                material.textureHasAlpha = texImages_[mmdMaterial.m_texture].hasAlpha;
             }
         }
         if (!mmdMaterial.m_spTexture.empty()) {
@@ -294,7 +294,7 @@ void Routine::initTextures() {
         if (!mmdMaterial.m_toonTexture.empty()) {
             material.toonTexture = getToonTexture(mmdMaterial.m_toonTexture);
         }
-        materials.push_back(std::move(material));
+        materials_.push_back(std::move(material));
     }
 }
 
@@ -324,7 +324,7 @@ void Routine::initPipeline() {
     };
 
     sg_pipeline_desc pipeline_desc = {
-        .shader = shaderMMD,
+        .shader = shaderMMD_,
         .depth = {
             .compare = SG_COMPAREFUNC_LESS_EQUAL,  // FIXME: SG_COMPAREFUNC_LESS?
             .write_enabled = true,
@@ -357,59 +357,59 @@ void Routine::initPipeline() {
     pipeline_desc.layout.attrs[ATTR_mmd_vs_in_Nor] = layout_desc.attrs[ATTR_mmd_vs_in_Nor];
     pipeline_desc.layout.attrs[ATTR_mmd_vs_in_UV] = layout_desc.attrs[ATTR_mmd_vs_in_UV];
 
-    pipeline_frontface = sg_make_pipeline(&pipeline_desc);
+    pipeline_frontface_ = sg_make_pipeline(&pipeline_desc);
 
     pipeline_desc.cull_mode = SG_CULLMODE_NONE;
-    pipeline_bothface = sg_make_pipeline(&pipeline_desc);
+    pipeline_bothface_ = sg_make_pipeline(&pipeline_desc);
 }
 
 void Routine::selectNextMotion() {
     // Select next MMD motion by weighted rate.
-    if (motionWeights.empty())
+    if (motionWeights_.empty())
         return;
 
-    unsigned int rnd = randDist(rand);
+    unsigned int rnd = randDist_(rand_);
     unsigned int sum = 0;
-    const auto motionCount = motionWeights.size();
-    motionID = motionCount - 1;
+    const auto motionCount = motionWeights_.size();
+    motionID_ = motionCount - 1;
     for (size_t i = 0; i < motionCount; ++i) {
-        sum += motionWeights[i];
+        sum += motionWeights_[i];
         if (sum >= rnd) {
-            motionID = i;
+            motionID_ = i;
             break;
         }
     }
-    if (motionID >= motionCount)
+    if (motionID_ >= motionCount)
         Err::Exit("Internal error: unreachable:", __FILE__ ":", __LINE__, ':', __func__);
 }
 
 void Routine::Update() {
     const auto size{Context::getWindowSize()};
-    const auto model = mmd.GetModel();
+    const auto model = mmd_.GetModel();
     const size_t vertCount = model->GetVertexCount();
-    const double vmdFrame = stm_sec(stm_since(timeBeginAnimation)) * Constant::VmdFPS;
-    const double elapsedTime = stm_sec(stm_since(timeLastFrame));
+    const double vmdFrame = stm_sec(stm_since(timeBeginAnimation_)) * Constant::VmdFPS;
+    const double elapsedTime = stm_sec(stm_since(timeLastFrame_));
 
-    if (auto& cameraAnimation = mmd.GetCameraAnimation(); cameraAnimation) {
+    if (auto& cameraAnimation = mmd_.GetCameraAnimation(); cameraAnimation) {
         cameraAnimation->Evaluate(vmdFrame);
         const auto& mmdCamera = cameraAnimation->GetCamera();
         saba::MMDLookAtCamera lookAtCamera(mmdCamera);
-        viewMatrix = glm::lookAt(
+        viewMatrix_ = glm::lookAt(
                 lookAtCamera.m_eye,
                 lookAtCamera.m_center,
                 lookAtCamera.m_up);
-        projectionMatrix = glm::perspectiveFovRH(
+        projectionMatrix_ = glm::perspectiveFovRH(
                 mmdCamera.m_fov,
                 static_cast<float>(size.x),
                 static_cast<float>(size.y),
                 1.0f,
                 10000.0f);
     } else {
-        viewMatrix = glm::lookAt(
+        viewMatrix_ = glm::lookAt(
                 defaultCamera_.eye,
                 defaultCamera_.center,
                 glm::vec3(0, 1, 0));
-        projectionMatrix = glm::perspectiveFovRH(
+        projectionMatrix_ = glm::perspectiveFovRH(
                 glm::radians(30.0f),
                 static_cast<float>(size.x),
                 static_cast<float>(size.y),
@@ -417,19 +417,19 @@ void Routine::Update() {
                 10000.0f);
     }
 
-    auto& animations = mmd.GetAnimations();
+    auto& animations = mmd_.GetAnimations();
     if (!animations.empty()) {
-        auto& animation = animations[motionID];
+        auto& animation = animations[motionID_];
         model->BeginAnimation();
-        if (needBridgeMotions) {
-            animation->Evaluate(0.0f, stm_sec(stm_since(timeBeginAnimation)));
+        if (needBridgeMotions_) {
+            animation->Evaluate(0.0f, stm_sec(stm_since(timeBeginAnimation_)));
             model->UpdateMorphAnimation();
             model->UpdateNodeAnimation(false);
             model->UpdatePhysicsAnimation(elapsedTime);
             model->UpdateNodeAnimation(true);
             if (vmdFrame >= Constant::VmdFPS) {
-                needBridgeMotions = false;
-                timeBeginAnimation = stm_now();
+                needBridgeMotions_ = false;
+                timeBeginAnimation_ = stm_now();
             }
         } else {
             model->UpdateAllAnimation(animation.get(), vmdFrame, elapsedTime);
@@ -438,26 +438,26 @@ void Routine::Update() {
     }
     model->Update();
 
-    sg_update_buffer(posVB, sg_range{
+    sg_update_buffer(posVB_, sg_range{
                 .ptr = model->GetUpdatePositions(),
                 .size = vertCount * sizeof(glm::vec3),
             });
-    sg_update_buffer(normVB, sg_range{
+    sg_update_buffer(normVB_, sg_range{
                 .ptr = model->GetUpdateNormals(),
                 .size = vertCount * sizeof(glm::vec3),
             });
-    sg_update_buffer(uvVB, sg_range{
+    sg_update_buffer(uvVB_, sg_range{
                 .ptr = model->GetUpdateUVs(),
                 .size = vertCount * sizeof(glm::vec2),
             });
 
     if (!animations.empty()) {
-        timeLastFrame = stm_now();
-        if (vmdFrame > animations[motionID]->GetMaxKeyTime()) {
+        timeLastFrame_ = stm_now();
+        if (vmdFrame > animations[motionID_]->GetMaxKeyTime()) {
             model->SaveBaseAnimation();
-            timeBeginAnimation = timeLastFrame;
+            timeBeginAnimation_ = timeLastFrame_;
             selectNextMotion();
-            needBridgeMotions = true;
+            needBridgeMotions_ = true;
         }
     }
 
@@ -466,7 +466,7 @@ void Routine::Update() {
 
 void Routine::Draw() {
     const auto size{Context::getWindowSize()};
-    const auto model = mmd.GetModel();
+    const auto model = mmd_.GetModel();
     // const auto& dxMat = glm::mat4(
     //     1.0f, 0.0f, 0.0f, 0.0f,
     //     0.0f, 1.0f, 0.0f, 0.0f,
@@ -476,25 +476,24 @@ void Routine::Draw() {
 
     auto userView = userViewport_.GetMatrix();
     auto world = glm::mat4(1.0f);
-    auto wv = userView * viewMatrix * world;
-    auto wvp = userView * projectionMatrix * viewMatrix * world;
+    auto wv = userView * viewMatrix_ * world;
+    auto wvp = userView * projectionMatrix_ * viewMatrix_ * world;
     // wvp = dxMat * wvp;
-    auto wvit = glm::mat3(userView * viewMatrix * world);
+    auto wvit = glm::mat3(userView * viewMatrix_ * world);
     wvit = glm::inverse(wvit);
     wvit = glm::transpose(wvit);
 
     auto lightColor = glm::vec3(1, 1, 1);
     auto lightDir = glm::vec3(-0.5f, -1.0f, -0.5f);
     // auto viewMat = glm::mat3(viewMatrix);
-    lightDir = glm::mat3(viewMatrix) * lightDir;
+    lightDir = glm::mat3(viewMatrix_) * lightDir;
 
-    sg_begin_default_pass(&passAction, size.x, size.y);
+    sg_begin_default_pass(&passAction_, size.x, size.y);
 
     const size_t subMeshCount = model->GetSubMeshCount();
     for (size_t i = 0; i < subMeshCount; ++i) {
         const auto& subMesh = model->GetSubMeshes()[i];
-        // const auto& shader = shaderMMD;
-        const auto & material = materials[subMesh.m_materialID];
+        const auto & material = materials_[subMesh.m_materialID];
         const auto& mmdMaterial = material.material;
 
         if (mmdMaterial.m_alpha == 0)
@@ -520,7 +519,7 @@ void Routine::Draw() {
 
 #if 1
         if (material.texture) {
-            binds.fs_images[SLOT_u_Tex_mmd] = *material.texture;
+            binds_.fs_images[SLOT_u_Tex_mmd] = *material.texture;
             if (material.textureHasAlpha) {
                 // Use Material Alpha * Texture Alpha
                 u_mmd_fs.u_TexMode = 2;
@@ -531,15 +530,15 @@ void Routine::Draw() {
             u_mmd_fs.u_TexMulFactor = mmdMaterial.m_textureMulFactor;
             u_mmd_fs.u_TexAddFactor = mmdMaterial.m_textureAddFactor;
         } else {
-            binds.fs_images[SLOT_u_Tex_mmd] = dummyTex;
+            binds_.fs_images[SLOT_u_Tex_mmd] = dummyTex_;
         }
 #else
-        binds.fs_images[SLOT_u_Tex_mmd] = dummyTex;
+        binds.fs_images[SLOT_u_Tex_mmd] = dummyTex_;
 #endif
 
 #if 1
         if (material.spTexture) {
-            binds.fs_images[SLOT_u_SphereTex] = *material.spTexture;
+            binds_.fs_images[SLOT_u_SphereTex] = *material.spTexture;
             switch (mmdMaterial.m_spTextureMode) {
             case saba::MMDMaterial::SphereTextureMode::Mul:
                 u_mmd_fs.u_SphereTexMode = 1;
@@ -553,30 +552,30 @@ void Routine::Draw() {
             u_mmd_fs.u_SphereTexMulFactor = mmdMaterial.m_spTextureMulFactor;
             u_mmd_fs.u_SphereTexAddFactor = mmdMaterial.m_spTextureAddFactor;
         } else {
-            binds.fs_images[SLOT_u_SphereTex] = dummyTex;
+            binds_.fs_images[SLOT_u_SphereTex] = dummyTex_;
         }
 #else
-        binds.fs_images[SLOT_u_SphereTex] = dummyTex;
+        binds.fs_images[SLOT_u_SphereTex] = dummyTex_;
 #endif
 
 #if 1
         if (material.toonTexture) {
-            binds.fs_images[SLOT_u_ToonTex] = *material.toonTexture;
+            binds_.fs_images[SLOT_u_ToonTex] = *material.toonTexture;
             u_mmd_fs.u_ToonTexMulFactor = mmdMaterial.m_toonTextureMulFactor;
             u_mmd_fs.u_ToonTexAddFactor = mmdMaterial.m_toonTextureAddFactor;
             u_mmd_fs.u_ToonTexMode = 1;
         } else {
-            binds.fs_images[SLOT_u_ToonTex] = dummyTex;
+            binds_.fs_images[SLOT_u_ToonTex] = dummyTex_;
         }
 #else
-        binds.fs_images[SLOT_u_ToonTex] = dummyTex;
+        binds.fs_images[SLOT_u_ToonTex] = dummyTex_;
 #endif
 
         if (mmdMaterial.m_bothFace)
-            sg_apply_pipeline(pipeline_bothface);
+            sg_apply_pipeline(pipeline_bothface_);
         else
-            sg_apply_pipeline(pipeline_frontface);
-        sg_apply_bindings(binds);
+            sg_apply_pipeline(pipeline_frontface_);
+        sg_apply_bindings(binds_);
         // TODO: Transput glBindTexutre
         sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_u_mmd_vs, SG_RANGE(u_mmd_vs));
         sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_u_mmd_fs, SG_RANGE(u_mmd_fs));
@@ -590,31 +589,31 @@ void Routine::Draw() {
 }
 
 void Routine::Terminate() {
-    if (!shouldTerminate)
+    if (!shouldTerminate_)
         return;
 
-    motionID = 0;
-    motionWeights.clear();
-    induces.clear();
-    texImages.clear();
-    textures.clear();
-    toonTextures.clear();
-    materials.clear();
+    motionID_ = 0;
+    motionWeights_.clear();
+    induces_.clear();
+    texImages_.clear();
+    textures_.clear();
+    toonTextures_.clear();
+    materials_.clear();
 
-    sg_destroy_shader(shaderMMD);
+    sg_destroy_shader(shaderMMD_);
 
-    sg_destroy_buffer(posVB);
-    sg_destroy_buffer(normVB);
-    sg_destroy_buffer(uvVB);
+    sg_destroy_buffer(posVB_);
+    sg_destroy_buffer(normVB_);
+    sg_destroy_buffer(uvVB_);
 
-    sg_destroy_image(dummyTex);
+    sg_destroy_image(dummyTex_);
 
-    sg_destroy_pipeline(pipeline_frontface);
-    sg_destroy_pipeline(pipeline_bothface);
+    sg_destroy_pipeline(pipeline_frontface_);
+    sg_destroy_pipeline(pipeline_bothface_);
 
     sg_shutdown();
 
-    shouldTerminate = false;
+    shouldTerminate_ = false;
 }
 
 void Routine::OnMouseDown() {
@@ -634,17 +633,17 @@ void Routine::ResetModelPosition() {
 }
 
 std::optional<Routine::ImageMap::const_iterator> Routine::loadImage(const std::string& path) {
-    auto itr = texImages.find(path);
-    if (itr == texImages.cend()) {
+    auto itr = texImages_.find(path);
+    if (itr == texImages_.cend()) {
         Image img;
         if (path.starts_with("<embedded-toons>")) {
             if (img.loadFromMemory(Resource::getToonData(path))) {
-                texImages.emplace(path, std::move(img));
-                return texImages.find(path);
+                texImages_.emplace(path, std::move(img));
+                return texImages_.find(path);
             }
         } else if (img.loadFromFile(path)) {
-            texImages.emplace(path, std::move(img));
-            return texImages.find(path);
+            texImages_.emplace(path, std::move(img));
+            return texImages_.find(path);
         }
         return std::nullopt;
     } else {

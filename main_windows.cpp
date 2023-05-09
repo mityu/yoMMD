@@ -1,14 +1,20 @@
+#define WINVER 0x0602
 #include <string>
 #include <vector>
 #include <string_view>
 #include <windows.h>
 #include <windowsx.h>
 #include <d3d11.h>
+#include <d3d11_2.h>
+#include <dcomp.h>
 #include <dxgi.h>
+#include <wrl.h>
 #include "sokol_gfx.h"
 #include "sokol_time.h"
 #include "glm/glm.hpp"
 #include "yommd.hpp"
+
+template <typename T> using ComPtr = Microsoft::WRL::ComPtr<T>;
 
 namespace {
 const void *getRenderTargetView();
@@ -35,11 +41,9 @@ private:
 
     void createWindow();
     void createDrawable();
-    void destroyDrawable();
     void createStatusIcon();
     void createTaskbar();
     LRESULT handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
-    template <typename T> void safeRelease(T **obj);
 private:
     static constexpr PCWSTR windowClassName_ = L"yoMMD AppMain";
     static constexpr UINT YOMMD_WM_TOGGLE_ENABLE_MOUSE = WM_APP;
@@ -48,14 +52,18 @@ private:
     bool isRunning_;
     Routine routine_;
     HWND hwnd_;
-    DXGI_SWAP_CHAIN_DESC swapChainDesc_;
-    IDXGISwapChain *swapChain_;
-    ID3D11Texture2D *renderTarget_;
-    ID3D11RenderTargetView *renderTargetView_;
-    ID3D11Device *device_;
-    ID3D11DeviceContext *deviceContext_;
-    ID3D11Texture2D *depthStencilBuffer_;
-    ID3D11DepthStencilView *depthStencilView_;
+    ComPtr<IDXGISwapChain1> swapChain_;
+    ComPtr<ID3D11Texture2D> renderTarget_;
+    ComPtr<ID3D11RenderTargetView> renderTargetView_;
+    ComPtr<ID3D11Device> d3Device_;
+    ComPtr<ID3D11DeviceContext> deviceContext_;
+    ComPtr<IDXGIDevice> dxgiDevice_;
+    ComPtr<IDXGIFactory2> dxFactory_;
+    ComPtr<ID3D11Texture2D> depthStencilBuffer_;
+    ComPtr<ID3D11DepthStencilView> depthStencilView_;
+    ComPtr<IDCompositionDevice> dcompDevice_;
+    ComPtr<IDCompositionTarget> dcompTarget_;
+    ComPtr<IDCompositionVisual> dcompVisual_;
 
     HANDLE hMenuThread_;
     HICON hTaskbarIcon_;
@@ -71,10 +79,6 @@ AppMain appMain;
 AppMain::AppMain() :
     isRunning_(true),
     hwnd_(nullptr),
-    swapChainDesc_({}), swapChain_(nullptr),
-    renderTarget_(nullptr), renderTargetView_(nullptr),
-    device_(nullptr), deviceContext_(nullptr),
-    depthStencilBuffer_(nullptr), depthStencilView_(nullptr),
     hMenuThread_(nullptr), hTaskbarIcon_(nullptr)
 {}
 
@@ -88,26 +92,19 @@ void AppMain::Setup(const CmdArgs& cmdArgs) {
     createTaskbar();
     routine_.Init(cmdArgs);
 
-    // FIXME: Remove title bar here, because doing this in createWindow()
-    // cause crash. (Somehow GetWindowSize() is called but it returns
-    // glm::vec2{0, 0} and it misses assersion done in glm library.)
-    SetWindowLongW(hwnd_, GWL_STYLE, WS_POPUP);
-    SetWindowPos(hwnd_, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED) ;
-    ShowWindow(hwnd_, SW_SHOWMAXIMIZED);
+    // Every initialization must be finished.  Now let's show window.
+    ShowWindow(hwnd_, SW_SHOWNORMAL);
 }
 
 void AppMain::UpdateDisplay() {
     routine_.Update();
     routine_.Draw();
     swapChain_->Present(1, 0);
+    dcompDevice_->Commit();
 }
 
 void AppMain::Terminate() {
     routine_.Terminate();
-    destroyDrawable();
-    safeRelease(&swapChain_);
-    safeRelease(&deviceContext_);
-    safeRelease(&device_);
     DestroyWindow(hwnd_);
     hwnd_ = nullptr;
     UnregisterClassW(windowClassName_, GetModuleHandleW(nullptr));
@@ -136,8 +133,8 @@ sg_context_desc AppMain::GetSokolContext() const {
     return sg_context_desc {
         .sample_count = Constant::SampleCount,
         .d3d11 = {
-            .device = reinterpret_cast<const void *>(device_),
-            .device_context = reinterpret_cast<const void *>(deviceContext_),
+            .device = reinterpret_cast<const void *>(d3Device_.Get()),
+            .device_context = reinterpret_cast<const void *>(deviceContext_.Get()),
             .render_target_view_cb = getRenderTargetView,
             .depth_stencil_view_cb = getDepthStencilView,
         }
@@ -160,23 +157,31 @@ glm::vec2 AppMain::GetDrawableSize() const {
 }
 
 const ID3D11RenderTargetView *AppMain::GetRenderTargetView() const {
-    return renderTargetView_;
+    return renderTargetView_.Get();
 }
 
 const ID3D11DepthStencilView *AppMain::GetDepthStencilView() const {
-    return depthStencilView_;
+    return depthStencilView_.Get();
 }
 
 void AppMain::createWindow() {
-    constexpr DWORD winStyle = WS_OVERLAPPEDWINDOW | WS_MAXIMIZE;
+    constexpr DWORD winStyle = WS_POPUP;
     constexpr DWORD winExStyle =
-        WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_NOACTIVATE;
+        WS_EX_NOREDIRECTIONBITMAP |
+        WS_EX_NOACTIVATE |
+        WS_EX_TOPMOST |
+        WS_EX_LAYERED |  // TODO: Is there another way?
+        WS_EX_TRANSPARENT;
 
     const HINSTANCE hInstance = GetModuleHandleW(nullptr);
     const HICON appIcon = LoadIconW(hInstance, L"YOMMD_APPICON_ID");
     if (!appIcon) {
         Err::Log("Failed to load application icon.");
     }
+
+    RECT rect = {};
+    SystemParametersInfoW(SPI_GETWORKAREA, 0, &rect, 0);
+
 
     WNDCLASSW wc = {};
 
@@ -191,103 +196,116 @@ void AppMain::createWindow() {
 
     hwnd_ = CreateWindowExW(
         winExStyle, windowClassName_, L"yoMMD", winStyle,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        CW_USEDEFAULT, CW_USEDEFAULT,
+        rect.left, rect.top,
+        rect.right - rect.left, rect.bottom - rect.top,
         nullptr, nullptr,
-        GetModuleHandleW(nullptr), this);
+        hInstance, this);
 
     if (!hwnd_)
         Err::Exit("Failed to create window.");
 
-
-    // NOTE: Don't call ShowWindow() here.  It's called later.
-
-    SetLayeredWindowAttributes(hwnd_, RGB(0, 0, 0), 255, LWA_ALPHA | LWA_COLORKEY);
+    // Don't call ShowWindow() here.  Postpone showing window until
+    // MMD model setup finished.
 }
 
 void AppMain::createDrawable() {
     if (!hwnd_) {
         Err::Exit("Internal error: createDrawable() must be called after createWindow()");
     }
-
-    glm::vec2 size(GetWindowSize());
-    Info::Log("size:", size.x, size.y);
-
-    swapChainDesc_ = DXGI_SWAP_CHAIN_DESC {
-        .BufferDesc = {
-            .Width = static_cast<UINT>(size.x),
-            .Height = static_cast<UINT>(size.y),
-            .RefreshRate = {
-                .Numerator = static_cast<UINT>(Constant::FPS),
-                .Denominator = 1,
-            },
-            .Format = DXGI_FORMAT_B8G8R8A8_UNORM,
-        },
-        .SampleDesc = {
-            .Count = static_cast<UINT>(Constant::SampleCount),
-            .Quality = static_cast<UINT>(D3D11_STANDARD_MULTISAMPLE_PATTERN),
-        },
-        .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
-        .BufferCount = 1,
-        .OutputWindow = hwnd_,
-        .Windowed = true,
-        .SwapEffect = DXGI_SWAP_EFFECT_DISCARD,
+    constexpr auto failif = [](HRESULT hr, auto&& ...errMsg) {
+        if (FAILED(hr))
+            Err::Exit(std::forward<decltype(errMsg)>(errMsg)...);
     };
+
+    HRESULT hr;
+
     UINT createFlags = D3D11_CREATE_DEVICE_SINGLETHREADED |
         D3D11_CREATE_DEVICE_BGRA_SUPPORT;
-    #ifdef _DEBUG
-        createFlags |= D3D11_CREATE_DEVICE_DEBUG;
-    #endif
-    D3D_FEATURE_LEVEL feature_level;
-    HRESULT hr = D3D11CreateDeviceAndSwapChain(
-        nullptr,                    // pAdapter (use default)
-        D3D_DRIVER_TYPE_HARDWARE,   // DriverType
-        nullptr,                    // Software
-        createFlags,                // Flags
-        nullptr,                    // pFeatureLevels
-        0,                          // FeatureLevels
-        D3D11_SDK_VERSION,          // SDKVersion
-        &swapChainDesc_,            // pSwapChainDesc
-        &swapChain_,                // ppSwapChain
-        &device_,                   // ppDevice
-        &feature_level,             // pFeatureLevel
-        &deviceContext_);           // ppImmediateContext
+#ifdef _DEBUG
+    createFlags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif
+    hr = D3D11CreateDevice(
+            nullptr,
+            D3D_DRIVER_TYPE_HARDWARE,
+            nullptr,
+            createFlags,
+            nullptr, 0, // Highest available feature level
+            D3D11_SDK_VERSION,
+            d3Device_.GetAddressOf(),
+            nullptr,
+            deviceContext_.GetAddressOf());
+    failif(hr, "Failed to create d3d11 device");
 
-    if (FAILED(hr))
-        Err::Exit("Failed to create device and swap chain.");
+    hr = d3Device_.As(&dxgiDevice_);
+    failif(hr, "device_.As() failed:", __FILE__, __LINE__);
 
-    swapChain_->GetBuffer(
-            0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&renderTarget_));
-    device_->CreateRenderTargetView(
-            reinterpret_cast<ID3D11Resource*>(renderTarget_), nullptr, &renderTargetView_);
+    hr = CreateDXGIFactory2(0, __uuidof(dxFactory_.Get()),
+            reinterpret_cast<void **>(dxFactory_.GetAddressOf()));
+    failif(hr, "Failed to create DXGIFactory2");
 
-    D3D11_TEXTURE2D_DESC ds_desc = {
+    glm::vec2 size(GetWindowSize());
+    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+    swapChainDesc.Width = static_cast<UINT>(size.x);
+    swapChainDesc.Height = static_cast<UINT>(size.y);
+    swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+    swapChainDesc.BufferCount = 2;
+    swapChainDesc.SampleDesc.Count = 1;
+    swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
+
+    hr = dxFactory_->CreateSwapChainForComposition(
+            dxgiDevice_.Get(), &swapChainDesc,
+            nullptr, swapChain_.GetAddressOf());
+    failif(hr, "Failed to create swap chain.");
+
+    hr = swapChain_->GetBuffer(0, __uuidof(renderTarget_.Get()),
+            reinterpret_cast<void **>(renderTarget_.GetAddressOf()));
+    failif(hr, "Failed to get buffer from swap chain.");
+
+    hr = d3Device_->CreateRenderTargetView(renderTarget_.Get(), nullptr,
+            renderTargetView_.GetAddressOf());
+    failif(hr, "Failed to get render target view.");
+
+    D3D11_TEXTURE2D_DESC stencilDesc = {
         .Width = static_cast<UINT>(size.x),
         .Height = static_cast<UINT>(size.y),
         .MipLevels = 1,
         .ArraySize = 1,
         .Format = DXGI_FORMAT_D24_UNORM_S8_UINT,
-        .SampleDesc = swapChainDesc_.SampleDesc,
+        .SampleDesc = swapChainDesc.SampleDesc,
         .Usage = D3D11_USAGE_DEFAULT,
         .BindFlags = D3D11_BIND_DEPTH_STENCIL,
     };
-    device_->CreateTexture2D(&ds_desc, nullptr, &depthStencilBuffer_);
+    hr = d3Device_->CreateTexture2D(
+            &stencilDesc, nullptr, depthStencilBuffer_.GetAddressOf());
+    failif(hr, "Failed to create depth stencil buffer.");
 
-    D3D11_DEPTH_STENCIL_VIEW_DESC dsv_desc = {
-        .Format = ds_desc.Format,
+    D3D11_DEPTH_STENCIL_VIEW_DESC stencilViewDesc = {
+        .Format = stencilDesc.Format,
         .ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS,
     };
-    device_->CreateDepthStencilView(
-            reinterpret_cast<ID3D11Resource*>(depthStencilBuffer_),
-            &dsv_desc,
-            &depthStencilView_);
-}
+    hr = d3Device_->CreateDepthStencilView(
+            reinterpret_cast<ID3D11Resource*>(depthStencilBuffer_.Get()),
+            &stencilViewDesc,
+            depthStencilView_.GetAddressOf());
+    failif(hr, "Failed to create depth stencil view.");
 
-void AppMain::destroyDrawable() {
-    safeRelease(&renderTarget_);
-    safeRelease(&renderTargetView_);
-    safeRelease(&depthStencilBuffer_);
-    safeRelease(&depthStencilView_);
+    hr = DCompositionCreateDevice(
+       dxgiDevice_.Get(),
+       __uuidof(dcompDevice_.Get()),
+       reinterpret_cast<void **>(dcompDevice_.GetAddressOf()));
+    failif(hr, "Failed to create DirectComposition device.");
+
+    hr = dcompDevice_->CreateTargetForHwnd(
+            hwnd_, true, dcompTarget_.GetAddressOf());
+    failif(hr, "Failed to DirectComposition render target.");
+
+    hr = dcompDevice_->CreateVisual(dcompVisual_.GetAddressOf());
+    failif(hr, "Failed to create DirectComposition visual object.");
+
+    dcompVisual_->SetContent(swapChain_.Get());
+    dcompTarget_->SetRoot(dcompVisual_.Get());
 }
 
 void AppMain::createTaskbar() {
@@ -412,13 +430,6 @@ DWORD WINAPI AppMain::showMenu(LPVOID param) {
     return 0;
 }
 
-template <typename T> void AppMain::safeRelease(T **obj) {
-    if (*obj) {
-        (*obj)->Release();
-        *obj = nullptr;
-    }
-}
-
 LRESULT CALLBACK AppMain::windowProc(
         HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     using This_T = AppMain;
@@ -428,11 +439,12 @@ LRESULT CALLBACK AppMain::windowProc(
         CREATESTRUCT* pCreate =
             reinterpret_cast<CREATESTRUCT *>(lParam);
         pThis = static_cast<This_T *>(pCreate->lpCreateParams);
-        SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)pThis);
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR)pThis);
 
         pThis->hwnd_ = hwnd;
     } else {
-        pThis = reinterpret_cast<This_T *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+        pThis = reinterpret_cast<This_T *>(GetWindowLongPtrW(
+                    hwnd, GWLP_USERDATA));
     }
 
     if (pThis) {

@@ -1,7 +1,7 @@
 CXX:=g++
 CC:=gcc
-TARGET:=yommd
-TARGET_DEBUG:=yommd-debug
+TARGET:=yoMMD
+TARGET_DEBUG:=yoMMD-debug
 OBJDIR:=./obj
 SRC:=viewer.cpp config.cpp resources.cpp image.cpp util.cpp libs.mm
 OBJ=$(addsuffix .o,$(addprefix $(OBJDIR)/,$(SRC)))

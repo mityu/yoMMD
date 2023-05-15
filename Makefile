@@ -111,6 +111,15 @@ package: package-tiny
 		zip -ur ../package/$(PKGNAME) \
 		$(notdir $(wildcard default-attachments/*)) -x "*/.*"
 
+app: $(TARGET)
+	@[ -d "package" ] || mkdir package
+	@[ ! -d "package/yoMMD.app" ] || rm -r package/yoMMD.app
+	@ mkdir -p package/yoMMD.app/Contents/MacOS
+	@ mkdir package/yoMMD.app/Contents/Resources
+	cp Info.plist package/yoMMD.app/Contents
+	cp icons/yoMMD.icns package/yoMMD.app/Contents/Resources
+	cp $(TARGET) package/yoMMD.app/Contents/MacOS
+
 
 # Build bullet physics library
 LIB_BULLET_BUILDER=make -j4 && make install
@@ -186,6 +195,6 @@ help:
 	@echo "init-submodule	Init submodule, and build bullet and saba library"
 	@echo "help		Show this help"
 
-.PHONY: release debug help run clean package package-tiny
+.PHONY: release debug help run clean package package-tiny app
 .PHONY: may-create-release-build
 .PHONY: build-bullet build-saba update-sokol-shdc init-submodule

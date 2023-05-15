@@ -287,6 +287,13 @@ glm::vec2 Context::getMousePosition() {
     return glm::vec2(pos.x, pos.y);
 }
 
+namespace Dialog {
+void messageBox(std::string_view msg) {
+    (void)msg;
+    // TODO: Implement
+}
+}
+
 int main() {
     [NSApplication sharedApplication];
 

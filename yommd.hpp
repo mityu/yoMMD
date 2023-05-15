@@ -54,9 +54,16 @@ template <typename... Args> void Log(Args&&... args) {
 }
 }
 
+// main_osx.mm/main_window.cpp
+namespace Dialog {
+void messageBox(std::string_view msg);
+}
+
 namespace Err {
 template <typename... Args> void Log(Args&&... args) {
-    ::_internal::_log(std::cerr, std::forward<Args>(args)...);
+    std::stringstream ss;
+    ::_internal::_log(ss, std::forward<Args>(args)...);
+    Dialog::messageBox(ss.str());
 }
 template <typename... Args> [[noreturn]] void Exit(Args&&... args) {
     Log(std::forward<Args>(args)...);

@@ -109,7 +109,7 @@ void slogFunc(const char *tag, uint32_t logLevel, uint32_t logItem, const char *
     }
 
     if (logLevel == 0) {
-        ss << "Aborting because of panic.";
+        ss << "\nAborting because of panic.";
         Err::Exit(ss.str());
     } else {
         Err::Log(ss.str());

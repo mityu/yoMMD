@@ -160,7 +160,11 @@ void Routine::Init(const CmdArgs& args) {
     std::vector<const fs::path *> motionPaths;
     fs::path configFile = args.configFile;
     if (configFile.empty()) {
-        constexpr std::string_view paths[] = {"./config.toml", "~/yoMMD/config.toml"};
+        constexpr std::string_view paths[] = {
+            "./config.toml",
+            "~/.config/yoMMD/config.toml",
+            "~/yoMMD/config.toml",
+        };
         for (const auto& path : paths) {
             fs::path file(path);
             Yommd::makeAbsolute(file, args.cwd);

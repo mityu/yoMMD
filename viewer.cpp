@@ -159,7 +159,19 @@ void Routine::Init(const CmdArgs& args) {
     // fs::path resourcePath = args.cwd / "toons";
     fs::path resourcePath = "<embedded-toons>";
     std::vector<const fs::path *> motionPaths;
-    const Config config = Config::Parse(args.configFile);
+    fs::path configFile = args.configFile;
+    if (configFile.empty()) {
+        constexpr std::string_view paths[] = {"./config.toml", "~/yoMMD/config.toml"};
+        for (const auto& path : paths) {
+            fs::path file(path);
+            Yommd::makeAbsolute(file, args.cwd);
+            if (fs::exists(file)) {
+                configFile = file;
+                break;
+            }
+        }
+    }
+    const Config config = Config::Parse(configFile);
     for (const auto& motion : config.motions) {
         if (!motion.disabled) {
             motionPaths.push_back(&motion.path);

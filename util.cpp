@@ -60,14 +60,12 @@ CmdArgs CmdArgs::Parse(const std::vector<std::string>& args) {
     }
 
     // Fallback
-    if (cmdArgs.configFile.empty())
-        cmdArgs.configFile = Constant::DefaultConfigFilePath;
-
     if (cmdArgs.logFile.empty())
         cmdArgs.logFile = Constant::DefaultLogFilePath;
 
     // Make absolute if necessary.
-    Yommd::makeAbsolute(cmdArgs.configFile, cmdArgs.cwd);
+    if (!cmdArgs.configFile.empty())
+        Yommd::makeAbsolute(cmdArgs.configFile, cmdArgs.cwd);
 
     if (!cmdArgs.logFile.empty())
         Yommd::makeAbsolute(cmdArgs.logFile, cmdArgs.cwd);

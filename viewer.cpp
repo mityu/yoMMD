@@ -156,7 +156,6 @@ Routine::~Routine() {
 
 void Routine::Init(const CmdArgs& args) {
     namespace fs = std::filesystem;
-    // fs::path resourcePath = args.cwd / "toons";
     fs::path resourcePath = "<embedded-toons>";
     std::vector<const fs::path *> motionPaths;
     fs::path configFile = args.configFile;
@@ -171,6 +170,8 @@ void Routine::Init(const CmdArgs& args) {
             }
         }
     }
+    if (configFile.empty())
+        Err::Exit("No config file found.");
     const Config config = Config::Parse(configFile);
     for (const auto& motion : config.motions) {
         if (!motion.disabled) {

@@ -29,7 +29,6 @@ namespace Constant {
 constexpr int SampleCount = 4;
 constexpr float FPS = 60.0f;
 constexpr float VmdFPS = 30.0f;
-constexpr std::string_view DefaultConfigFilePath = "./config.toml";
 constexpr std::string_view DefaultLogFilePath = "";
 }
 

@@ -8,6 +8,7 @@
 #include <vector>
 #include <iostream>
 #include <cstdlib>
+#include <sstream>
 #include <string_view>
 #include <map>
 #include <filesystem>

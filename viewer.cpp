@@ -347,23 +347,6 @@ void Routine::initPipeline() {
         .cull_mode = SG_CULLMODE_FRONT,
         .face_winding = SG_FACEWINDING_CW,
         .sample_count = Constant::SampleCount,
-        // .stencil = {
-        //     .enabled = true,
-        //     .front = {
-        //         // .compare = SG_COMPAREFUNC_NOT_EQUAL,
-        //         // .pass_op = SG_STENCILOP_REPLACE,
-        //         .compare = SG_COMPAREFUNC_ALWAYS,
-        //         .pass_op = SG_STENCILOP_KEEP,
-        //     },
-        //     .back = {
-        //         // .compare = SG_COMPAREFUNC_NOT_EQUAL,
-        //         // .pass_op = SG_STENCILOP_REPLACE,
-        //         .compare = SG_COMPAREFUNC_ALWAYS,
-        //         .pass_op = SG_STENCILOP_KEEP,
-        //     },
-        //     .ref = 1,
-        //     .read_mask = 1,
-        // },
     };
     pipeline_desc.layout.attrs[ATTR_mmd_vs_in_Pos] = layout_desc.attrs[ATTR_mmd_vs_in_Pos];
     pipeline_desc.layout.attrs[ATTR_mmd_vs_in_Nor] = layout_desc.attrs[ATTR_mmd_vs_in_Nor];
@@ -529,7 +512,6 @@ void Routine::Draw() {
             .u_SphereTexMode = 0,
         };
 
-#if 1
         if (material.texture) {
             binds_.fs_images[SLOT_u_Tex_mmd] = *material.texture;
             if (material.textureHasAlpha) {
@@ -544,11 +526,7 @@ void Routine::Draw() {
         } else {
             binds_.fs_images[SLOT_u_Tex_mmd] = dummyTex_;
         }
-#else
-        binds.fs_images[SLOT_u_Tex_mmd] = dummyTex_;
-#endif
 
-#if 1
         if (material.spTexture) {
             binds_.fs_images[SLOT_u_SphereTex] = *material.spTexture;
             switch (mmdMaterial.m_spTextureMode) {
@@ -566,11 +544,7 @@ void Routine::Draw() {
         } else {
             binds_.fs_images[SLOT_u_SphereTex] = dummyTex_;
         }
-#else
-        binds.fs_images[SLOT_u_SphereTex] = dummyTex_;
-#endif
 
-#if 1
         if (material.toonTexture) {
             binds_.fs_images[SLOT_u_ToonTex] = *material.toonTexture;
             u_mmd_fs.u_ToonTexMulFactor = mmdMaterial.m_toonTextureMulFactor;
@@ -579,16 +553,12 @@ void Routine::Draw() {
         } else {
             binds_.fs_images[SLOT_u_ToonTex] = dummyTex_;
         }
-#else
-        binds.fs_images[SLOT_u_ToonTex] = dummyTex_;
-#endif
 
         if (mmdMaterial.m_bothFace)
             sg_apply_pipeline(pipeline_bothface_);
         else
             sg_apply_pipeline(pipeline_frontface_);
         sg_apply_bindings(binds_);
-        // TODO: Transput glBindTexutre
         sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_u_mmd_vs, SG_RANGE(u_mmd_vs));
         sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_u_mmd_fs, SG_RANGE(u_mmd_fs));
 
@@ -596,7 +566,6 @@ void Routine::Draw() {
     }
 
     sg_end_pass();
-    // transparentFBO.Draw();
     sg_commit();
 }
 

@@ -236,7 +236,7 @@ void Routine::initBuffers() {
     const auto copyInduces = [&model, this](const auto *mmdInduces) {
         const size_t subMeshCount = model->GetSubMeshCount();
         for (size_t i = 0; i < subMeshCount; ++i) {
-            const auto subMesth = model->GetSubMeshes()[i];
+            const auto& subMesth = model->GetSubMeshes()[i];
             for (int j = 0; j < subMesth.m_vertexCount; ++j)
                 induces_.push_back(
                         static_cast<uint32_t>(mmdInduces[subMesth.m_beginIndex + j]));

@@ -289,8 +289,21 @@ glm::vec2 Context::getMousePosition() {
 
 namespace Dialog {
 void messageBox(std::string_view msg) {
-    (void)msg;
-    // TODO: Implement
+    // TODO: Implement more rich one.
+    NSFont *font = [NSFont monospacedSystemFontOfSize:12.0 weight:NSFontWeightRegular];
+    NSAlert *alert = [[NSAlert alloc] init];
+
+    // Get all views present on the NSAlert content view. 5th element will be a
+    // NSTextField object holding the Message text.
+    NSArray* views = [[[alert window] contentView] subviews];
+    NSTextField *text = (NSTextField *)[views objectAtIndex:5];
+    [text setFont:font];
+    [text setAlignment:NSTextAlignmentLeft];
+    [[views objectAtIndex:4] setAlignment:NSTextAlignmentLeft];
+
+    [alert setMessageText:@"yoMMD Error"];
+    [alert setInformativeText:[NSString stringWithUTF8String:msg.data()]];
+    [alert runModal];
 }
 }
 

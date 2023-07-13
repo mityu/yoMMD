@@ -127,7 +127,7 @@ ifeq ($(OS),Windows_NT)
 LIB_BULLET_BUILDER=ninja && ninja install
 endif
 build-bullet: lib/bullet3/build lib/bullet3/Makefile
-		@cd lib/bullet3 && $(LIB_BULLET_BUILDER)
+	@cd lib/bullet3 && $(LIB_BULLET_BUILDER)
 
 lib/bullet3/build:
 	mkdir lib/bullet3/build
@@ -163,7 +163,7 @@ LIB_SABA_BUILDER=make -j4 Saba
 ifeq ($(OS),Windows_NT)
 LIB_SABA_BUILDER=ninja Saba
 endif
-buld-saba:
+build-saba:
 	@[ -d "lib/saba/build" ] || mkdir lib/saba/build
 	@cd lib/saba/build && cmake -DCMAKE_BUILD_TYPE=RELEASE .. && $(LIB_SABA_BUILDER)
 

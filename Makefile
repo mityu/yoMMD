@@ -15,6 +15,7 @@ LDFLAGS:=-Llib/saba/build/src -lSaba -Llib/bullet3/build/lib \
 SOKOL_SHDC:=tool/sokol-shdc
 SOKOL_SHDC_URL=
 PKGNAME_PLATFORM:=
+CMAKE_GENERATOR:=
 
 ifeq ($(OS),Windows_NT)
 TARGET:=$(TARGET).exe
@@ -25,6 +26,7 @@ LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi -ldcomp -lgdi32
 SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/win32/sokol-shdc.exe
 SOKOL_SHDC:=$(SOKOL_SHDC).exe
 PKGNAME_PLATFORM:=win-x86_64
+CMAKE_GENERATOR:=-G "MSYS Makefiles"
 else ifeq ($(shell uname),Darwin)
 # TODO: Support intel mac?
 CXX:=clang++
@@ -121,12 +123,8 @@ app: $(TARGET)
 
 
 # Build bullet physics library
-LIB_BULLET_BUILDER=make -j4 && make install
-ifeq ($(OS),Windows_NT)
-LIB_BULLET_BUILDER=ninja && ninja install
-endif
 build-bullet: lib/bullet3/build lib/bullet3/Makefile
-	@cd lib/bullet3 && $(LIB_BULLET_BUILDER)
+	@cd lib/bullet3 && make -j4 && make install
 
 lib/bullet3/build:
 	mkdir lib/bullet3/build
@@ -155,16 +153,15 @@ lib/bullet3/Makefile:
 		-DUSE_MSVC_RUNTIME_LIBRARY_DLL=OFF \
 		-DUSE_OPENVR=OFF                   \
 		-DCMAKE_INSTALL_PREFIX=./build     \
+		${CMAKE_GENERATOR}				   \
 		.
 
 # Build saba library
-LIB_SABA_BUILDER=make -j4 Saba
-ifeq ($(OS),Windows_NT)
-LIB_SABA_BUILDER=ninja Saba
-endif
 build-saba:
 	@[ -d "lib/saba/build" ] || mkdir lib/saba/build
-	@cd lib/saba/build && cmake -DCMAKE_BUILD_TYPE=RELEASE .. && $(LIB_SABA_BUILDER)
+	cd lib/saba/build && \
+		cmake -DCMAKE_BUILD_TYPE=RELEASE ${CMAKE_GENERATOR} .. && \
+		make -j4 Saba
 
 $(SOKOL_SHDC): tool/
 	curl -L -o $@ $(SOKOL_SHDC_URL)

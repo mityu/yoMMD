@@ -144,7 +144,7 @@ void UserViewport::ResetPosition() {
 }
 
 Routine::Routine() :
-    passAction_({.colors = {{.action = SG_ACTION_CLEAR, .value = {0, 0, 0, 0}}}}),
+    passAction_({.colors = {{.load_action = SG_LOADACTION_CLEAR, .clear_value = {0, 0, 0, 0}}}}),
     binds_({}),
     timeBeginAnimation_(0), timeLastFrame_(0), motionID_(0), needBridgeMotions_(false),
     rand_(static_cast<int>(std::time(nullptr)))
@@ -309,14 +309,29 @@ void Routine::initTextures() {
             material.spTexture = getTexture(mmdMaterial.m_spTexture);
         }
         if (!mmdMaterial.m_toonTexture.empty()) {
-            material.toonTexture = getToonTexture(mmdMaterial.m_toonTexture);
+            material.toonTexture = getTexture(mmdMaterial.m_toonTexture);
         }
         materials_.push_back(std::move(material));
     }
+
+    sampler_texture_ = sg_make_sampler(sg_sampler_desc{
+        .min_filter = SG_FILTER_LINEAR,
+        .mag_filter = SG_FILTER_LINEAR,
+    });
+    sampler_sphere_texture_ = sg_make_sampler(sg_sampler_desc{
+        .min_filter = SG_FILTER_LINEAR,
+        .mag_filter = SG_FILTER_LINEAR,
+    });
+    sampler_toon_texture_ = sg_make_sampler(sg_sampler_desc{
+        .min_filter = SG_FILTER_LINEAR,
+        .mag_filter = SG_FILTER_LINEAR,
+        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
+        .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
+    });
 }
 
 void Routine::initPipeline() {
-    sg_layout_desc layout_desc;
+    sg_vertex_layout_state layout_desc;
     layout_desc.attrs[ATTR_mmd_vs_in_Pos] = {
         .buffer_index = ATTR_mmd_vs_in_Pos,
         .format = SG_VERTEXFORMAT_FLOAT3,
@@ -330,7 +345,7 @@ void Routine::initPipeline() {
         .format = SG_VERTEXFORMAT_FLOAT2,
     };
 
-    sg_color_state color_state = {
+    sg_color_target_state color_state = {
         .blend = {
             .enabled = true,
             .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
@@ -518,7 +533,8 @@ void Routine::Draw() {
         };
 
         if (material.texture) {
-            binds_.fs_images[SLOT_u_Tex_mmd] = *material.texture;
+            binds_.fs.images[SLOT_u_Tex] = *material.texture;
+            binds_.fs.samplers[SLOT_u_Tex_smp] = sampler_texture_;
             if (material.textureHasAlpha) {
                 // Use Material Alpha * Texture Alpha
                 u_mmd_fs.u_TexMode = 2;
@@ -529,11 +545,13 @@ void Routine::Draw() {
             u_mmd_fs.u_TexMulFactor = mmdMaterial.m_textureMulFactor;
             u_mmd_fs.u_TexAddFactor = mmdMaterial.m_textureAddFactor;
         } else {
-            binds_.fs_images[SLOT_u_Tex_mmd] = dummyTex_;
+            binds_.fs.images[SLOT_u_Tex] = dummyTex_;
+            binds_.fs.samplers[SLOT_u_Tex_smp] = sampler_texture_;
         }
 
         if (material.spTexture) {
-            binds_.fs_images[SLOT_u_SphereTex] = *material.spTexture;
+            binds_.fs.images[SLOT_u_SphereTex] = *material.spTexture;
+            binds_.fs.samplers[SLOT_u_SphereTex_smp] = sampler_sphere_texture_;
             switch (mmdMaterial.m_spTextureMode) {
             case saba::MMDMaterial::SphereTextureMode::Mul:
                 u_mmd_fs.u_SphereTexMode = 1;
@@ -547,16 +565,19 @@ void Routine::Draw() {
             u_mmd_fs.u_SphereTexMulFactor = mmdMaterial.m_spTextureMulFactor;
             u_mmd_fs.u_SphereTexAddFactor = mmdMaterial.m_spTextureAddFactor;
         } else {
-            binds_.fs_images[SLOT_u_SphereTex] = dummyTex_;
+            binds_.fs.images[SLOT_u_SphereTex] = dummyTex_;
+            binds_.fs.samplers[SLOT_u_SphereTex_smp] = sampler_sphere_texture_;
         }
 
         if (material.toonTexture) {
-            binds_.fs_images[SLOT_u_ToonTex] = *material.toonTexture;
+            binds_.fs.images[SLOT_u_ToonTex] = *material.toonTexture;
+            binds_.fs.samplers[SLOT_u_ToonTex_smp] = sampler_toon_texture_;
             u_mmd_fs.u_ToonTexMulFactor = mmdMaterial.m_toonTextureMulFactor;
             u_mmd_fs.u_ToonTexAddFactor = mmdMaterial.m_toonTextureAddFactor;
             u_mmd_fs.u_ToonTexMode = 1;
         } else {
-            binds_.fs_images[SLOT_u_ToonTex] = dummyTex_;
+            binds_.fs.images[SLOT_u_ToonTex] = dummyTex_;
+            binds_.fs.samplers[SLOT_u_ToonTex_smp] = sampler_toon_texture_;
         }
 
         if (mmdMaterial.m_bothFace)
@@ -650,33 +671,6 @@ std::optional<sg_image> Routine::getTexture(const std::string& path) {
         .height = static_cast<int>(image.height),
         .usage = SG_USAGE_IMMUTABLE,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
-        .min_filter = SG_FILTER_LINEAR,
-        .mag_filter = SG_FILTER_LINEAR,
-    };
-    image_desc.data.subimage[0][0] =  {
-        .ptr = image.pixels.data(),
-        .size = image.pixels.size(),
-    };
-    return sg_make_image(&image_desc);
-}
-
-std::optional<sg_image> Routine::getToonTexture(const std::string& path) {
-    const auto itr = loadImage(path);
-    if (!itr)
-        return std::nullopt;
-
-    const auto& image = (*itr)->second;
-    sg_image_desc image_desc = {
-        .type = SG_IMAGETYPE_2D,
-        .render_target = false,
-        .width = static_cast<int>(image.width),
-        .height = static_cast<int>(image.height),
-        .usage = SG_USAGE_IMMUTABLE,
-        .pixel_format = SG_PIXELFORMAT_RGBA8,
-        .min_filter = SG_FILTER_LINEAR,
-        .mag_filter = SG_FILTER_LINEAR,
-        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-        .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
     };
     image_desc.data.subimage[0][0] =  {
         .ptr = image.pixels.data(),

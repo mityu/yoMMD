@@ -277,6 +277,9 @@ private:
     std::map<std::string, sg_image> textures_;  // For "texture" and "spTexture".
     std::map<std::string, sg_image> toonTextures_;
     std::vector<Material> materials_;
+    sg_sampler sampler_texture_;
+    sg_sampler sampler_sphere_texture_;
+    sg_sampler sampler_toon_texture_;
 
     Camera defaultCamera_;
 

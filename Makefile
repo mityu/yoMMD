@@ -32,6 +32,7 @@ else ifeq ($(shell uname),Darwin)
 CXX:=clang++
 CC:=clang
 SRC+=main_osx.mm
+LDFLAGS+=-F$(shell xcrun --show-sdk-path)/System/Library/Frameworks  # Homebrew clang needs this.
 LDFLAGS+=-framework Foundation -framework Cocoa -framework Metal -framework MetalKit -framework QuartzCore
 OBJCFLAGS=-fobjc-arc
 SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/osx_arm64/sokol-shdc

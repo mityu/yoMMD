@@ -20,7 +20,7 @@ ifeq ($(OS),Windows_NT)
 TARGET:=$(TARGET).exe
 TARGET_DEBUG:=$(TARGET_DEBUG).exe
 SRC+=main_windows.cpp appicon_windows.rc
-CFLAGS+=-I/mingw64/include/bullet -Wno-missing-field-initializers
+CFLAGS+=-Wno-missing-field-initializers
 LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi -ldcomp -lgdi32
 SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/win32/sokol-shdc.exe
 SOKOL_SHDC:=$(SOKOL_SHDC).exe
@@ -30,7 +30,6 @@ else ifeq ($(shell uname),Darwin)
 CXX:=clang++
 CC:=clang
 SRC+=main_osx.mm
-CFLAGS+=-I/opt/homebrew/include
 LDFLAGS+=-framework Foundation -framework Cocoa -framework Metal -framework MetalKit -framework QuartzCore
 OBJCFLAGS=-fobjc-arc
 SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/osx_arm64/sokol-shdc

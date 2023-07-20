@@ -36,6 +36,8 @@
 -(NSSize)getWindowSize;
 -(NSSize)getDrawableSize;
 -(Routine&)getRoutine;
+-(void)notifyInitializationDone;
+-(bool)getInitialized;
 @end
 
 namespace{
@@ -59,6 +61,8 @@ inline AppMain *getAppMain(void);
 
     auto& routine = [appMain getRoutine];
     routine.Init(cmdArgs);
+
+    [appMain notifyInitializationDone];
 }
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
     [getAppMain() getRoutine].Terminate();
@@ -99,6 +103,8 @@ inline AppMain *getAppMain(void);
     Info::Log("drawableSize:", size.width, ',', size.height);
 }
 - (void)drawInMTKView:(nonnull MTKView*)view {
+    if (![getAppMain() getInitialized])
+        return;
     @autoreleasepool {
         auto& routine = [getAppMain() getRoutine];
         routine.Update();
@@ -117,6 +123,13 @@ inline AppMain *getAppMain(void);
     NSMenu *appMenu;
     NSRunningApplication *alterApp;
     Routine routine;
+    bool initialized_;
+}
+-(instancetype)init {
+    self = [super init];
+    if (self)
+        initialized_ = false;
+    return self;
 }
 -(void)createMainWindow {
     const NSUInteger style = NSWindowStyleMaskBorderless;
@@ -253,6 +266,12 @@ inline AppMain *getAppMain(void);
 }
 -(Routine&)getRoutine {
     return routine;
+}
+-(void)notifyInitializationDone {
+    initialized_ = true;
+}
+-(bool)getInitialized {
+    return initialized_;
 }
 @end
 

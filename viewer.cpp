@@ -31,7 +31,7 @@ Material::Material(const saba::MMDMaterial& mat) :
 
 void MMD::Load(
         const std::filesystem::path& modelPath,
-        const std::vector<const std::filesystem::path *>& motionPaths,
+        const std::vector<const std::vector<std::filesystem::path> *>& motionPaths,
         const std::filesystem::path& resourcePath) {
     const auto ext = std::filesystem::path(modelPath).extension();
     if (ext == ".pmx") {
@@ -55,20 +55,25 @@ void MMD::Load(
     for (const auto& motionPath : motionPaths) {
         auto vmdAnim = std::make_unique<saba::VMDAnimation>();
         if (!vmdAnim->Create(model_)) {
-            Err::Exit("Failed to create VMDAnimation:", motionPath);
-        }
-        saba::VMDFile vmdFile;
-        if (!saba::ReadVMDFile(&vmdFile, motionPath->string().c_str())) {
-            Err::Exit("Failed to read VMD file:", motionPath);
-        }
-        if (!vmdAnim->Add(vmdFile)) {
-            Err::Exit("Failed to add VMDAnimation:", motionPath);
+            Err::Exit("Failed to create VMDAnimation");
         }
 
-        if (!vmdFile.m_cameras.empty()) {
-            cameraAnimation_ = std::make_unique<saba::VMDCameraAnimation>();
-            if (!cameraAnimation_->Create(vmdFile))
-                Err::Log("Failed to create VMDCameraAnimation:", motionPath);
+        for (const auto& p : *motionPath) {
+            saba::VMDFile vmdFile;
+            if (!saba::ReadVMDFile(&vmdFile, p.string().c_str())) {
+                Err::Exit("Failed to read VMD file:", p);
+            }
+            if (!vmdAnim->Add(vmdFile)) {
+                Err::Exit("Failed to add VMDAnimation:", p);
+            }
+
+            if (!vmdFile.m_cameras.empty()) {
+                Err::Log("Camera animation is temporally disabled.");
+                Info::Log("Animation file:", p);
+                // cameraAnimation_ = std::make_unique<saba::VMDCameraAnimation>();
+                // if (!cameraAnimation_->Create(vmdFile))
+                //     Err::Log("Failed to create VMDCameraAnimation:", p);
+            }
         }
 
         animations_.push_back(std::move(vmdAnim));
@@ -157,7 +162,7 @@ Routine::~Routine() {
 void Routine::Init(const CmdArgs& args) {
     namespace fs = std::filesystem;
     fs::path resourcePath = "<embedded-toons>";
-    std::vector<const fs::path *> motionPaths;
+    std::vector<const std::vector<fs::path> *> motionPaths;
     fs::path configFile = args.configFile;
     if (configFile.empty()) {
         constexpr std::string_view paths[] = {
@@ -179,7 +184,7 @@ void Routine::Init(const CmdArgs& args) {
     const Config config = Config::Parse(configFile);
     for (const auto& motion : config.motions) {
         if (!motion.disabled) {
-            motionPaths.push_back(&motion.path);
+            motionPaths.push_back(&motion.paths);
             motionWeights_.push_back(motion.weight);
         }
     }
@@ -432,6 +437,7 @@ void Routine::Update() {
                 10000.0f);
     }
 
+    // TODO: Update camera animation
     auto& animations = mmd_.GetAnimations();
     if (!animations.empty()) {
         auto& animation = animations[motionID_];

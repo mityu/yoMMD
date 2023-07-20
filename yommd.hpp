@@ -121,7 +121,7 @@ struct Config {
     struct Motion {
         bool disabled;
         unsigned int weight;
-        Path path;
+        std::vector<Path> paths;
     };
     Config();
 
@@ -190,7 +190,7 @@ class MMD : private NonCopyable {
 public:
     using Path = std::filesystem::path;
     void Load(const Path& modelPath,
-            const std::vector<const Path *>& motionPaths,  // We doesn't have path_view yet.
+            const std::vector<const std::vector<Path> *>& motionPaths,
             const Path& resourcePath);
     bool IsLoaded() const;
     const std::shared_ptr<saba::MMDModel> GetModel() const;
@@ -246,7 +246,6 @@ private:
     void selectNextMotion();
     std::optional<ImageMap::const_iterator> loadImage(const std::string& path);
     std::optional<sg_image> getTexture(const std::string& path);
-    std::optional<sg_image> getToonTexture(const std::string& path);
 private:
     struct Camera {
         glm::vec3 eye;

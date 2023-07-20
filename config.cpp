@@ -28,13 +28,17 @@ Config Config::Parse(const std::filesystem::path& configFile) {
             bool disabled = toml::find_or(motion, "disabled", false);
             auto weight = toml::find_or<decltype(
                     Motion::weight)>(motion, "weight", 1);
-            auto path = fs::path(String::tou8(
-                        toml::find<std::string>(motion, "path")));
-            Yommd::makeAbsolute(path, configDir);
+            auto raw_path = toml::find<std::vector<std::string>>(motion, "path");
+            std::vector<fs::path> path;
+            for (const auto& p : raw_path) {
+                auto u8path = fs::path(String::tou8(p));
+                Yommd::makeAbsolute(u8path, configDir);
+                path.push_back(u8path);
+            }
             config.motions.push_back(Motion{
                 .disabled = disabled,
                 .weight = weight,
-                .path = path,
+                .paths = std::move(path),
             });
         }
 

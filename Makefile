@@ -5,9 +5,10 @@ TARGET_DEBUG:=yoMMD-debug
 OBJDIR:=./obj
 SRC:=viewer.cpp config.cpp resources.cpp image.cpp util.cpp libs.mm
 OBJ=$(addsuffix .o,$(addprefix $(OBJDIR)/,$(SRC)))
+DEP=$(OBJ:%.o=%.d)
 CFLAGS:=-O2 -Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb \
 		-Ilib/toml11 -Ilib/incbin -Ilib/bullet3/build/include/bullet \
-		-Wall -Wextra -pedantic
+		-Wall -Wextra -pedantic -MMD -MP
 CPPFLAGS=-std=c++20
 OBJCFLAGS=
 LDFLAGS:=-Llib/saba/build/src -lSaba -Llib/bullet3/build/lib \
@@ -39,7 +40,7 @@ SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/osx_arm
 PKGNAME_PLATFORM:=darwin-arm64
 endif
 
-$(TARGET): $(OBJDIR) yommd.glsl.h $(OBJ)
+$(TARGET): $(OBJDIR) $(OBJ)
 	$(CXX) -o $@ $(OBJ) $(LDFLAGS)
 
 ifeq ($(OS),Windows_NT)
@@ -61,22 +62,24 @@ debug: TARGET:=$(TARGET_DEBUG)
 debug:
 	@$(MAKE) CFLAGS="$(CFLAGS)" OBJDIR="$(OBJDIR)" TARGET="$(TARGET)"
 
-$(OBJDIR)/viewer.cpp.o: viewer.cpp yommd.glsl.h yommd.hpp
+-include $(DEP)
+
+$(OBJDIR)/viewer.cpp.o: viewer.cpp
 	$(CXX) -o $@ $(CPPFLAGS) $(CFLAGS) -c $<
 
-$(OBJDIR)/%.cpp.o: %.cpp yommd.hpp
+$(OBJDIR)/%.cpp.o: %.cpp
 	$(CXX) -o $@ $(CPPFLAGS) $(CFLAGS) -c $<
 
 ifneq ($(shell uname),Darwin)
 # When not on macOS, compile libs.mm as C program.
-$(OBJDIR)/libs.mm.o: libs.mm platform.hpp
+$(OBJDIR)/libs.mm.o: libs.mm
 	$(CC) -o $@ $(CFLAGS) -c -x c $<
 endif
 
-$(OBJDIR)/%.m.o: %.m yommd.hpp
+$(OBJDIR)/%.m.o: %.m
 	$(CC) -o $@ $(OBJCFLAGS) $(CFLAGS) -c $<
 
-$(OBJDIR)/%.mm.o: %.mm yommd.hpp
+$(OBJDIR)/%.mm.o: %.mm
 	$(CXX) -o $@ $(CPPFLAGS) $(OBJCFLAGS) $(CFLAGS) -c $<
 
 $(OBJDIR)/%.rc.o: %.rc
@@ -94,7 +97,7 @@ run: $(TARGET)
 	./$(TARGET)
 
 clean:
-	$(RM) $(TARGET)-debug $(OBJDIR)/debug/*.o
+	$(RM) $(TARGET_DEBUG) $(OBJDIR)/debug/*.o
 	$(RM) $(OBJDIR)/*.o $(TARGET) yommd.glsl.h
 
 all: clean $(TARGET);

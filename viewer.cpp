@@ -606,7 +606,6 @@ void Routine::Terminate() {
     induces_.clear();
     texImages_.clear();
     textures_.clear();
-    toonTextures_.clear();
     materials_.clear();
 
     sg_destroy_shader(shaderMMD_);
@@ -661,6 +660,9 @@ std::optional<Routine::ImageMap::const_iterator> Routine::loadImage(const std::s
 }
 
 std::optional<sg_image> Routine::getTexture(const std::string& path) {
+    if (const auto itr = textures_.find(path); itr != textures_.cend())
+        return itr->second;
+
     const auto itr = loadImage(path);
     if (!itr)
         return std::nullopt;
@@ -678,5 +680,7 @@ std::optional<sg_image> Routine::getTexture(const std::string& path) {
         .ptr = image.pixels.data(),
         .size = image.pixels.size(),
     };
-    return sg_make_image(&image_desc);
+    const sg_image handler = sg_make_image(&image_desc);
+    textures_.emplace(path, handler);
+    return handler;
 }

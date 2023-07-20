@@ -273,8 +273,7 @@ private:
 
     sg_image dummyTex_;
     ImageMap texImages_;
-    std::map<std::string, sg_image> textures_;  // For "texture" and "spTexture".
-    std::map<std::string, sg_image> toonTextures_;
+    std::map<std::string, sg_image> textures_;
     std::vector<Material> materials_;
     sg_sampler sampler_texture_;
     sg_sampler sampler_sphere_texture_;

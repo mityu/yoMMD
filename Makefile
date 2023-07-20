@@ -17,6 +17,7 @@ SOKOL_SHDC:=tool/sokol-shdc
 SOKOL_SHDC_URL=
 PKGNAME_PLATFORM:=
 CMAKE_GENERATOR:=
+CMAKE_BUILDFILE:=Makefile
 
 ifeq ($(OS),Windows_NT)
 TARGET:=$(TARGET).exe
@@ -38,6 +39,11 @@ LDFLAGS+=-framework Foundation -framework Cocoa -framework Metal -framework Meta
 OBJCFLAGS=-fobjc-arc
 SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/osx_arm64/sokol-shdc
 PKGNAME_PLATFORM:=darwin-arm64
+endif
+
+ifneq ($(shell command -v ninja),)
+CMAKE_GENERATOR:=-G Ninja
+CMAKE_BUILDFILE:=build.ninja
 endif
 
 $(TARGET): $(OBJDIR) $(OBJ)
@@ -64,7 +70,7 @@ debug:
 
 -include $(DEP)
 
-$(OBJDIR)/viewer.cpp.o: viewer.cpp
+$(OBJDIR)/viewer.cpp.o: viewer.cpp yommd.glsl.h
 	$(CXX) -o $@ $(CPPFLAGS) $(CFLAGS) -c $<
 
 $(OBJDIR)/%.cpp.o: %.cpp
@@ -127,14 +133,12 @@ app: $(TARGET)
 
 
 # Build bullet physics library
-build-bullet: lib/bullet3/build lib/bullet3/Makefile
-	@cd lib/bullet3 && make -j4 && make install
+build-bullet: lib/bullet3/build/$(CMAKE_BUILDFILE)
+	@cd lib/bullet3/build && cmake --build . -j && cmake --build . -t install
 
-lib/bullet3/build:
-	mkdir lib/bullet3/build
-
-lib/bullet3/Makefile:
-	cd lib/bullet3 && cmake \
+lib/bullet3/build/$(CMAKE_BUILDFILE):
+	@ test ! -d "lib/bullet3/build" && mkdir lib/bullet3/build
+	cd lib/bullet3/build && cmake \
 		-DLIBRARY_OUTPUT_PATH=./           \
 		-DBUILD_BULLET2_DEMOS=OFF          \
 		-DBUILD_BULLET3=OFF                \
@@ -156,16 +160,16 @@ lib/bullet3/Makefile:
 		-DUSE_MSVC_INCREMENTAL_LINKING=OFF \
 		-DUSE_MSVC_RUNTIME_LIBRARY_DLL=OFF \
 		-DUSE_OPENVR=OFF                   \
-		-DCMAKE_INSTALL_PREFIX=./build     \
-		${CMAKE_GENERATOR}				   \
-		.
+		-DCMAKE_INSTALL_PREFIX=./          \
+		$(CMAKE_GENERATOR)				   \
+		..
 
 # Build saba library
 build-saba:
 	@[ -d "lib/saba/build" ] || mkdir lib/saba/build
 	cd lib/saba/build && \
-		cmake -DCMAKE_BUILD_TYPE=RELEASE ${CMAKE_GENERATOR} .. && \
-		make -j4 Saba
+		cmake -DCMAKE_BUILD_TYPE=RELEASE $(CMAKE_GENERATOR) .. && \
+		cmake --build . -t Saba -j
 
 $(SOKOL_SHDC): tool/
 	curl -L -o $@ $(SOKOL_SHDC_URL)
@@ -186,6 +190,7 @@ help:
 	@echo "debug		Debug build"
 	@echo "run		Build and run binary"
 	@echo "clean		Clean build related files"
+	@echo "app          Make application bundle (Only available on macOS)"
 	@echo "package-tiny	Make distribution package without any MMD models/motions"
 	@echo "package		Make distribution package with default config,"
 	@echo "		MMD model and motions included"

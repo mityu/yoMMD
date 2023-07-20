@@ -189,17 +189,17 @@ public:
 class MMD : private NonCopyable {
 public:
     using Path = std::filesystem::path;
-    void Load(const Path& modelPath,
-            const std::vector<const std::vector<Path> *>& motionPaths,
-            const Path& resourcePath);
-    bool IsLoaded() const;
+    using Animation = std::pair<
+        std::unique_ptr<saba::VMDAnimation>,
+        std::unique_ptr<saba::VMDCameraAnimation>>;
+    void LoadModel(const Path& modelPath, const Path& resourcePath);
+    void LoadMotion(const std::vector<Path>& paths);
+    bool IsModelLoaded() const;
     const std::shared_ptr<saba::MMDModel> GetModel() const;
-    const std::vector<std::unique_ptr<saba::VMDAnimation>>& GetAnimations() const;
-    const std::unique_ptr<saba::VMDCameraAnimation>& GetCameraAnimation() const;
+    const std::vector<Animation>& GetAnimations() const;
 private:
     std::shared_ptr<saba::MMDModel> model_;
-    std::vector<std::unique_ptr<saba::VMDAnimation>> animations_;
-    std::unique_ptr<saba::VMDCameraAnimation> cameraAnimation_;
+    std::vector<Animation> animations_;
 };
 
 class UserViewport {

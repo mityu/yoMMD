@@ -29,9 +29,8 @@ Material::Material(const saba::MMDMaterial& mat) :
     textureHasAlpha(false)
 {}
 
-void MMD::Load(
+void MMD::LoadModel(
         const std::filesystem::path& modelPath,
-        const std::vector<const std::vector<std::filesystem::path> *>& motionPaths,
         const std::filesystem::path& resourcePath) {
     const auto ext = std::filesystem::path(modelPath).extension();
     if (ext == ".pmx") {
@@ -51,36 +50,35 @@ void MMD::Load(
     }
 
     model_->InitializeAnimation();
-
-    for (const auto& motionPath : motionPaths) {
-        auto vmdAnim = std::make_unique<saba::VMDAnimation>();
-        if (!vmdAnim->Create(model_)) {
-            Err::Exit("Failed to create VMDAnimation");
-        }
-
-        for (const auto& p : *motionPath) {
-            saba::VMDFile vmdFile;
-            if (!saba::ReadVMDFile(&vmdFile, p.string().c_str())) {
-                Err::Exit("Failed to read VMD file:", p);
-            }
-            if (!vmdAnim->Add(vmdFile)) {
-                Err::Exit("Failed to add VMDAnimation:", p);
-            }
-
-            if (!vmdFile.m_cameras.empty()) {
-                Err::Log("Camera animation is temporally disabled.");
-                Info::Log("Animation file:", p);
-                // cameraAnimation_ = std::make_unique<saba::VMDCameraAnimation>();
-                // if (!cameraAnimation_->Create(vmdFile))
-                //     Err::Log("Failed to create VMDCameraAnimation:", p);
-            }
-        }
-
-        animations_.push_back(std::move(vmdAnim));
-    }
 }
 
-bool MMD::IsLoaded() const {
+void MMD::LoadMotion(const std::vector<std::filesystem::path>& paths) {
+    std::unique_ptr<saba::VMDCameraAnimation> cameraAnim(nullptr);
+    auto vmdAnim = std::make_unique<saba::VMDAnimation>();
+    if (!vmdAnim->Create(model_)) {
+        Err::Exit("Failed to create VMDAnimation");
+    }
+
+    for (const auto& p : paths) {
+        saba::VMDFile vmdFile;
+        if (!saba::ReadVMDFile(&vmdFile, p.string().c_str())) {
+            Err::Exit("Failed to read VMD file:", p);
+        }
+        if (!vmdAnim->Add(vmdFile)) {
+            Err::Exit("Failed to add VMDAnimation:", p);
+        }
+
+        if (!vmdFile.m_cameras.empty()) {
+            cameraAnim = std::make_unique<saba::VMDCameraAnimation>();
+            if (!cameraAnim->Create(vmdFile))
+                Err::Log("Failed to create VMDCameraAnimation:", p);
+        }
+    }
+
+    animations_.push_back(std::make_pair(std::move(vmdAnim), std::move(cameraAnim)));
+}
+
+bool MMD::IsModelLoaded() const {
     return static_cast<bool>(model_);
 }
 
@@ -88,12 +86,8 @@ const std::shared_ptr<saba::MMDModel> MMD::GetModel() const {
     return model_;
 }
 
-const std::vector<std::unique_ptr<saba::VMDAnimation>>& MMD::GetAnimations() const {
+const std::vector<MMD::Animation>& MMD::GetAnimations() const {
     return animations_;
-}
-
-const std::unique_ptr<saba::VMDCameraAnimation>& MMD::GetCameraAnimation() const {
-    return cameraAnimation_;
 }
 
 UserViewport::UserViewport() :
@@ -162,7 +156,6 @@ Routine::~Routine() {
 void Routine::Init(const CmdArgs& args) {
     namespace fs = std::filesystem;
     fs::path resourcePath = "<embedded-toons>";
-    std::vector<const std::vector<fs::path> *> motionPaths;
     fs::path configFile = args.configFile;
     if (configFile.empty()) {
         constexpr std::string_view paths[] = {
@@ -181,16 +174,19 @@ void Routine::Init(const CmdArgs& args) {
     }
     if (configFile.empty())
         Err::Exit("No config file found.");
+
     const Config config = Config::Parse(configFile);
+
+    defaultCamera_.eye = config.defaultCameraPosition;
+    defaultCamera_.center = config.defaultGazePosition;
+    mmd_.LoadModel(config.model, resourcePath);
+
     for (const auto& motion : config.motions) {
         if (!motion.disabled) {
-            motionPaths.push_back(&motion.paths);
+            mmd_.LoadMotion(motion.paths);
             motionWeights_.push_back(motion.weight);
         }
     }
-    defaultCamera_.eye = config.defaultCameraPosition;
-    defaultCamera_.center = config.defaultGazePosition;
-    mmd_.Load(config.model, motionPaths, resourcePath);
 
     sg_desc desc = {
         .logger = {
@@ -410,40 +406,41 @@ void Routine::Update() {
     const double vmdFrame = stm_sec(stm_since(timeBeginAnimation_)) * Constant::VmdFPS;
     const double elapsedTime = stm_sec(stm_since(timeLastFrame_));
 
-    if (auto& cameraAnimation = mmd_.GetCameraAnimation(); cameraAnimation) {
-        cameraAnimation->Evaluate(vmdFrame);
-        const auto& mmdCamera = cameraAnimation->GetCamera();
-        saba::MMDLookAtCamera lookAtCamera(mmdCamera);
-        viewMatrix_ = glm::lookAt(
-                lookAtCamera.m_eye,
-                lookAtCamera.m_center,
-                lookAtCamera.m_up);
-        projectionMatrix_ = glm::perspectiveFovRH(
-                mmdCamera.m_fov,
-                static_cast<float>(size.x),
-                static_cast<float>(size.y),
-                1.0f,
-                10000.0f);
-    } else {
-        viewMatrix_ = glm::lookAt(
-                defaultCamera_.eye,
-                defaultCamera_.center,
-                glm::vec3(0, 1, 0));
-        projectionMatrix_ = glm::perspectiveFovRH(
-                glm::radians(30.0f),
-                static_cast<float>(size.x),
-                static_cast<float>(size.y),
-                1.0f,
-                10000.0f);
-    }
-
-    // TODO: Update camera animation
     auto& animations = mmd_.GetAnimations();
+
     if (!animations.empty()) {
-        auto& animation = animations[motionID_];
+        // Update camera animation.
+        auto& [vmdAnim, cameraAnim] = animations[motionID_];
+        if (cameraAnim) {
+            cameraAnim->Evaluate(vmdFrame);
+            const auto& mmdCamera = cameraAnim->GetCamera();
+            saba::MMDLookAtCamera lookAtCamera(mmdCamera);
+            viewMatrix_ = glm::lookAt(
+                    lookAtCamera.m_eye,
+                    lookAtCamera.m_center,
+                    lookAtCamera.m_up);
+            projectionMatrix_ = glm::perspectiveFovRH(
+                    mmdCamera.m_fov,
+                    static_cast<float>(size.x),
+                    static_cast<float>(size.y),
+                    1.0f,
+                    10000.0f);
+        } else {
+            viewMatrix_ = glm::lookAt(
+                    defaultCamera_.eye,
+                    defaultCamera_.center,
+                    glm::vec3(0, 1, 0));
+            projectionMatrix_ = glm::perspectiveFovRH(
+                    glm::radians(30.0f),
+                    static_cast<float>(size.x),
+                    static_cast<float>(size.y),
+                    1.0f,
+                    10000.0f);
+        }
+
         model->BeginAnimation();
         if (needBridgeMotions_) {
-            animation->Evaluate(0.0f, stm_sec(stm_since(timeBeginAnimation_)));
+            vmdAnim->Evaluate(0.0f, stm_sec(stm_since(timeBeginAnimation_)));
             model->UpdateMorphAnimation();
             model->UpdateNodeAnimation(false);
             model->UpdatePhysicsAnimation(elapsedTime);
@@ -453,7 +450,7 @@ void Routine::Update() {
                 timeBeginAnimation_ = stm_now();
             }
         } else {
-            model->UpdateAllAnimation(animation.get(), vmdFrame, elapsedTime);
+            model->UpdateAllAnimation(vmdAnim.get(), vmdFrame, elapsedTime);
         }
         model->EndAnimation();
     }
@@ -473,16 +470,15 @@ void Routine::Update() {
             });
 
     if (!animations.empty()) {
+        auto& vmdAnim = animations[motionID_].first;
         timeLastFrame_ = stm_now();
-        if (vmdFrame > animations[motionID_]->GetMaxKeyTime()) {
+        if (vmdFrame > vmdAnim->GetMaxKeyTime()) {
             model->SaveBaseAnimation();
             timeBeginAnimation_ = timeLastFrame_;
             selectNextMotion();
             needBridgeMotions_ = true;
         }
     }
-
-    // TODO: cameraAnimation->reset() should be called anywhere?
 }
 
 void Routine::Draw() {

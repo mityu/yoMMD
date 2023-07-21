@@ -114,15 +114,15 @@ inline AppMain *getAppMain(void);
 @end
 
 @implementation AppMain {
-    AppDelegate *appDelegate;
-    Window *window;
-    View *view;
-    id<MTLDevice> metalDevice;
-    ViewDelegate *viewDelegate;
-    NSStatusItem *statusItem;
-    NSMenu *appMenu;
-    NSRunningApplication *alterApp;
-    Routine routine;
+    AppDelegate *appDelegate_;
+    Window *window_;
+    View *view_;
+    id<MTLDevice> metalDevice_;
+    ViewDelegate *viewDelegate_;
+    NSStatusItem *statusItem_;
+    NSMenu *appMenu_;
+    NSRunningApplication *alterApp_;
+    Routine routine_;
     bool initialized_;
 }
 -(instancetype)init {
@@ -143,47 +143,47 @@ inline AppMain *getAppMain(void);
         NSWindowCollectionBehaviorFullScreenDisallowsTiling |
         NSWindowCollectionBehaviorIgnoresCycle;
 
-    window = [[Window alloc] initWithContentRect:screenRect
+    window_ = [[Window alloc] initWithContentRect:screenRect
                                          styleMask:style
                                            backing:NSBackingStoreBuffered
                                              defer:NO];
 
-    [window setTitle:@"yoMMD"];
-    [window center];
-    [window setIsVisible:YES];
-    [window setOpaque:NO];
-    [window setHasShadow:NO];
-    [window setBackgroundColor:[NSColor clearColor]];
-    [window setLevel:NSFloatingWindowLevel];
-    [window setCollectionBehavior:collectionBehavior];
-    [window setIgnoresMouseEvents:YES];
+    [window_ setTitle:@"yoMMD"];
+    [window_ center];
+    [window_ setIsVisible:YES];
+    [window_ setOpaque:NO];
+    [window_ setHasShadow:NO];
+    [window_ setBackgroundColor:[NSColor clearColor]];
+    [window_ setLevel:NSFloatingWindowLevel];
+    [window_ setCollectionBehavior:collectionBehavior];
+    [window_ setIgnoresMouseEvents:YES];
 
-    viewDelegate = [[ViewDelegate alloc] init];
-    metalDevice = MTLCreateSystemDefaultDevice();
-    view = [[View alloc] init];
-    [view setPreferredFramesPerSecond:static_cast<NSInteger>(Constant::FPS)];
-    [view setDelegate:viewDelegate];
-    [view setDevice: metalDevice];
-    [view setColorPixelFormat:MTLPixelFormatBGRA8Unorm];
-    [view setDepthStencilPixelFormat:MTLPixelFormatDepth32Float_Stencil8];
+    viewDelegate_ = [[ViewDelegate alloc] init];
+    metalDevice_ = MTLCreateSystemDefaultDevice();
+    view_ = [[View alloc] init];
+    [view_ setPreferredFramesPerSecond:static_cast<NSInteger>(Constant::FPS)];
+    [view_ setDelegate:viewDelegate_];
+    [view_ setDevice: metalDevice_];
+    [view_ setColorPixelFormat:MTLPixelFormatBGRA8Unorm];
+    [view_ setDepthStencilPixelFormat:MTLPixelFormatDepth32Float_Stencil8];
     // [view setAutoResizeDrawable:NO];
 
-    [window setContentView:view];
-    [[view layer] setMagnificationFilter:kCAFilterNearest];
-    [[view layer] setOpaque:NO];  // Make transparent
+    [window_ setContentView:view_];
+    [[view_ layer] setMagnificationFilter:kCAFilterNearest];
+    [[view_ layer] setOpaque:NO];  // Make transparent
 }
 -(void)createStatusItem {
     const auto iconData = Resource::getStatusIconData();
     NSData *nsIconData = [NSData dataWithBytes:iconData.data()
                                         length:iconData.length()];
     NSImage *icon = [[NSImage alloc] initWithData:nsIconData];
-    statusItem =
+    statusItem_ =
         [[NSStatusBar systemStatusBar] statusItemWithLength:NSSquareStatusItemLength];
-    [statusItem.button setImage:icon];
-    [statusItem setBehavior:NSStatusItemBehaviorTerminationOnRemoval];
-    [statusItem setVisible:YES];
+    [statusItem_.button setImage:icon];
+    [statusItem_ setBehavior:NSStatusItemBehaviorTerminationOnRemoval];
+    [statusItem_ setVisible:YES];
 
-    appMenu = [[NSMenu alloc] init];
+    appMenu_ = [[NSMenu alloc] init];
 
     NSMenuItem *enableMouse = [[NSMenuItem alloc]
                         initWithTitle:@"Enable Mouse"
@@ -203,13 +203,13 @@ inline AppMain *getAppMain(void);
             initWithTitle:@"Quit" action:@selector(actionQuit:) keyEquivalent:@""];
     [quit setTarget:self];
 
-    [appMenu addItem:enableMouse];
-    [appMenu addItem:resetModelPosition];
-    [appMenu addItem:[NSMenuItem separatorItem]];
-    [appMenu addItem:quit];
-    [statusItem setMenu:appMenu];
+    [appMenu_ addItem:enableMouse];
+    [appMenu_ addItem:resetModelPosition];
+    [appMenu_ addItem:[NSMenuItem separatorItem]];
+    [appMenu_ addItem:quit];
+    [statusItem_ setMenu:appMenu_];
 
-    alterApp = NULL;
+    alterApp_ = NULL;
 }
 -(void)actionQuit:(id)sender {
     [NSApp terminate:sender];
@@ -220,52 +220,52 @@ inline AppMain *getAppMain(void);
         for (NSUInteger i = 0; i < appList.count; ++i) {
             auto app = [appList objectAtIndex:i];
             if (app.active) {
-                alterApp = app;
+                alterApp_ = app;
                 break;
             }
         }
 
         [sender setState:NSControlStateValueOn];
-        [window setIgnoresMouseEvents:NO];
+        [window_ setIgnoresMouseEvents:NO];
     } else {
         [sender setState:NSControlStateValueOff];
-        [window setIgnoresMouseEvents:YES];
-        if (NSApp.active && alterApp) {
-            [alterApp activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+        [window_ setIgnoresMouseEvents:YES];
+        if (NSApp.active && alterApp_) {
+            [alterApp_ activateWithOptions:NSApplicationActivateIgnoringOtherApps];
         }
-        alterApp = NULL;
+        alterApp_ = NULL;
     }
 }
 -(void)actionResetModelPosition:(NSMenuItem *)sender {
-    routine.ResetModelPosition();
+    routine_.ResetModelPosition();
 }
 -(const NSMenu *)getAppMenu {
-    return appMenu;
+    return appMenu_;
 }
 -(sg_context_desc)getSokolContext {
     return sg_context_desc{
         .sample_count = Constant::SampleCount,
         .metal = {
-            .device = (__bridge const void *)metalDevice,
+            .device = (__bridge const void *)metalDevice_,
             .renderpass_descriptor_cb = getSokolRenderpassDescriptor,
             .drawable_cb = getSokolDrawable,
         },
     };
 }
 -(id<CAMetalDrawable>)getDrawable {
-    return [view currentDrawable];
+    return [view_ currentDrawable];
 }
 -(MTLRenderPassDescriptor *)getRenderPassDescriptor {
-    return [view currentRenderPassDescriptor];
+    return [view_ currentRenderPassDescriptor];
 }
 -(NSSize)getWindowSize {
-    return window.frame.size;
+    return window_.frame.size;
 }
 -(NSSize)getDrawableSize {
-    return view.drawableSize;
+    return view_.drawableSize;
 }
 -(Routine&)getRoutine {
-    return routine;
+    return routine_;
 }
 -(void)notifyInitializationDone {
     initialized_ = true;

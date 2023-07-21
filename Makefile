@@ -137,7 +137,7 @@ build-bullet: lib/bullet3/build/$(CMAKE_BUILDFILE)
 	@cd lib/bullet3/build && cmake --build . -j && cmake --build . -t install
 
 lib/bullet3/build/$(CMAKE_BUILDFILE):
-	@ test ! -d "lib/bullet3/build" && mkdir lib/bullet3/build
+	@[ -d "lib/bullet3/build" ] || mkdir lib/bullet3/build
 	cd lib/bullet3/build && cmake \
 		-DLIBRARY_OUTPUT_PATH=./           \
 		-DBUILD_BULLET2_DEMOS=OFF          \

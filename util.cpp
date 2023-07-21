@@ -70,8 +70,6 @@ CmdArgs CmdArgs::Parse(const std::vector<std::string>& args) {
     if (!cmdArgs.logFile.empty())
         Yommd::makeAbsolute(cmdArgs.logFile, cmdArgs.cwd);
 
-    Info::Log(cmdArgs.configFile, cmdArgs.logFile);
-
     return cmdArgs;
 }
 

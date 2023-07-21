@@ -100,7 +100,6 @@ inline AppMain *getAppMain(void);
 
 @implementation ViewDelegate
 - (void)mtkView:(nonnull MTKView*)view drawableSizeWillChange:(CGSize)size {
-    Info::Log("drawableSize:", size.width, ',', size.height);
 }
 - (void)drawInMTKView:(nonnull MTKView*)view {
     if (![getAppMain() getInitialized])

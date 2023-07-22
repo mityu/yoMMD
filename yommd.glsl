@@ -1,4 +1,8 @@
 // vim: set commentstring=//\ %s:
+// Ported from these, which distributed under MIT License.
+//  - https://github.com/benikabocha/saba/blob/fa2ea89b1e2108271591c8bcdfcff8fb32e7f528/viewer/Saba/Viewer/resource/shader/mmd.vert
+//  - https://github.com/benikabocha/saba/blob/fa2ea89b1e2108271591c8bcdfcff8fb32e7f528/viewer/Saba/Viewer/resource/shader/mmd.frag
+//  - (License) https://github.com/benikabocha/saba/blob/fa2ea89b1e2108271591c8bcdfcff8fb32e7f528/LICENCE
 #version 300
 
 @ctype mat4 glm::mat4

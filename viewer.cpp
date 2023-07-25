@@ -23,6 +23,20 @@
 #include "yommd.hpp"
 #include "yommd.glsl.h"
 
+namespace{
+const std::filesystem::path getXdgConfigHomePath() {
+#ifdef PLATFORM_WINDOWS
+    const std::wstring_view wpath = _wgetenv(L"XDG_CONFIG_HOME");
+    if (wpath.empty())
+        return String::wideToMulti<char8_t>(wpath);
+#else
+    const std::string_view path = std::getenv("XDG_CONFIG_HOME");
+    if (!path.empty())
+        return String::tou8(path);
+#endif
+    return "~/.config";
+}
+}
 
 Material::Material(const saba::MMDMaterial& mat) :
     material(mat),
@@ -158,13 +172,12 @@ void Routine::Init(const CmdArgs& args) {
     fs::path resourcePath = "<embedded-toons>";
     fs::path configFile = args.configFile;
     if (configFile.empty()) {
-        constexpr std::string_view paths[] = {
+        fs::path paths[] = {
             "./config.toml",
-            "~/.config/yoMMD/config.toml",
+            getXdgConfigHomePath() / "yoMMD/config.toml",
             "~/yoMMD/config.toml",
         };
-        for (const auto& path : paths) {
-            fs::path file(path);
+        for (auto& file : paths) {
             Yommd::makeAbsolute(file, args.cwd);
             if (fs::exists(file)) {
                 configFile = file;

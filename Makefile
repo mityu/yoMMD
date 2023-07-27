@@ -51,7 +51,7 @@ $(TARGET): $(OBJDIR) $(OBJ)
 
 ifeq ($(OS),Windows_NT)
 release:
-	@[ -f "$(TARGET)" ] && rm $(TARGET)
+	@[ ! -f "$(TARGET)" ] || rm $(TARGET)
 	@$(MAKE) LDFLAGS="$(LDFLAGS) -mwindows"
 
 may-create-release-build:

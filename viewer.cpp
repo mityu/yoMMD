@@ -26,12 +26,12 @@
 namespace{
 const std::filesystem::path getXdgConfigHomePath() {
 #ifdef PLATFORM_WINDOWS
-    const std::wstring_view wpath = _wgetenv(L"XDG_CONFIG_HOME");
-    if (wpath.empty())
+    const wchar_t *wpath = _wgetenv(L"XDG_CONFIG_HOME");
+    if (wpath)
         return String::wideToMulti<char8_t>(wpath);
 #else
-    const std::string_view path = std::getenv("XDG_CONFIG_HOME");
-    if (!path.empty())
+    const char *path = std::getenv("XDG_CONFIG_HOME");
+    if (path)
         return String::tou8(path);
 #endif
     return "~/.config";

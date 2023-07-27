@@ -128,13 +128,13 @@ void makeAbsolute(std::filesystem::path& path, const std::filesystem::path& cwd)
 namespace {
 std::filesystem::path getHomePath() {
 #ifdef PLATFORM_WINDOWS
-    const std::wstring_view wpath = _wgetenv(L"USERPROFILE");
-    if (wpath.empty())
+    const wchar_t *wpath = _wgetenv(L"USERPROFILE");
+    if (!wpath)
         Err::Exit("%USERPROFILE% is not set");
     return std::filesystem::path(String::wideToMulti<char8_t>(wpath));
 #else
-    const std::string_view path = std::getenv("HOME");
-    if (path.empty())
+    const char *path = std::getenv("HOME");
+    if (!path)
         Err::Exit("$HOME is not set");
     return std::filesystem::path(String::tou8(path));
 #endif

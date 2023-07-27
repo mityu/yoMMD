@@ -168,7 +168,11 @@ lib/bullet3/build/$(CMAKE_BUILDFILE):
 build-saba:
 	@[ -d "lib/saba/build" ] || mkdir lib/saba/build
 	cd lib/saba/build && \
-		cmake -DCMAKE_BUILD_TYPE=RELEASE $(CMAKE_GENERATOR) .. && \
+		cmake \
+			-DCMAKE_BUILD_TYPE=RELEASE    \
+			-DSABA_BULLET_ROOT=../../bullet3/build \
+			-DSABA_ENABLE_TEST=OFF        \
+			$(CMAKE_GENERATOR) .. && \
 		cmake --build . -t Saba -j
 
 $(SOKOL_SHDC): tool/

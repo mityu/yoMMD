@@ -32,7 +32,7 @@ const std::filesystem::path getXdgConfigHomePath() {
 #else
     const char *path = std::getenv("XDG_CONFIG_HOME");
     if (path)
-        return String::tou8(path);
+        return String::tou8(std::string_view(path));
 #endif
     return "~/.config";
 }

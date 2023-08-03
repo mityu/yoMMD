@@ -136,7 +136,7 @@ std::filesystem::path getHomePath() {
     const char *path = std::getenv("HOME");
     if (!path)
         Err::Exit("$HOME is not set");
-    return std::filesystem::path(String::tou8(path));
+    return std::filesystem::path(String::tou8(std::string_view(path)));
 #endif
 }
 }

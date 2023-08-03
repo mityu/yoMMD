@@ -7,7 +7,6 @@
 -Ilib/toml11
 -Ilib/incbin
 -Ilib/bullet3/build/include/bullet
--I/opt/homebrew/include
 -Wall
 -Wdeprecated
 -Wextra

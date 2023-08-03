@@ -3,6 +3,12 @@
 yoMMD is a software to show MMD models on Desktop, as known as "Desktop mascot,"
 for Windows and macOS.
 
+![Screenshot](https://github.com/mityu/yoMMD/assets/24771416/cefd0730-be00-42d7-abdc-b9a2ba64f89e)
+
+- MMD Model: つみ式ミクさんv4(https://3d.nicovideo.jp/works/td56081)
+- Motion: ぼんやり待ちループ(https://3d.nicovideo.jp/works/td30405)
+
+
 # Development environment
 
 - Apple/homebrew clang on macOS Ventura 13
@@ -10,18 +16,45 @@ for Windows and macOS.
 
 yoMMD must work on these environment.
 
+# Build tools
+
+- gcc (Windows)/clang (macOS)
+- make
+- cmake
+- (optional) ninja
+
+## Installation
+
+#### With homebrew:
+
+```
+$ brew install cmake
+$ brew install ninja  # optional
+```
+
+#### With MinGW64 on msys2:
+
+Note that you have to use `mingw-w64-x86_64-cmake` package, not `cmake` package.
+yoMMD build will fail with the msys cmake package.
+
+```
+$ pacman -S mingw-w64-x86_64-cmake
+$ pacman -S mingw-w64-x86_64-ninja  # optional
+```
+
 
 # Build
 
-The dependencies are managed as submodule under `lib/` and you don't need to
-set up external libraries before.
+yoMMD manages its all dependencies as submodule.  You don't need to additionaly
+install any libraries.
 
 ## On macOS
 
 ```
 $ git clone https://github.com/mityu/yoMMD
 $ cd yoMMD
-$ make init-submodule  # Initialize submodule and build them. This takes a bit long time...
+$ git submodule update --init --recursive  # Initialize submodule. This takes a bit long time...
+$ make build-submodules
 $ make -j4  # Build ./yoMMD executable
 ```
 
@@ -41,7 +74,8 @@ building yoMMD.
 ```
 $ git clone https://github.com/mityu/yoMMD
 $ cd yoMMD
-$ make init-submodule  # Initialize submodule and build them. This takes a bit long time...
+$ git submodule update --init --recursive  # Initialize submodule. This takes a bit long time...
+$ make build-submodules
 $ make release -j4  # Build ./yoMMD.exe executable.
 ```
 

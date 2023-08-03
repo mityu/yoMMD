@@ -165,15 +165,16 @@ lib/bullet3/build/$(CMAKE_BUILDFILE):
 		..
 
 # Build saba library
-build-saba:
+build-saba: lib/saba/build/$(CMAKE_BUILDFILE)
+	cd lib/saba/build && cmake --build . -t Saba -j
+
+lib/saba/build/$(CMAKE_BUILDFILE):
 	@[ -d "lib/saba/build" ] || mkdir lib/saba/build
-	cd lib/saba/build && \
-		cmake \
-			-DCMAKE_BUILD_TYPE=RELEASE    \
-			-DSABA_BULLET_ROOT=../../bullet3/build \
-			-DSABA_ENABLE_TEST=OFF        \
-			$(CMAKE_GENERATOR) .. && \
-		cmake --build . -t Saba -j
+	cd lib/saba/build && cmake                  \
+		-DCMAKE_BUILD_TYPE=RELEASE              \
+		-DSABA_BULLET_ROOT=../../bullet3/build  \
+		-DSABA_ENABLE_TEST=OFF                  \
+		$(CMAKE_GENERATOR) ..
 
 $(SOKOL_SHDC): tool/
 	curl -L -o $@ $(SOKOL_SHDC_URL)
@@ -182,28 +183,27 @@ $(SOKOL_SHDC): tool/
 update-sokol-shdc:
 	$(RM) $(SOKOL_SHDC) && make $(SOKOL_SHDC)
 
-init-submodule:
-	git submodule update --init
+build-submodule:
 	$(MAKE) build-bullet
 	$(MAKE) build-saba
 
 help:
 	@echo "Available targets:"
-	@echo "$(TARGET)		Build executable binary (The default target)"
-	@echo "release		Release build (Only available on Windows)"
-	@echo "debug		Debug build"
-	@echo "run		Build and run binary"
-	@echo "clean		Clean build related files"
-	@echo "app          Make application bundle (Only available on macOS)"
-	@echo "package-tiny	Make distribution package without any MMD models/motions"
-	@echo "package		Make distribution package with default config,"
-	@echo "		MMD model and motions included"
-	@echo "build-bullet	Build bullet physics library"
-	@echo "build-saba	Build saba library"
-	@echo "update-sokol-shdc	Update sokol-shdc tool"
-	@echo "init-submodule	Init submodule, and build bullet and saba library"
-	@echo "help		Show this help"
+	@echo "$(TARGET)               Build executable binary (The default target)"
+	@echo "release             Release build (Only available on Windows)"
+	@echo "debug               Debug build"
+	@echo "run                 Build and run binary"
+	@echo "clean               Clean build related files"
+	@echo "app                 Make application bundle (Only available on macOS)"
+	@echo "package-tiny        Make distribution package without any MMD models/motions"
+	@echo "package             Make distribution package with default config,"
+	@echo "                        MMD model and motions included"
+	@echo "build-bullet        Build bullet physics library"
+	@echo "build-saba          Build saba library"
+	@echo "update-sokol-shdc   Update sokol-shdc tool"
+	@echo "bulid-submodule     Build submodule libraries"
+	@echo "help                Show this help"
 
 .PHONY: release debug help run clean package package-tiny app
 .PHONY: may-create-release-build
-.PHONY: build-bullet build-saba update-sokol-shdc init-submodule
+.PHONY: build-bullet build-saba update-sokol-shdc build-submodule

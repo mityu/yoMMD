@@ -94,6 +94,37 @@ You can write configurations in `config.toml`.
 
 TODO: Write more
 
+# Example configration
+
+The example configuration for the screenshot on the top of this README.
+
+```toml
+model = "./つみ式ミクさんv4/つみ式ミクさんv4.pmx"
+default-model-position = [0.65, 0.85]
+default-camera-position = [0.0, 20.0, 50.0]
+default-scale = 2.0
+
+[[motion]]
+path = ["./ぼんやり待ちループ/ぼんやり待ち合わせ_腕広いver(465f).vmd"]
+
+# To specify multiple .vmd files.
+# [[motion]]
+# path = ["./path/to/awesome_model_motion.vmd", "./path/to/awesome_camera_motion.vmd"]
+# disabled = true  # Make this "true" to disable this motion.
+```
+
+where directory structure is:
+
+```
+|-- config.toml
+|-- つみ式ミクさんv4
+|    |-- ...
+|    |-- つみ式ミクさんv4.pmx
++-- ぼんやり待ちループ
+     |-- ...
+     |-- ぼんやり待ち合わせ_腕広いver(465f).vmd
+```
+
 # FAQ
 
 Q. Is this work with multi monitors?

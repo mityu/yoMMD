@@ -23,6 +23,14 @@
 @interface ViewDelegate: NSObject<MTKViewDelegate>
 @end
 
+@interface AlertWindow : NSObject
+-(void)showAlert:(NSString *)msg;
+-(void)actionClose:(id)sender;
+@end
+
+@interface AlertWindowDelegate : NSObject<NSWindowDelegate>
+@end
+
 @interface AppMain: NSObject
 -(void)createMainWindow;
 -(void)createStatusItem;
@@ -215,9 +223,8 @@ inline AppMain *getAppMain(void);
 }
 -(void)actionToggleHandleMouse:(NSMenuItem *)sender {
     if (sender.state == NSControlStateValueOff) {
-        auto appList = [[NSWorkspace sharedWorkspace] runningApplications];
-        for (NSUInteger i = 0; i < appList.count; ++i) {
-            auto app = [appList objectAtIndex:i];
+        NSArray *appList = [[NSWorkspace sharedWorkspace] runningApplications];
+        for (NSRunningApplication *app in appList) {
             if (app.active) {
                 alterApp_ = app;
                 break;
@@ -274,6 +281,105 @@ inline AppMain *getAppMain(void);
 }
 @end
 
+@implementation AlertWindow {
+    NSWindow *window_;
+}
+static constexpr float paddingX_ = 10.0;
+static constexpr float paddingY_ = 5.0;
+-(void)showAlert:(NSString *)msg {
+    NSScrollView *alertView_;
+    NSButton *button_;
+
+    window_ = [[NSWindow alloc]
+        initWithContentRect:NSMakeRect(0, 0, 600, 350)
+                  styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
+                    backing:NSBackingStoreBuffered
+                      defer:NO];
+    [window_ setTitle:@"yoMMD Error"];
+    [window_ setIsVisible:YES];
+    [window_ center];
+    [window_ setDelegate:[[AlertWindowDelegate alloc] init]];
+
+    button_ = [self createButton];
+
+    NSRect logViewFrame = window_.contentView.frame;
+    logViewFrame.origin.x += paddingX_;
+    logViewFrame.origin.y += paddingY_ * 2 + button_.frame.size.height;
+    logViewFrame.size.width -= paddingX_ * 2;
+    logViewFrame.size.height -= paddingY_ * 4 + button_.frame.size.height;
+
+    alertView_ = [self createAlertView:msg frame:logViewFrame];
+
+    [window_.contentView addSubview:alertView_];
+    [window_.contentView addSubview:button_];
+    [window_ setDefaultButtonCell:button_.cell];
+
+    if (!NSApp.active)
+        [NSApp activateIgnoringOtherApps:YES];
+    [window_ makeKeyAndOrderFront:window_];
+
+    // Start modal event loop for the alert window.  This modal event loop
+    // should be ended on "windowWillClose" callback.
+    [NSApp runModalForWindow:window_];
+}
+-(void)actionClose:(id)sender {
+    [window_ close];
+}
+-(NSButton *)createButton {
+    NSButton *button = [NSButton buttonWithTitle:@"OK"
+                                          target:self
+                                          action:@selector(actionClose:)];
+    const NSRect& viewFrame = window_.contentView.frame;
+    NSSize size = button.frame.size;
+    NSPoint origin = viewFrame.origin;
+    size.width = size.width * 5 / 3;
+    origin.x += viewFrame.size.width - size.width - paddingX_;
+    origin.y += paddingY_;
+
+    [button setFrameOrigin:origin];
+    [button setFrameSize:size];
+
+    return button;
+}
+-(NSScrollView *)createAlertView:(NSString *)msg frame:(NSRect)frame {
+    NSFont *font = [NSFont monospacedSystemFontOfSize:12.0 weight:NSFontWeightRegular];
+    NSTextStorage *textStorage = [[NSTextStorage alloc] initWithString:msg];
+    NSTextContainer *container = [[NSTextContainer alloc] initWithContainerSize: NSMakeSize(FLT_MAX, FLT_MAX)];
+    NSLayoutManager *layoutManager = [[NSLayoutManager alloc] init];
+
+    [layoutManager addTextContainer:container];
+    [textStorage addLayoutManager:layoutManager];
+    [textStorage setFont:font];
+
+    // Render glyph
+    [layoutManager glyphRangeForTextContainer:container];
+
+    // Get text bounds
+    NSRect bounds = [layoutManager usedRectForTextContainer:container];
+
+    NSTextView *textView = [[NSTextView alloc] initWithFrame:bounds textContainer:container];
+    [textView setEditable:NO];
+
+    NSClipView *clipView = [[NSClipView alloc] initWithFrame:bounds];
+    clipView.documentView = textView;
+
+    NSScrollView *scrollView = [[NSScrollView alloc] initWithFrame:frame];
+    [scrollView setContentView:clipView];
+    [scrollView setHasHorizontalScroller:YES];
+    [scrollView setHasVerticalScroller:YES];
+
+    return scrollView;
+}
+@end
+
+@implementation AlertWindowDelegate
+-(void)windowWillClose:(NSNotification *)notification {
+    (void)notification;
+    // Stop modal event loop for the alert window.
+    [NSApp stopModal];
+}
+@end
+
 namespace{
 const void *getSokolDrawable() {
     return (__bridge const void *)[getAppMain() getDrawable];
@@ -310,21 +416,10 @@ glm::vec2 Context::getMousePosition() {
 
 namespace Dialog {
 void messageBox(std::string_view msg) {
-    // TODO: Implement more rich one.
-    NSFont *font = [NSFont monospacedSystemFontOfSize:12.0 weight:NSFontWeightRegular];
-    NSAlert *alert = [[NSAlert alloc] init];
+    static AlertWindow *window;
 
-    // Get all views present on the NSAlert content view. 5th element will be a
-    // NSTextField object holding the Message text.
-    NSArray* views = [[[alert window] contentView] subviews];
-    NSTextField *text = (NSTextField *)[views objectAtIndex:5];
-    [text setFont:font];
-    [text setAlignment:NSTextAlignmentLeft];
-    [[views objectAtIndex:4] setAlignment:NSTextAlignmentLeft];
-
-    [alert setMessageText:@"yoMMD Error"];
-    [alert setInformativeText:[NSString stringWithUTF8String:msg.data()]];
-    [alert runModal];
+    window = [AlertWindow alloc];
+    [window showAlert:[NSString stringWithUTF8String:msg.data()]];
 }
 }
 

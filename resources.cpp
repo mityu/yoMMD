@@ -54,7 +54,7 @@ View getToonData(std::string_view path) {
     } else if (basename == "toon10.bmp") {
         return {_Toon10Data, _Toon10Size};
     } else {
-        Err::Log("Internal error:");
+        Err::Log("Internal error: Unknown toon image:", path);
         return {nullptr, 0};
     }
 }

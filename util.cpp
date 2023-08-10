@@ -9,7 +9,7 @@
 namespace {
 std::filesystem::path getHomePath();
 namespace globals {
-static constexpr char usage[] = R"(
+constexpr std::string_view usage = R"(
 Usage: yommd <options>
 
 options:

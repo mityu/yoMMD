@@ -167,34 +167,15 @@ Routine::~Routine() {
     Terminate();
 }
 
-void Routine::Init(const CmdArgs& args) {
+void Routine::Init() {
     namespace fs = std::filesystem;
     fs::path resourcePath = "<embedded-toons>";
-    fs::path configFile = args.configFile;
-    if (configFile.empty()) {
-        fs::path paths[] = {
-            "./config.toml",
-            getXdgConfigHomePath() / "yoMMD/config.toml",
-            "~/yoMMD/config.toml",
-        };
-        for (auto& file : paths) {
-            Yommd::makeAbsolute(file, args.cwd);
-            if (fs::exists(file)) {
-                configFile = file;
-                break;
-            }
-        }
-    }
-    if (configFile.empty())
-        Err::Exit("No config file found.");
 
-    const Config config = Config::Parse(configFile);
+    defaultCamera_.eye = config_.defaultCameraPosition;
+    defaultCamera_.center = config_.defaultGazePosition;
+    mmd_.LoadModel(config_.model, resourcePath);
 
-    defaultCamera_.eye = config.defaultCameraPosition;
-    defaultCamera_.center = config.defaultGazePosition;
-    mmd_.LoadModel(config.model, resourcePath);
-
-    for (const auto& motion : config.motions) {
+    for (const auto& motion : config_.motions) {
         if (!motion.disabled) {
             mmd_.LoadMotion(motion.paths);
             motionWeights_.push_back(motion.weight);
@@ -228,12 +209,12 @@ void Routine::Init(const CmdArgs& args) {
     randDist_.param(decltype(randDist_)::param_type(0, distSup - 1));
 
     auto physics = mmd_.GetModel()->GetMMDPhysics();
-    physics->GetDynamicsWorld()->setGravity(btVector3(0, -config.gravity * 5.0f, 0));
+    physics->GetDynamicsWorld()->setGravity(btVector3(0, -config_.gravity * 5.0f, 0));
     physics->SetMaxSubStepCount(INT_MAX);
-    physics->SetFPS(config.simulationFPS);
+    physics->SetFPS(config_.simulationFPS);
 
-    userViewport_.SetDefaultTranslation(config.defaultModelPosition);
-    userViewport_.SetDefaultScaling(config.defaultScale);
+    userViewport_.SetDefaultTranslation(config_.defaultModelPosition);
+    userViewport_.SetDefaultScaling(config_.defaultScale);
 
     selectNextMotion();
     needBridgeMotions_ = false;
@@ -651,6 +632,33 @@ void Routine::OnWheelScrolled(float delta) {
 
 void Routine::ResetModelPosition() {
     userViewport_.ResetPosition();
+}
+
+void Routine::ParseConfig(const CmdArgs& args) {
+    namespace fs = std::filesystem;
+    fs::path configFile = args.configFile;
+    if (configFile.empty()) {
+        fs::path paths[] = {
+            "./config.toml",
+            getXdgConfigHomePath() / "yoMMD/config.toml",
+            "~/yoMMD/config.toml",
+        };
+        for (auto& file : paths) {
+            Yommd::makeAbsolute(file, args.cwd);
+            if (fs::exists(file)) {
+                configFile = file;
+                break;
+            }
+        }
+    }
+    if (configFile.empty())
+        Err::Exit("No config file found.");
+
+    config_ = Config::Parse(configFile);
+}
+
+const Config& Routine::GetConfig() const {
+    return config_;
 }
 
 std::optional<Routine::ImageMap::const_iterator> Routine::loadImage(const std::string& path) {

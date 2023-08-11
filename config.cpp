@@ -7,7 +7,8 @@
 Config::Config() :
     simulationFPS(60.0f), gravity(9.8f),
     defaultModelPosition(0.0f, 0.0f), defaultScale(1.0f),
-    defaultCameraPosition(0, 10, 50), defaultGazePosition(0, 10, 0),defaultDisplayIndex(0)
+    defaultCameraPosition(0, 10, 50), defaultGazePosition(0, 10, 0),
+    defaultScreenNumber(std::nullopt)
 {}
 
 Config Config::Parse(const std::filesystem::path& configFile) {
@@ -70,8 +71,10 @@ Config Config::Parse(const std::filesystem::path& configFile) {
         config.simulationFPS = toml::find_or(
                 entire, "simulation-fps", config.simulationFPS);
         config.gravity = toml::find_or(entire, "gravity", config.gravity);
-        config.defaultDisplayIndex = toml::find_or(
-                entire, "default-display-index", config.defaultDisplayIndex);
+        if (entire.contains("default-screen-number")) {
+            config.defaultScreenNumber =
+                toml::find<int>(entire, "default-screen-number");
+        }
     } catch (std::runtime_error& e) {
         // File open error, file read error, etc...
         Err::Exit(e.what());

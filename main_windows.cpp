@@ -111,10 +111,11 @@ AppMain::~AppMain() {
 }
 
 void AppMain::Setup(const CmdArgs& cmdArgs) {
+    routine_.ParseConfig(cmdArgs);
     createWindow();
     createDrawable();
     createTaskbar();
-    routine_.Init(cmdArgs);
+    routine_.Init();
 
     // Every initialization must be finished.  Now let's show window.
     ShowWindow(hwnd_, SW_SHOWNORMAL);
@@ -206,8 +207,11 @@ void AppMain::createWindow() {
         Err::Log("Failed to load application icon.");
     }
 
-    Config config = Config::Parse("config.toml");
-    int targetDisplayIndex = config.defaultDisplayIndex;
+    const Config& config = routine_.GetConfig();
+    int targetDisplayIndex = 0;  // The main monitor ID should be 0.
+    if (config.defaultScreenNumber.has_value()) {
+        targetDisplayIndex = *config.defaultScreenNumber;
+    }
 
     DISPLAY_DEVICE displayDevice;
     displayDevice.cb = sizeof(DISPLAY_DEVICE);
@@ -216,10 +220,6 @@ void AppMain::createWindow() {
     DEVMODE dm;
     dm.dmSize = sizeof(DEVMODE);
     EnumDisplaySettings(displayDevice.DeviceName, ENUM_CURRENT_SETTINGS, &dm);
-
-    RECT rect = {dm.dmPosition.x, dm.dmPosition.y,
-        dm.dmPosition.x + dm.dmPelsWidth,
-        dm.dmPosition.y + dm.dmPelsHeight};
 
     WNDCLASSEXW wc = {};
 
@@ -236,8 +236,8 @@ void AppMain::createWindow() {
 
     hwnd_ = CreateWindowExW(
         winExStyle, windowClassName_, L"yoMMD", winStyle,
-        rect.left, rect.top,
-        rect.right - rect.left, rect.bottom - rect.top,
+        dm.dmPosition.x, dm.dmPosition.y,
+        dm.dmPelsWidth, dm.dmPelsHeight,
         nullptr, nullptr,
         hInstance, this);
 

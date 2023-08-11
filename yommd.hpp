@@ -141,7 +141,7 @@ struct Config {
     float defaultScale;
     glm::vec3 defaultCameraPosition;
     glm::vec3 defaultGazePosition;
-    int defaultDisplayIndex;
+    std::optional<int> defaultScreenNumber;
 
     static Config Parse(const std::filesystem::path& configFile);
 };
@@ -239,7 +239,7 @@ class Routine : private NonCopyable {
 public:
     Routine();
     ~Routine();
-    void Init(const CmdArgs &args);
+    void Init();
     void Update();
     void Draw();
     void Terminate();
@@ -247,6 +247,8 @@ public:
     void OnMouseDown();
     void OnWheelScrolled(float delta);
     void ResetModelPosition();
+    void ParseConfig(const CmdArgs& args);
+    const Config& GetConfig() const;
 private:
     using ImageMap = std::map<std::string, Image>;
     void initBuffers();
@@ -260,6 +262,9 @@ private:
         glm::vec3 eye;
         glm::vec3 center;
     };
+
+    Config config_;
+
     UserViewport userViewport_;
 
     bool shouldTerminate_;

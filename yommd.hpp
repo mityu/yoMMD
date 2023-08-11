@@ -141,6 +141,7 @@ struct Config {
     float defaultScale;
     glm::vec3 defaultCameraPosition;
     glm::vec3 defaultGazePosition;
+    int defaultDisplayIndex;
 
     static Config Parse(const std::filesystem::path& configFile);
 };

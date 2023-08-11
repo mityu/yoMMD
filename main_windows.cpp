@@ -197,7 +197,7 @@ void AppMain::createWindow() {
         WS_EX_NOREDIRECTIONBITMAP |
         WS_EX_NOACTIVATE |
         WS_EX_TOPMOST |
-        WS_EX_LAYERED |  // TODO: Is there another way?
+        WS_EX_LAYERED |
         WS_EX_TRANSPARENT;
 
     const HINSTANCE hInstance = GetModuleHandleW(nullptr);
@@ -206,9 +206,20 @@ void AppMain::createWindow() {
         Err::Log("Failed to load application icon.");
     }
 
-    RECT rect = {};
-    SystemParametersInfoW(SPI_GETWORKAREA, 0, &rect, 0);
+    Config config = Config::Parse("config.toml");
+    int targetDisplayIndex = config.defaultDisplayIndex;
 
+    DISPLAY_DEVICE displayDevice;
+    displayDevice.cb = sizeof(DISPLAY_DEVICE);
+    EnumDisplayDevices(NULL, targetDisplayIndex, &displayDevice, 0);
+
+    DEVMODE dm;
+    dm.dmSize = sizeof(DEVMODE);
+    EnumDisplaySettings(displayDevice.DeviceName, ENUM_CURRENT_SETTINGS, &dm);
+
+    RECT rect = {dm.dmPosition.x, dm.dmPosition.y,
+        dm.dmPosition.x + dm.dmPelsWidth,
+        dm.dmPosition.y + dm.dmPelsHeight};
 
     WNDCLASSEXW wc = {};
 
@@ -398,6 +409,7 @@ DWORD WINAPI AppMain::showMenu(LPVOID param) {
         Err::Log("Failed to create dummy window for menu.");
         return 1;
     }
+
 
     POINT point;
     if (!GetCursorPos(&point)) {

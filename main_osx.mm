@@ -17,6 +17,9 @@
 @interface Window: NSWindow
 @end
 
+@interface WindowDelegate : NSObject<NSWindowDelegate>
+@end
+
 @interface View: MTKView
 @end
 
@@ -32,26 +35,41 @@
 @end
 
 @interface AppMain: NSObject
+enum class MenuTag : NSInteger {
+    None,
+    SelectScreen,
+};
 -(void)createMainWindow;
 -(void)createStatusItem;
 -(void)actionQuit:(NSMenuItem *)sender;
 -(void)actionToggleHandleMouse:(NSMenuItem *)sender;
 -(void)actionResetModelPosition:(NSMenuItem *)sender;
+-(void)actionChangeScreen:(NSMenuItem *)sender;
 -(const NSMenu *)getAppMenu;
 -(sg_context_desc)getSokolContext;
 -(id<CAMetalDrawable>)getDrawable;
 -(MTLRenderPassDescriptor *)getRenderPassDescriptor;
 -(NSSize)getWindowSize;
 -(NSSize)getDrawableSize;
+-(NSNumber *)getCurrentScreenNumber;
 -(Routine&)getRoutine;
 -(void)notifyInitializationDone;
 -(bool)getInitialized;
+@end
+
+@interface AppMenuDelegate : NSObject<NSMenuDelegate>
+@end
+
+@interface SelectScreenMenuDelegate : NSObject<NSMenuDelegate>
 @end
 
 namespace{
 const void *getSokolDrawable(void);
 const void *getSokolRenderpassDescriptor(void);
 inline AppMain *getAppMain(void);
+
+// Find NSScreen from NSScreenNumber.  If screen is not found, returns nil.
+inline NSScreen *findScreenFromID(NSInteger scID);
 }
 
 @implementation AppDelegate
@@ -97,6 +115,16 @@ inline AppMain *getAppMain(void);
 }
 @end
 
+@implementation WindowDelegate
+-(void)windowDidChangeScreen:(NSNotification *)notification {
+    NSWindow *window = [notification object];
+    NSScreen *screen = [window screen];
+    if (!NSEqualRects(window.frame, screen.visibleFrame)) {
+        [window setFrame:screen.visibleFrame display:YES animate:NO];
+    }
+}
+@end
+
 @implementation View
 -(BOOL)acceptsFirstMouse:(NSEvent *)event {
     return NO;
@@ -123,11 +151,14 @@ inline AppMain *getAppMain(void);
 @implementation AppMain {
     AppDelegate *appDelegate_;
     Window *window_;
+    WindowDelegate *windowDelegate_;
     View *view_;
     id<MTLDevice> metalDevice_;
     ViewDelegate *viewDelegate_;
     NSStatusItem *statusItem_;
     NSMenu *appMenu_;
+    AppMenuDelegate *appMenuDelegate_;
+    SelectScreenMenuDelegate *selectScreenMenuDelegate_;
     NSRunningApplication *alterApp_;
     Routine routine_;
     bool initialized_;
@@ -151,10 +182,12 @@ inline AppMain *getAppMain(void);
         NSWindowCollectionBehaviorIgnoresCycle;
 
     window_ = [[Window alloc] initWithContentRect:screenRect
-                                         styleMask:style
-                                           backing:NSBackingStoreBuffered
-                                             defer:NO];
+                                        styleMask:style
+                                          backing:NSBackingStoreBuffered
+                                            defer:NO];
+    windowDelegate_ = [[WindowDelegate alloc] init];
 
+    [window_ setDelegate:windowDelegate_];
     [window_ setTitle:@"yoMMD"];
     [window_ center];
     [window_ setIsVisible:YES];
@@ -173,7 +206,6 @@ inline AppMain *getAppMain(void);
     [view_ setDevice: metalDevice_];
     [view_ setColorPixelFormat:MTLPixelFormatBGRA8Unorm];
     [view_ setDepthStencilPixelFormat:MTLPixelFormatDepth32Float_Stencil8];
-    // [view setAutoResizeDrawable:NO];
 
     [window_ setContentView:view_];
     [[view_ layer] setMagnificationFilter:kCAFilterNearest];
@@ -190,12 +222,15 @@ inline AppMain *getAppMain(void);
     [statusItem_ setBehavior:NSStatusItemBehaviorTerminationOnRemoval];
     [statusItem_ setVisible:YES];
 
+    appMenuDelegate_ = [[AppMenuDelegate alloc] init];
     appMenu_ = [[NSMenu alloc] init];
+    [appMenu_ setDelegate:appMenuDelegate_];
 
     NSMenuItem *enableMouse = [[NSMenuItem alloc]
                         initWithTitle:@"Enable Mouse"
                                action:@selector(actionToggleHandleMouse:)
                         keyEquivalent:@""];
+    [enableMouse setTag:Enum::cast(MenuTag::None)];
     [enableMouse setTarget:self];
     [enableMouse setState:NSControlStateValueOff];
 
@@ -204,14 +239,28 @@ inline AppMain *getAppMain(void);
                         initWithTitle:@"Reset Position"
                                action:@selector(actionResetModelPosition:)
                         keyEquivalent:@""];
+    [resetModelPosition setTag:Enum::cast(MenuTag::None)];
     [resetModelPosition setTarget:self];
+
+    selectScreenMenuDelegate_ = [[SelectScreenMenuDelegate alloc] init];
+    NSMenuItem *selectScreen = [[NSMenuItem alloc]
+                        initWithTitle:@"Select screen"
+                               action:nil
+                        keyEquivalent:@""];
+    [selectScreen setTag:Enum::cast(MenuTag::SelectScreen)];
+    [selectScreen setSubmenu:[[NSMenu alloc] init]];
+    [selectScreen.submenu setDelegate:selectScreenMenuDelegate_];
+    [selectScreen setTarget:self];
 
     NSMenuItem *quit = [[NSMenuItem alloc]
             initWithTitle:@"Quit" action:@selector(actionQuit:) keyEquivalent:@""];
+    [quit setTag:Enum::cast(MenuTag::None)];
     [quit setTarget:self];
 
     [appMenu_ addItem:enableMouse];
     [appMenu_ addItem:resetModelPosition];
+    [appMenu_ addItem:[NSMenuItem separatorItem]];
+    [appMenu_ addItem:selectScreen];
     [appMenu_ addItem:[NSMenuItem separatorItem]];
     [appMenu_ addItem:quit];
     [statusItem_ setMenu:appMenu_];
@@ -245,6 +294,16 @@ inline AppMain *getAppMain(void);
 -(void)actionResetModelPosition:(NSMenuItem *)sender {
     routine_.ResetModelPosition();
 }
+-(void)actionChangeScreen:(NSMenuItem *)sender {
+    NSScreen *dst = findScreenFromID(sender.tag);
+    if (!dst) {
+        // Display not found.  Maybe the connection for the target display is
+        // removed.
+        Info::Log("Display not found: %ld", sender.tag);
+        return;
+    }
+    [window_ setFrame:dst.visibleFrame display:YES animate:NO];
+}
 -(const NSMenu *)getAppMenu {
     return appMenu_;
 }
@@ -270,6 +329,12 @@ inline AppMain *getAppMain(void);
 -(NSSize)getDrawableSize {
     return view_.drawableSize;
 }
+-(NSNumber *)getCurrentScreenNumber {
+    NSScreen *screen = [window_ screen];
+    if (!screen)
+        Err::Log("Internal error? screen is offscreen");
+    return [screen deviceDescription][@"NSScreenNumber"];
+}
 -(Routine&)getRoutine {
     return routine_;
 }
@@ -278,6 +343,97 @@ inline AppMain *getAppMain(void);
 }
 -(bool)getInitialized {
     return initialized_;
+}
+@end
+
+@implementation AppMenuDelegate
+-(void)menu:(NSMenu *)menu willHighlightItem:(NSMenuItem *)item {
+    if (!item || item.tag != Enum::cast(MenuTag::SelectScreen))
+        return;
+
+    AppMain *appMain = getAppMain();
+    NSNumber *currentScreenID = [getAppMain() getCurrentScreenNumber];
+
+    NSMenu *subMenu = item.submenu;
+    [subMenu removeAllItems];
+    for (NSScreen *screen in [NSScreen screens]) {
+        NSNumber *scID = [screen deviceDescription][@"NSScreenNumber"];
+        NSString *title = [[NSString alloc]
+                    initWithFormat:@"Screen%@", [scID stringValue]];
+        NSMenuItem *subItem = [[NSMenuItem alloc]
+                        initWithTitle:title
+                               action:@selector(actionChangeScreen:)
+                        keyEquivalent:@""];
+        [subItem setTag:[scID integerValue]];
+        [subItem setTarget:appMain];
+        if ([scID isEqualToNumber:currentScreenID]) {
+            // FIXME: Menu item is not disabled on the first display of menus.
+            [subItem setEnabled:NO];
+        }
+        [subMenu addItem:subItem];
+    }
+}
+-(void)menuNeedsUpdate:(NSMenu *)menu {
+    NSMenuItem *selectScreen = [menu itemWithTag:Enum::cast(MenuTag::SelectScreen)];
+    if (!selectScreen) {
+        Err::Log("Internal error: \"Select screen\" menu not found");
+        return;
+    }
+
+    if ([[NSScreen screens] count] <= 1) {
+        [selectScreen setEnabled:NO];
+    } else {
+        [selectScreen setEnabled:YES];
+    }
+}
+@end
+
+@implementation SelectScreenMenuDelegate {
+    NSWindow *window_;
+}
+-(instancetype)init {
+    self = [super init];
+    if (self) {
+        constexpr NSUInteger style = NSWindowStyleMaskBorderless;
+        constexpr NSUInteger collectionBehavior =
+            NSWindowCollectionBehaviorCanJoinAllSpaces |
+            NSWindowCollectionBehaviorStationary |
+            NSWindowCollectionBehaviorTransient |
+            NSWindowCollectionBehaviorFullScreenAuxiliary |
+            NSWindowCollectionBehaviorFullScreenDisallowsTiling |
+            NSWindowCollectionBehaviorIgnoresCycle;
+        NSColor *bgColor = [NSColor colorWithDeviceRed:0.0 green:0.0 blue:0.0 alpha:0.5];
+        window_ = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 0, 0)
+                                              styleMask:style
+                                                backing:NSBackingStoreBuffered
+                                                  defer:NO];
+        [window_ setCollectionBehavior:collectionBehavior];
+        [window_ setLevel:NSFloatingWindowLevel];
+        [window_ setHasShadow:NO];
+        [window_ setOpaque:NO];
+        [window_ setBackgroundColor:bgColor];
+    }
+    return self;
+}
+-(void)menuDidClose:(NSMenu *)menu {
+    [window_ setIsVisible:NO];
+    [window_ setFrame:NSMakeRect(0, 0, 0, 0) display:NO];
+}
+-(void)menu:(NSMenu *)menu willHighlightItem:(NSMenuItem *)item {
+    if (!item) {
+        [window_ setIsVisible:NO];
+        return;
+    }
+
+    NSScreen *dst = findScreenFromID(item.tag);
+    if (!dst) {
+        // Display not found.  Maybe the connection for the target display is
+        // removed.
+        Info::Log("Display not found: %ld", item.tag);
+        return;
+    }
+    [window_ setFrame:dst.visibleFrame display:YES animate:NO];
+    [window_ setIsVisible:YES];
 }
 @end
 
@@ -392,6 +548,17 @@ const void *getSokolRenderpassDescriptor(void) {
 AppMain *getAppMain(void) {
     static AppMain *appMain = [[AppMain alloc] init];
     return appMain;
+}
+
+NSScreen *findScreenFromID(NSInteger scID) {
+    NSNumber *target = [[NSNumber alloc] initWithInteger:scID];
+    for (NSScreen *sc in [NSScreen screens]) {
+        NSNumber *scNum = [sc deviceDescription][@"NSScreenNumber"];
+        if ([scNum isEqualToNumber:target]) {
+            return sc;
+        }
+    }
+    return nil;
 }
 } // namespace
 

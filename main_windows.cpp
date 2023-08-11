@@ -27,6 +27,30 @@ std::optional<HMONITOR> getMonitorHandleFromID(int monitorID);
 std::optional<RECT> getMonitorWorkareaFromID(int screenID);
 }
 
+class AppMenu {
+public:
+    AppMenu();
+    ~AppMenu();
+    void Setup();
+    void Terminate();
+    void ShowMenu();
+public:
+    static constexpr UINT YOMMD_WM_TOGGLE_ENABLE_MOUSE = WM_APP;
+    static constexpr UINT YOMMD_WM_SHOW_TASKBAR_MENU = WM_APP + 1;
+private:
+    static DWORD WINAPI showMenu(LPVOID param);
+    static LRESULT CALLBACK windowProc(
+            HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+    void createTaskbar();
+private:
+    static constexpr PCWSTR wcName = L"yoMMD-menu-window";
+
+    HANDLE hMenuThread_;
+    HICON hTaskbarIcon_;
+    NOTIFYICONDATAW taskbarIconDesc_;
+};
+
 class AppMain {
 public:
     AppMain();
@@ -35,6 +59,8 @@ public:
     void UpdateDisplay();
     void Terminate();
     bool IsRunning() const;
+    Routine& GetRoutine();
+    const HWND& GetWindowHandle() const;
     sg_context_desc GetSokolContext() const;
     glm::vec2 GetWindowSize() const;
     glm::vec2 GetDrawableSize() const;
@@ -43,20 +69,18 @@ public:
 private:
     static LRESULT CALLBACK windowProc(
             HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    static DWORD WINAPI showMenu(LPVOID param);
+    static LRESULT CALLBACK menuWindowProc(
+            HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
     void createWindow();
     void createDrawable();
-    void createStatusIcon();
-    void createTaskbar();
     LRESULT handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
 private:
     static constexpr PCWSTR windowClassName_ = L"yoMMD AppMain";
-    static constexpr UINT YOMMD_WM_TOGGLE_ENABLE_MOUSE = WM_APP;
-    static constexpr UINT YOMMD_WM_SHOW_TASKBAR_MENU = WM_APP + 1;
 
     bool isRunning_;
     Routine routine_;
+    AppMenu menu_;
     HWND hwnd_;
     ComPtr<IDXGISwapChain1> swapChain_;
     ComPtr<ID3D11Texture2D> renderTarget_;
@@ -70,10 +94,6 @@ private:
     ComPtr<IDCompositionDevice> dcompDevice_;
     ComPtr<IDCompositionTarget> dcompTarget_;
     ComPtr<IDCompositionVisual> dcompVisual_;
-
-    HANDLE hMenuThread_;
-    HICON hTaskbarIcon_;
-    NOTIFYICONDATAW taskbarIconDesc_;
 };
 
 class MsgBox {
@@ -106,8 +126,7 @@ AppMain appMain;
 
 AppMain::AppMain() :
     isRunning_(true),
-    hwnd_(nullptr),
-    hMenuThread_(nullptr), hTaskbarIcon_(nullptr)
+    hwnd_(nullptr)
 {}
 
 AppMain::~AppMain() {
@@ -122,7 +141,7 @@ void AppMain::Setup(const CmdArgs& cmdArgs) {
     routine_.ParseConfig(cmdArgs);
     createWindow();
     createDrawable();
-    createTaskbar();
+    menu_.Setup();
     routine_.Init();
 
     // Every initialization must be finished.  Now let's show window.
@@ -141,27 +160,18 @@ void AppMain::Terminate() {
     DestroyWindow(hwnd_);
     hwnd_ = nullptr;
     UnregisterClassW(windowClassName_, GetModuleHandleW(nullptr));
-
-    if (hTaskbarIcon_) {
-        DestroyIcon(hTaskbarIcon_);
-        hTaskbarIcon_ = nullptr;
-    }
-
-    Shell_NotifyIconW(NIM_DELETE, &taskbarIconDesc_);
-
-    DWORD exitCode;
-    if (GetExitCodeThread(hMenuThread_, &exitCode) &&
-            exitCode == STILL_ACTIVE) {
-        Info::Log("Thread is still running. Wait finishing.");
-        // Right click menu/toolbar menu must not appear so long.
-        // We should be able to wait for it is closed.
-        WaitForSingleObject(hMenuThread_, INFINITE);
-        CloseHandle(hMenuThread_);
-    }
+    menu_.Terminate();
 }
 
 bool AppMain::IsRunning() const {
     return isRunning_;
+}
+
+Routine& AppMain::GetRoutine() {
+    return routine_;
+}
+const HWND& AppMain::GetWindowHandle() const {
+    return hwnd_;
 }
 
 sg_context_desc AppMain::GetSokolContext() const {
@@ -361,129 +371,6 @@ void AppMain::createDrawable() {
     dcompTarget_->SetRoot(dcompVisual_.Get());
 }
 
-void AppMain::createTaskbar() {
-    auto iconData = Resource::getStatusIconData();
-    hTaskbarIcon_ = CreateIconFromResource(
-            const_cast<PBYTE>(iconData.data()),
-            iconData.length(),
-            TRUE,
-            0x00030000);
-    if (!hTaskbarIcon_) {
-        Err::Log("Failed to load icon. Fallback to Windows' default application icon.");
-        hTaskbarIcon_ = LoadIconA(nullptr, IDI_APPLICATION);
-        if (!hTaskbarIcon_) {
-            Err::Exit("Icon fallback failed.");
-        }
-    }
-
-    taskbarIconDesc_.cbSize = sizeof(taskbarIconDesc_);
-    taskbarIconDesc_.hWnd = hwnd_;
-    taskbarIconDesc_.uID = 100;  // TODO: What value should be here?
-    taskbarIconDesc_.hIcon = hTaskbarIcon_;
-    taskbarIconDesc_.uVersion = NOTIFYICON_VERSION_4;
-    taskbarIconDesc_.uCallbackMessage = YOMMD_WM_SHOW_TASKBAR_MENU;
-    wcscpy_s(taskbarIconDesc_.szTip,
-            sizeof(taskbarIconDesc_.szTip), L"yoMMD");
-    taskbarIconDesc_.uFlags =
-        NIF_ICON | NIF_TIP | NIF_SHOWTIP | NIF_MESSAGE;
-
-    Shell_NotifyIconW(NIM_ADD, &taskbarIconDesc_);
-}
-
-DWORD WINAPI AppMain::showMenu(LPVOID param) {
-    constexpr DWORD winStyle = WS_CHILD;
-    constexpr PCWSTR wcName = L"yoMMD-menu-window";
-    AppMain& app = *reinterpret_cast<AppMain*>(param);
-    const HWND& parentWin = app.hwnd_;
-    HWND hwnd;
-
-    const LONG parentWinExStyle = GetWindowLongW(parentWin, GWL_EXSTYLE);
-    if (parentWinExStyle == 0) {
-        Info::Log("Failed to get parent window's style");
-    }
-
-    // TODO: Register once
-    WNDCLASSW wc = {};
-
-    wc.style         = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-    wc.lpfnWndProc   = DefWindowProcW,
-    wc.hInstance     = GetModuleHandleW(nullptr);
-    wc.lpszClassName = wcName;
-    wc.hIcon         = LoadIcon(nullptr, IDI_WINLOGO);
-    wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
-
-    RegisterClassW(&wc);
-
-    hwnd = CreateWindowExW(
-            0, wcName, L"", winStyle, 0, 0, 0, 0, parentWin, nullptr,
-            GetModuleHandleW(nullptr), parentWin
-            );
-    if (!hwnd) {
-        Err::Log("Failed to create dummy window for menu.");
-        return 1;
-    }
-
-
-    POINT point;
-    if (!GetCursorPos(&point)) {
-        Err::Log("Failed to get mouse point");
-        DestroyWindow(hwnd);
-        UnregisterClassW(wcName, GetModuleHandleW(nullptr));
-        return 1;
-    }
-
-#define Cmd(identifier) static_cast<std::underlying_type<Command>::type>(Command::identifier)
-    enum class Command : UINT_PTR {
-        None,
-        EnableMouse,
-        ResetPosition,
-        Quit,
-    };
-
-    HMENU hmenu = CreatePopupMenu();
-    AppendMenuW(hmenu, MF_STRING, Cmd(EnableMouse), L"&Enable Mouse");
-    AppendMenuW(hmenu, MF_STRING, Cmd(ResetPosition), L"&Reset Position");
-    AppendMenuW(hmenu, MF_SEPARATOR, Cmd(None), L"");
-    AppendMenuW(hmenu, MF_STRING, Cmd(Quit), L"&Quit");
-
-    if (parentWinExStyle == 0) {
-        EnableMenuItem(hmenu, Cmd(EnableMouse), MF_DISABLED);
-    } else if (parentWinExStyle & WS_EX_TRANSPARENT) {
-        CheckMenuItem(hmenu, Cmd(EnableMouse), MF_UNCHECKED);
-    } else {
-        CheckMenuItem(hmenu, Cmd(EnableMouse), MF_CHECKED);
-    }
-
-    UINT menuFlags = TPM_RIGHTBUTTON | TPM_NONOTIFY | TPM_RETURNCMD;
-
-    SetForegroundWindow(hwnd);
-    auto cmdID = TrackPopupMenu(
-            hmenu, menuFlags, point.x, point.y, 0, hwnd, NULL);
-
-    switch (cmdID) {
-    case Cmd(EnableMouse):
-        if (parentWinExStyle != 0) {
-            SetWindowLongW(parentWin, GWL_EXSTYLE,
-                    parentWinExStyle ^ WS_EX_TRANSPARENT);
-            // Call SetWindowPos() function?
-        }
-        break;
-    case Cmd(ResetPosition):
-        app.routine_.ResetModelPosition();
-        break;
-    case Cmd(Quit):
-        SendMessageW(parentWin, WM_DESTROY, 0, 0);
-        break;
-    }
-
-    DestroyWindow(hwnd);
-#undef Cmd
-
-    UnregisterClassW(wcName, GetModuleHandleW(nullptr));
-    DestroyMenu(hmenu);
-    return 0;
-}
-
 LRESULT CALLBACK AppMain::windowProc(
         HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     using This_T = AppMain;
@@ -531,28 +418,195 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
             routine_.OnWheelScrolled(delta);
             return 0;
         }
-    case YOMMD_WM_SHOW_TASKBAR_MENU:
+    case AppMenu::YOMMD_WM_SHOW_TASKBAR_MENU:
         if (const auto msg = LOWORD(lParam);
                 !(msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN))
             return 0;
         // Fallthrough
     case WM_RBUTTONDOWN:
-        {
-            DWORD exitCode;
-            if (GetExitCodeThread(hMenuThread_, &exitCode) &&
-                    exitCode == STILL_ACTIVE) {
-                Info::Log("Thread is running");
-                return 0;
-            }
-
-            hMenuThread_ = CreateThread(
-                    NULL, 0, AppMain::showMenu, this, 0, NULL);
-            return 0;
-        }
+        menu_.ShowMenu();
+        return 0;
     default:
         return DefWindowProc(hwnd_, uMsg, wParam, lParam);
     }
 }
+
+AppMenu::AppMenu() :
+    hMenuThread_(nullptr), hTaskbarIcon_(nullptr)
+{}
+
+AppMenu::~AppMenu() {
+    Terminate();
+}
+
+void AppMenu::Setup() {
+    WNDCLASSW wc = {};
+
+    wc.style         = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+    wc.lpfnWndProc   = AppMenu::windowProc,
+    wc.hInstance     = GetModuleHandleW(nullptr);
+    wc.lpszClassName = wcName;
+    wc.hIcon         = LoadIcon(nullptr, IDI_WINLOGO);
+    wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
+
+    RegisterClassW(&wc);
+
+    createTaskbar();
+}
+
+void AppMenu::Terminate() {
+    if (hTaskbarIcon_) {
+        DestroyIcon(hTaskbarIcon_);
+        hTaskbarIcon_ = nullptr;
+    }
+
+    Shell_NotifyIconW(NIM_DELETE, &taskbarIconDesc_);
+    UnregisterClassW(wcName, GetModuleHandleW(nullptr));
+
+    DWORD exitCode;
+    if (GetExitCodeThread(hMenuThread_, &exitCode) &&
+            exitCode == STILL_ACTIVE) {
+        Info::Log("Thread is still running. Wait finishing.");
+        // Right click menu/toolbar menu must not appear so long.
+        // We should be able to wait for it is closed.
+        WaitForSingleObject(hMenuThread_, INFINITE);
+        CloseHandle(hMenuThread_);
+    }
+}
+
+void AppMenu::ShowMenu() {
+    DWORD exitCode;
+    if (GetExitCodeThread(hMenuThread_, &exitCode) &&
+            exitCode == STILL_ACTIVE) {
+        Info::Log("Thread is running");
+    }
+
+    hMenuThread_ = CreateThread(
+            NULL, 0, AppMenu::showMenu, nullptr, 0, NULL);
+}
+
+DWORD WINAPI AppMenu::showMenu(LPVOID param) {
+    (void)param;
+    constexpr DWORD winStyle = WS_CHILD;
+    const HWND& parentWin = globals::appMain.GetWindowHandle();
+    HWND hwnd;
+
+    const LONG parentWinExStyle = GetWindowLongW(parentWin, GWL_EXSTYLE);
+    if (parentWinExStyle == 0) {
+        Info::Log("Failed to get parent window's style");
+    }
+
+    hwnd = CreateWindowExW(
+            0, wcName, L"", winStyle, 0, 0, 0, 0, parentWin, nullptr,
+            GetModuleHandleW(nullptr), parentWin
+            );
+    if (!hwnd) {
+        Err::Log("Failed to create dummy window for menu.");
+        return 1;
+    }
+
+
+    POINT point;
+    if (!GetCursorPos(&point)) {
+        Err::Log("Failed to get mouse point");
+        DestroyWindow(hwnd);
+        return 1;
+    }
+
+#define Cmd(identifier) static_cast<std::underlying_type<Command>::type>(Command::identifier)
+    enum class Command : UINT_PTR {
+        None,
+        EnableMouse,
+        ResetPosition,
+        Quit,
+    };
+
+    HMENU hmenu = CreatePopupMenu();
+    AppendMenuW(hmenu, MF_STRING, Cmd(EnableMouse), L"&Enable Mouse");
+    AppendMenuW(hmenu, MF_STRING, Cmd(ResetPosition), L"&Reset Position");
+    AppendMenuW(hmenu, MF_SEPARATOR, Cmd(None), L"");
+    AppendMenuW(hmenu, MF_STRING, Cmd(Quit), L"&Quit");
+
+    if (parentWinExStyle == 0) {
+        EnableMenuItem(hmenu, Cmd(EnableMouse), MF_DISABLED);
+    } else if (parentWinExStyle & WS_EX_TRANSPARENT) {
+        CheckMenuItem(hmenu, Cmd(EnableMouse), MF_UNCHECKED);
+    } else {
+        CheckMenuItem(hmenu, Cmd(EnableMouse), MF_CHECKED);
+    }
+
+    UINT menuFlags = TPM_RIGHTBUTTON | TPM_NONOTIFY | TPM_RETURNCMD;
+
+    SetForegroundWindow(hwnd);
+    auto cmdID = TrackPopupMenu(
+            hmenu, menuFlags, point.x, point.y, 0, hwnd, NULL);
+
+    switch (cmdID) {
+    case Cmd(EnableMouse):
+        if (parentWinExStyle != 0) {
+            SetWindowLongW(parentWin, GWL_EXSTYLE,
+                    parentWinExStyle ^ WS_EX_TRANSPARENT);
+            // Call SetWindowPos() function?
+        }
+        break;
+    case Cmd(ResetPosition):
+        globals::appMain.GetRoutine().ResetModelPosition();
+        break;
+    case Cmd(Quit):
+        SendMessageW(parentWin, WM_DESTROY, 0, 0);
+        break;
+    }
+
+    DestroyWindow(hwnd);
+#undef Cmd
+
+    DestroyMenu(hmenu);
+    return 0;
+}
+
+void AppMenu::createTaskbar() {
+    HWND parentWin = globals::appMain.GetWindowHandle();
+    if (!parentWin) {
+        Err::Exit(
+                "Internal error:",
+                "Taskbar must be created after the main window is created:",
+                __FILE__, __LINE__
+                );
+    }
+
+    auto iconData = Resource::getStatusIconData();
+    hTaskbarIcon_ = CreateIconFromResource(
+            const_cast<PBYTE>(iconData.data()),
+            iconData.length(),
+            TRUE,
+            0x00030000);
+    if (!hTaskbarIcon_) {
+        Err::Log("Failed to load icon. Fallback to Windows' default application icon.");
+        hTaskbarIcon_ = LoadIconA(nullptr, IDI_APPLICATION);
+        if (!hTaskbarIcon_) {
+            Err::Exit("Icon fallback failed.");
+        }
+    }
+
+    taskbarIconDesc_.cbSize = sizeof(taskbarIconDesc_);
+    taskbarIconDesc_.hWnd = globals::appMain.GetWindowHandle();
+    taskbarIconDesc_.uID = 100;  // TODO: What value should be here?
+    taskbarIconDesc_.hIcon = hTaskbarIcon_;
+    taskbarIconDesc_.uVersion = NOTIFYICON_VERSION_4;
+    taskbarIconDesc_.uCallbackMessage = YOMMD_WM_SHOW_TASKBAR_MENU;
+    wcscpy_s(taskbarIconDesc_.szTip,
+            sizeof(taskbarIconDesc_.szTip), L"yoMMD");
+    taskbarIconDesc_.uFlags =
+        NIF_ICON | NIF_TIP | NIF_SHOWTIP | NIF_MESSAGE;
+
+    Shell_NotifyIconW(NIM_ADD, &taskbarIconDesc_);
+}
+
+LRESULT CALLBACK AppMenu::windowProc(
+        HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+}
+
 
 bool MsgBox::initialized_ = false;
 bool MsgBox::showingWindow_ = false;

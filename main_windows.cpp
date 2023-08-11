@@ -1,7 +1,8 @@
-#define WINVER 0x0602  // Make WS_EX_NOREDIRECTIONBITMAP available
+#define WINVER 0x0605
 #include <string>
 #include <vector>
 #include <string_view>
+#include <utility>
 #include <windows.h>
 #include <windowsx.h>
 #include <commctrl.h>
@@ -21,6 +22,9 @@ namespace {
 const void *getRenderTargetView();
 const void *getDepthStencilView();
 SIZE rectToSize(RECT rect);
+int getMonitorCount();
+std::optional<HMONITOR> getMonitorHandleFromID(int monitorID);
+std::optional<RECT> getMonitorWorkareaFromID(int screenID);
 }
 
 class AppMain {
@@ -111,6 +115,10 @@ AppMain::~AppMain() {
 }
 
 void AppMain::Setup(const CmdArgs& cmdArgs) {
+    // Tell system not to take it account into size scaling.
+    // TODO: Use .manifest file.
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
     routine_.ParseConfig(cmdArgs);
     createWindow();
     createDrawable();
@@ -208,18 +216,23 @@ void AppMain::createWindow() {
     }
 
     const Config& config = routine_.GetConfig();
-    int targetDisplayIndex = 0;  // The main monitor ID should be 0.
+    int targetScreenNumber = 0;  // The main monitor ID should be 0.
     if (config.defaultScreenNumber.has_value()) {
-        targetDisplayIndex = *config.defaultScreenNumber;
+        targetScreenNumber = *config.defaultScreenNumber;
     }
 
-    DISPLAY_DEVICE displayDevice;
-    displayDevice.cb = sizeof(DISPLAY_DEVICE);
-    EnumDisplayDevices(NULL, targetDisplayIndex, &displayDevice, 0);
-
-    DEVMODE dm;
-    dm.dmSize = sizeof(DEVMODE);
-    EnumDisplaySettings(displayDevice.DeviceName, ENUM_CURRENT_SETTINGS, &dm);
+    RECT rect = {};
+    if (auto r = getMonitorWorkareaFromID(targetScreenNumber); r.has_value()) {
+        rect = *r;
+    } else {
+        // It seems the specified screen not found.  Use the main screen as
+        // fallback.
+        r = getMonitorWorkareaFromID(0);
+        if (!r.has_value()) {
+            Err::Log("Internal error: failed to get display device");
+        }
+        rect = *r;
+    }
 
     WNDCLASSEXW wc = {};
 
@@ -236,8 +249,8 @@ void AppMain::createWindow() {
 
     hwnd_ = CreateWindowExW(
         winExStyle, windowClassName_, L"yoMMD", winStyle,
-        dm.dmPosition.x, dm.dmPosition.y,
-        dm.dmPelsWidth, dm.dmPelsHeight,
+        rect.left, rect.top,
+        rect.right - rect.left, rect.bottom - rect.top,
         nullptr, nullptr,
         hInstance, this);
 
@@ -755,7 +768,57 @@ const void *getDepthStencilView() {
 SIZE rectToSize(RECT rect) {
     return {rect.right - rect.left, rect.bottom - rect.top};
 }
+int getMonitorCount() {
+    static const MONITORENUMPROC proc = [](
+            HMONITOR hMonitor,
+            HDC hdc,
+            LPRECT rect,
+            LPARAM param) -> BOOL {
+        (void)hMonitor, (void)hdc, (void)rect;
+        int *cnt = reinterpret_cast<int *>(param);
+        (*cnt)++;
+        return FALSE;
+    };
+    int cnt = 0;
+    EnumDisplayMonitors(nullptr, nullptr, proc, reinterpret_cast<LPARAM>(&cnt));
+    return cnt;
 }
+std::optional<HMONITOR> getMonitorHandleFromID(int monitorID) {
+    struct Data {
+        const int monitorID;
+        int curMonitorID;
+        std::optional<HMONITOR> handle;
+    };
+    static const MONITORENUMPROC proc = [](
+            HMONITOR hMonitor,
+            HDC hdc,
+            LPRECT rect,
+            LPARAM param) -> BOOL {
+        (void)hdc, (void)rect;
+        Data *data = reinterpret_cast<Data *>(param);
+        if (data->curMonitorID == data->monitorID) {
+            data->handle = hMonitor;
+            return TRUE;
+        }
+        data->curMonitorID++;
+        return FALSE;
+    };
+    Data data = {.monitorID = monitorID, .curMonitorID = 0, .handle = std::nullopt};
+    EnumDisplayMonitors(nullptr, nullptr, proc, reinterpret_cast<LPARAM>(&data));
+    return data.handle;
+}
+std::optional<RECT> getMonitorWorkareaFromID(int monitorID) {
+    const auto handle = getMonitorHandleFromID(monitorID);
+    if (!handle.has_value())
+        return std::nullopt;
+
+    MONITORINFO info = {};
+    info.cbSize = sizeof(info);
+    GetMonitorInfoW(*handle, &info);
+    return info.rcWork;
+}
+
+}  // namespace
 
 int WINAPI WinMain(
         HINSTANCE hInstance, HINSTANCE, LPSTR pCmdLine, int nCmdShow) {

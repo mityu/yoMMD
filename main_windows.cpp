@@ -3,8 +3,11 @@
 #include <vector>
 #include <string_view>
 #include <utility>
+#include <type_traits>
+#include <memory>
 #include <windows.h>
 #include <windowsx.h>
+#include <dwmapi.h>
 #include <commctrl.h>
 #include <d3d11.h>
 #include <d3d11_2.h>
@@ -22,9 +25,24 @@ namespace {
 const void *getRenderTargetView();
 const void *getDepthStencilView();
 SIZE rectToSize(RECT rect);
-int getMonitorCount();
+std::vector<HMONITOR> getAllMonitorHandles();
 std::optional<HMONITOR> getMonitorHandleFromID(int monitorID);
 std::optional<RECT> getMonitorWorkareaFromID(int screenID);
+
+template <typename T, typename DeleteFunc, DeleteFunc deleteFunc>
+class UniqueHandler {
+public:
+    UniqueHandler(T handler) : handler_(handler, deleteFunc) {};
+    UniqueHandler() : UniqueHandler(nullptr) {};
+    T GetRawHandler() {return handler_.get();};
+    operator T() {return GetRawHandler();};
+    UniqueHandler& operator=(T& handler) {handler_.reset(handler); return *this;};
+private:
+    std::unique_ptr<std::remove_pointer_t<T>, DeleteFunc> handler_;
+};
+
+using UniqueHWND = UniqueHandler<HWND, decltype(&DestroyWindow), &DestroyWindow>;
+using UniqueHMENU = UniqueHandler<HMENU, decltype(&DestroyMenu), &DestroyMenu>;
 }
 
 class AppMenu {
@@ -44,7 +62,45 @@ private:
 
     void createTaskbar();
 private:
-    static constexpr PCWSTR wcName = L"yoMMD-menu-window";
+    class Cmd {
+    private:
+        template <typename LHS, typename RHS>
+        using SelectSmallerSizeType =
+            std::conditional<sizeof(LHS) < sizeof(RHS), LHS, RHS>;
+
+        template <typename HD, typename ...TL> struct MinimumSizeType {
+            using type = typename SelectSmallerSizeType<
+                HD, typename MinimumSizeType<TL...>::type>::type;
+        };
+
+        template <typename T> struct MinimumSizeType<T> {
+            using type = T;
+        };
+    public:
+        using UnderlyingType = MinimumSizeType<UINT_PTR, UINT, WORD>::type;
+        enum class Kind : UnderlyingType {
+            None,
+            EnableMouse,
+            ResetPosition,
+            SelectScreen,
+            Quit,
+            MenuCount,
+        };
+        using enum Kind;
+
+        static constexpr Kind GetCmd(UnderlyingType cmd);
+        static constexpr UnderlyingType GetUserData(UnderlyingType cmd);
+        static constexpr UnderlyingType Combine(Kind cmd, UnderlyingType userData);
+    private:
+        static constexpr size_t fieldLength_ = sizeof(UnderlyingType) * 8 / 2;
+
+        static_assert(
+                Enum::cast(Kind::MenuCount) < (UnderlyingType(1) << fieldLength_),
+                "Too many menu commands declared");
+    };
+
+    static constexpr PCWSTR wcMenuName = L"yoMMD-menu-window";
+    static constexpr PCWSTR wcSelectorName = L"yoMMD-screen-selector-window";
 
     HANDLE hMenuThread_;
     HICON hTaskbarIcon_;
@@ -59,6 +115,7 @@ public:
     void UpdateDisplay();
     void Terminate();
     bool IsRunning() const;
+    void ChangeScreen(int screenID);
     Routine& GetRoutine();
     const HWND& GetWindowHandle() const;
     sg_context_desc GetSokolContext() const;
@@ -68,8 +125,6 @@ public:
     const ID3D11DepthStencilView *GetDepthStencilView() const;
 private:
     static LRESULT CALLBACK windowProc(
-            HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    static LRESULT CALLBACK menuWindowProc(
             HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
     void createWindow();
@@ -165,6 +220,18 @@ void AppMain::Terminate() {
 
 bool AppMain::IsRunning() const {
     return isRunning_;
+}
+
+void AppMain::ChangeScreen(int screenID) {
+    auto r = getMonitorWorkareaFromID(screenID);
+    if (!r.has_value()) {
+        // It seems the specified monitor is disconnected.  Do nothing.
+        return;
+    }
+    const auto cx = r->right - r->left;
+    const auto cy = r->bottom - r->top;
+    constexpr UINT uFlags = SWP_SHOWWINDOW | SWP_NOACTIVATE;
+    SetWindowPos(hwnd_, HWND_TOP, r->left, r->top, cx, cy, uFlags);  // TODO: HWND_TOPMOST?
 }
 
 Routine& AppMain::GetRoutine() {
@@ -445,10 +512,14 @@ void AppMenu::Setup() {
     wc.style         = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
     wc.lpfnWndProc   = AppMenu::windowProc,
     wc.hInstance     = GetModuleHandleW(nullptr);
-    wc.lpszClassName = wcName;
+    wc.lpszClassName = wcMenuName;
     wc.hIcon         = LoadIcon(nullptr, IDI_WINLOGO);
     wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
+    RegisterClassW(&wc);
 
+    wc.lpfnWndProc   = DefWindowProcW;
+    wc.lpszClassName = wcSelectorName;
+    wc.hbrBackground = reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
     RegisterClassW(&wc);
 
     createTaskbar();
@@ -461,7 +532,7 @@ void AppMenu::Terminate() {
     }
 
     Shell_NotifyIconW(NIM_DELETE, &taskbarIconDesc_);
-    UnregisterClassW(wcName, GetModuleHandleW(nullptr));
+    UnregisterClassW(wcMenuName, GetModuleHandleW(nullptr));
 
     DWORD exitCode;
     if (GetExitCodeThread(hMenuThread_, &exitCode) &&
@@ -489,83 +560,154 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
     (void)param;
     constexpr DWORD winStyle = WS_CHILD;
     const HWND& parentWin = globals::appMain.GetWindowHandle();
-    HWND hwnd;
+    UniqueHWND hMenuWindow, hSelectorWindow;
 
     const LONG parentWinExStyle = GetWindowLongW(parentWin, GWL_EXSTYLE);
     if (parentWinExStyle == 0) {
         Info::Log("Failed to get parent window's style");
     }
 
-    hwnd = CreateWindowExW(
-            0, wcName, L"", winStyle, 0, 0, 0, 0, parentWin, nullptr,
-            GetModuleHandleW(nullptr), parentWin
+    hSelectorWindow = CreateWindowExW(
+            WS_EX_LAYERED | WS_EX_NOACTIVATE, wcSelectorName, L"",
+            WS_DISABLED | WS_POPUP,
+            0, 0, 0, 0, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr
             );
-    if (!hwnd) {
+    if (!hSelectorWindow.GetRawHandler()) {
+        Err::Log("Failed to create screen selector window.");
+        return 1;
+    }
+    SetLayeredWindowAttributes(hSelectorWindow, RGB(0, 0, 0), 127, LWA_ALPHA);
+    BOOL fDisable = TRUE;
+    DwmSetWindowAttribute(hSelectorWindow,
+            DWMWA_TRANSITIONS_FORCEDISABLED, &fDisable, sizeof(fDisable));
+
+    hMenuWindow = CreateWindowExW(
+            0, wcMenuName, L"", winStyle, 0, 0, 0, 0, parentWin, nullptr,
+            GetModuleHandleW(nullptr), hSelectorWindow
+            );
+    if (!hMenuWindow.GetRawHandler()) {
         Err::Log("Failed to create dummy window for menu.");
         return 1;
     }
 
-
     POINT point;
     if (!GetCursorPos(&point)) {
         Err::Log("Failed to get mouse point");
-        DestroyWindow(hwnd);
         return 1;
     }
 
-#define Cmd(identifier) static_cast<std::underlying_type<Command>::type>(Command::identifier)
-    enum class Command : UINT_PTR {
-        None,
-        EnableMouse,
-        ResetPosition,
-        Quit,
-    };
-
-    HMENU hmenu = CreatePopupMenu();
-    AppendMenuW(hmenu, MF_STRING, Cmd(EnableMouse), L"&Enable Mouse");
-    AppendMenuW(hmenu, MF_STRING, Cmd(ResetPosition), L"&Reset Position");
-    AppendMenuW(hmenu, MF_SEPARATOR, Cmd(None), L"");
-    AppendMenuW(hmenu, MF_STRING, Cmd(Quit), L"&Quit");
-
-    if (parentWinExStyle == 0) {
-        EnableMenuItem(hmenu, Cmd(EnableMouse), MF_DISABLED);
-    } else if (parentWinExStyle & WS_EX_TRANSPARENT) {
-        CheckMenuItem(hmenu, Cmd(EnableMouse), MF_UNCHECKED);
-    } else {
-        CheckMenuItem(hmenu, Cmd(EnableMouse), MF_CHECKED);
+    UniqueHMENU hScreensMenu = CreatePopupMenu();
+    HMONITOR curMonitorHandle =
+        MonitorFromWindow(globals::appMain.GetWindowHandle(), MONITOR_DEFAULTTONULL);
+    std::vector<HMONITOR> monitorHandles = getAllMonitorHandles();
+    for (int cnt = monitorHandles.size(), i = 0; i < cnt; ++i) {
+        const std::wstring title(L"&Screen" + std::to_wstring(i));
+        const auto op = Cmd::Combine(Cmd::SelectScreen, i);
+        AppendMenuW(hScreensMenu, MF_STRING, op, title.c_str());
+        if (monitorHandles[i] == curMonitorHandle) {
+            EnableMenuItem(hScreensMenu, op, MF_DISABLED);
+        }
     }
 
-    UINT menuFlags = TPM_RIGHTBUTTON | TPM_NONOTIFY | TPM_RETURNCMD;
+    UniqueHMENU hmenu = CreatePopupMenu();
+    AppendMenuW(hmenu, MF_STRING, Enum::cast(Cmd::EnableMouse), L"&Enable Mouse");
+    AppendMenuW(hmenu, MF_STRING, Enum::cast(Cmd::ResetPosition), L"&Reset Position");
+    AppendMenuW(hmenu, MF_SEPARATOR, Enum::cast(Cmd::None), L"");
+    AppendMenuW(hmenu, MF_POPUP, reinterpret_cast<UINT_PTR>(hScreensMenu.GetRawHandler()), L"&Select screen");
+    AppendMenuW(hmenu, MF_SEPARATOR, Enum::cast(Cmd::None), L"");
+    AppendMenuW(hmenu, MF_STRING, Enum::cast(Cmd::Quit), L"&Quit");
 
-    SetForegroundWindow(hwnd);
-    auto cmdID = TrackPopupMenu(
-            hmenu, menuFlags, point.x, point.y, 0, hwnd, NULL);
+    if (parentWinExStyle == 0) {
+        EnableMenuItem(hmenu, Enum::cast(Cmd::EnableMouse), MF_DISABLED);
+    } else if (parentWinExStyle & WS_EX_TRANSPARENT) {
+        CheckMenuItem(hmenu, Enum::cast(Cmd::EnableMouse), MF_UNCHECKED);
+    } else {
+        CheckMenuItem(hmenu, Enum::cast(Cmd::EnableMouse), MF_CHECKED);
+    }
 
-    switch (cmdID) {
-    case Cmd(EnableMouse):
+    if (monitorHandles.size() <= 1)
+        EnableMenuItem(hmenu, reinterpret_cast<UINT_PTR>(hScreensMenu.GetRawHandler()), MF_DISABLED);
+
+    constexpr UINT menuFlags = TPM_RIGHTBUTTON | TPM_NONOTIFY | TPM_RETURNCMD;
+
+    SetForegroundWindow(hMenuWindow);
+    const auto op = TrackPopupMenuEx(
+            hmenu, menuFlags, point.x, point.y, hMenuWindow, nullptr);
+
+    switch (Cmd::GetCmd(op)) {
+    case Cmd::EnableMouse:
         if (parentWinExStyle != 0) {
             SetWindowLongW(parentWin, GWL_EXSTYLE,
                     parentWinExStyle ^ WS_EX_TRANSPARENT);
-            // Call SetWindowPos() function?
         }
         break;
-    case Cmd(ResetPosition):
+    case Cmd::ResetPosition:
         globals::appMain.GetRoutine().ResetModelPosition();
         break;
-    case Cmd(Quit):
+    case Cmd::SelectScreen:
+        globals::appMain.ChangeScreen(Cmd::GetUserData(op));
+        break;
+    case Cmd::Quit:
         SendMessageW(parentWin, WM_DESTROY, 0, 0);
+        break;
+    case Cmd::None:
+        // Canceled. Do nothing.
+        break;
+    case Cmd::MenuCount:
+        Err::Log("Internal error: Command::MenuCount is used");
         break;
     }
 
-    DestroyWindow(hwnd);
-#undef Cmd
-
-    DestroyMenu(hmenu);
     return 0;
 }
 
+LRESULT CALLBACK AppMenu::windowProc(
+        HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    switch (uMsg) {
+    case WM_MENUSELECT:
+        if (HIWORD(wParam) & MF_MOUSESELECT && !(HIWORD(wParam) & MF_POPUP)) {
+            const HWND hSelectorWindow =
+                reinterpret_cast<HWND>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+            ShowWindow(hSelectorWindow, SW_HIDE);
+
+            const HMENU hmenu = reinterpret_cast<HMENU>(lParam);
+            const std::underlying_type_t<Cmd::Kind> op = LOWORD(wParam);
+            MENUITEMINFOW itemInfo = {
+                .cbSize = sizeof(itemInfo),
+                .fMask = MIIM_FTYPE | MIIM_STATE | MIIM_ID,
+            };
+            GetMenuItemInfoW(hmenu, op, false, &itemInfo);
+            if (itemInfo.fType != MFT_STRING || itemInfo.fState & MFS_DISABLED)
+                break;
+            if (Cmd::GetCmd(op) != Cmd::SelectScreen)
+                break;
+
+            const auto r = getMonitorWorkareaFromID(Cmd::GetUserData(op));
+            if (!r.has_value()) {
+                // Maybe monitor is disconnected. Do nothing.
+                break;
+            }
+
+            const auto cx = r->right - r->left;
+            const auto cy = r->bottom - r->top;
+            constexpr UINT uFlags = SWP_SHOWWINDOW | SWP_NOACTIVATE;
+            SetWindowPos(
+                    hSelectorWindow, HWND_TOPMOST, r->left, r->top, cx, cy, uFlags);
+        }
+        break;
+    case WM_CREATE:
+        {
+            const CREATESTRUCT& cs = *reinterpret_cast<CREATESTRUCT *>(lParam);
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA,
+                    reinterpret_cast<LONG_PTR>(cs.lpCreateParams));
+        }
+        break;
+    }
+    return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+}
+
 void AppMenu::createTaskbar() {
-    HWND parentWin = globals::appMain.GetWindowHandle();
+    const HWND& parentWin = globals::appMain.GetWindowHandle();
     if (!parentWin) {
         Err::Exit(
                 "Internal error:",
@@ -589,7 +731,7 @@ void AppMenu::createTaskbar() {
     }
 
     taskbarIconDesc_.cbSize = sizeof(taskbarIconDesc_);
-    taskbarIconDesc_.hWnd = globals::appMain.GetWindowHandle();
+    taskbarIconDesc_.hWnd = parentWin;
     taskbarIconDesc_.uID = 100;  // TODO: What value should be here?
     taskbarIconDesc_.hIcon = hTaskbarIcon_;
     taskbarIconDesc_.uVersion = NOTIFYICON_VERSION_4;
@@ -602,11 +744,21 @@ void AppMenu::createTaskbar() {
     Shell_NotifyIconW(NIM_ADD, &taskbarIconDesc_);
 }
 
-LRESULT CALLBACK AppMenu::windowProc(
-        HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+constexpr AppMenu::Cmd::Kind AppMenu::Cmd::GetCmd(AppMenu::Cmd::UnderlyingType cmd) {
+    constexpr UnderlyingType mask = (UnderlyingType(1) << fieldLength_) - 1;
+    return Kind(cmd & mask);
 }
 
+constexpr AppMenu::Cmd::UnderlyingType AppMenu::Cmd::GetUserData(AppMenu::Cmd::UnderlyingType cmd) {
+    constexpr UnderlyingType mask = (UnderlyingType(1) << fieldLength_) - 1;
+    return ((cmd >> fieldLength_) & mask);
+}
+
+constexpr AppMenu::Cmd::UnderlyingType AppMenu::Cmd::Combine(
+        AppMenu::Cmd::Kind kind, AppMenu::Cmd::UnderlyingType userData) {
+    userData <<= fieldLength_;
+    return Enum::cast(kind) | userData;
+}
 
 bool MsgBox::initialized_ = false;
 bool MsgBox::showingWindow_ = false;
@@ -822,20 +974,21 @@ const void *getDepthStencilView() {
 SIZE rectToSize(RECT rect) {
     return {rect.right - rect.left, rect.bottom - rect.top};
 }
-int getMonitorCount() {
+std::vector<HMONITOR> getAllMonitorHandles() {
     static const MONITORENUMPROC proc = [](
             HMONITOR hMonitor,
             HDC hdc,
             LPRECT rect,
             LPARAM param) -> BOOL {
-        (void)hMonitor, (void)hdc, (void)rect;
-        int *cnt = reinterpret_cast<int *>(param);
-        (*cnt)++;
-        return FALSE;
+        (void)hdc, (void)rect;
+        std::vector<HMONITOR>& handles =
+            *reinterpret_cast<std::vector<HMONITOR>*>(param);
+        handles.push_back(hMonitor);
+        return TRUE;
     };
-    int cnt = 0;
-    EnumDisplayMonitors(nullptr, nullptr, proc, reinterpret_cast<LPARAM>(&cnt));
-    return cnt;
+    std::vector<HMONITOR> handles;
+    EnumDisplayMonitors(nullptr, nullptr, proc, reinterpret_cast<LPARAM>(&handles));
+    return handles;
 }
 std::optional<HMONITOR> getMonitorHandleFromID(int monitorID) {
     struct Data {
@@ -852,10 +1005,10 @@ std::optional<HMONITOR> getMonitorHandleFromID(int monitorID) {
         Data *data = reinterpret_cast<Data *>(param);
         if (data->curMonitorID == data->monitorID) {
             data->handle = hMonitor;
-            return TRUE;
+            return FALSE;
         }
         data->curMonitorID++;
-        return FALSE;
+        return TRUE;
     };
     Data data = {.monitorID = monitorID, .curMonitorID = 0, .handle = std::nullopt};
     EnumDisplayMonitors(nullptr, nullptr, proc, reinterpret_cast<LPARAM>(&data));

@@ -125,11 +125,6 @@ where directory structure is:
      |-- ぼんやり待ち合わせ_腕広いver(465f).vmd
 ```
 
-# FAQ
-
-Q. Is this work with multi monitors?
-A. I don't know since I don't use multi monitors.
-
 # License
 
 The MIT License, except for the files in `icons/` directory.

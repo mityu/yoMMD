@@ -82,11 +82,12 @@ inline NSScreen *findScreenFromID(NSInteger scID);
     const auto cmdArgs = CmdArgs::Parse(argsVec);
 
     auto appMain = getAppMain();
+    auto& routine = [appMain getRoutine];
+    routine.ParseConfig(cmdArgs);
     [appMain createMainWindow];
     [appMain createStatusItem];
 
-    auto& routine = [appMain getRoutine];
-    routine.Init(cmdArgs);
+    routine.Init();
 
     [appMain notifyInitializationDone];
 }
@@ -172,7 +173,15 @@ inline NSScreen *findScreenFromID(NSInteger scID);
 -(void)createMainWindow {
     const NSUInteger style = NSWindowStyleMaskBorderless;
     // const NSUInteger style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable;
-    const auto screenRect = [NSScreen mainScreen].visibleFrame;
+    const auto screenRect = []() {
+        const auto& screenNumber = [getAppMain() getRoutine].GetConfig().defaultScreenNumber;
+        if (screenNumber.has_value()) {
+            NSScreen *screen = findScreenFromID(*screenNumber);
+            if (screen)
+                return screen.visibleFrame;
+        }
+        return [NSScreen mainScreen].visibleFrame;
+    }();
     const NSUInteger collectionBehavior =
         NSWindowCollectionBehaviorCanJoinAllSpaces |
         NSWindowCollectionBehaviorStationary |
@@ -189,7 +198,6 @@ inline NSScreen *findScreenFromID(NSInteger scID);
 
     [window_ setDelegate:windowDelegate_];
     [window_ setTitle:@"yoMMD"];
-    [window_ center];
     [window_ setIsVisible:YES];
     [window_ setOpaque:NO];
     [window_ setHasShadow:NO];

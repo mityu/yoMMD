@@ -23,7 +23,6 @@ jobs:
           g++ --version
       - name: Try build on Windows
         run: |
-          cd yoMMD
           make build-submodules
           make -j
   macos:
@@ -41,7 +40,6 @@ jobs:
           clang++ --version
       - name: Try build on macOS
         run: |
-          cd yoMMD
           make build-submodules
           make -j
           make app

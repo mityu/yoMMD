@@ -95,8 +95,7 @@ yommd.glsl.h: yommd.glsl $(SOKOL_SHDC)
 	$(SOKOL_SHDC) --input $< --output $@ --slang metal_macos:hlsl5
 ifeq ($(OS),Windows_NT)
 	# CRLF -> LF
-	@# TODO: Better way?
-	vim -u NONE -i NONE -N -n -e -s -c "set fileformat=unix | write | quitall!" $@
+	tr -d \\r < $@ > $@.tmp && mv $@.tmp $@
 endif
 
 run: $(TARGET)

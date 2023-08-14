@@ -2,7 +2,7 @@ name: Build test
 on: [push, pull_request]
 
 jobs:
-  build:
+  windows:
     runs-on: windows-latest
     defaults:
       run:
@@ -25,7 +25,7 @@ jobs:
           cd yoMMD
           make build-submodules
           make -j
-  build:
+  macos:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3

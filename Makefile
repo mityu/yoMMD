@@ -30,15 +30,19 @@ SOKOL_SHDC:=$(SOKOL_SHDC).exe
 PKGNAME_PLATFORM:=win-x86_64
 CMAKE_GENERATOR:=-G "MSYS Makefiles"
 else ifeq ($(shell uname),Darwin)
-# TODO: Support intel mac?
 CXX:=clang++
 CC:=clang
 SRC+=main_osx.mm
 LDFLAGS+=-F$(shell xcrun --show-sdk-path)/System/Library/Frameworks  # Homebrew clang needs this.
 LDFLAGS+=-framework Foundation -framework Cocoa -framework Metal -framework MetalKit -framework QuartzCore
 OBJCFLAGS=-fobjc-arc
+ifeq ($(shell uname),arm64)
 SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/osx_arm64/sokol-shdc
 PKGNAME_PLATFORM:=darwin-arm64
+else
+SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/osx/sokol-shdc
+PKGNAME_PLATFORM:=darwin-x86_64
+endif
 endif
 
 ifneq ($(shell command -v ninja),)

@@ -1,6 +1,7 @@
 #ifndef YOMMD_HPP_
 #define YOMMD_HPP_
 
+#include <type_traits>
 #include <optional>
 #include <memory>
 #include <random>
@@ -98,6 +99,13 @@ inline std::basic_string<T> wideToMulti(const std::wstring_view wstr) {
 #endif
 }
 
+namespace Enum {
+template <typename T>
+inline constexpr std::underlying_type_t<T> cast(T v) {
+    return static_cast<decltype(cast(v))>(v);
+}
+}
+
 // util.cpp
 struct CmdArgs {
     using Path = std::filesystem::path;
@@ -133,6 +141,7 @@ struct Config {
     float defaultScale;
     glm::vec3 defaultCameraPosition;
     glm::vec3 defaultGazePosition;
+    std::optional<int> defaultScreenNumber;
 
     static Config Parse(const std::filesystem::path& configFile);
 };
@@ -230,7 +239,7 @@ class Routine : private NonCopyable {
 public:
     Routine();
     ~Routine();
-    void Init(const CmdArgs &args);
+    void Init();
     void Update();
     void Draw();
     void Terminate();
@@ -238,6 +247,8 @@ public:
     void OnMouseDown();
     void OnWheelScrolled(float delta);
     void ResetModelPosition();
+    void ParseConfig(const CmdArgs& args);
+    const Config& GetConfig() const;
 private:
     using ImageMap = std::map<std::string, Image>;
     void initBuffers();
@@ -251,6 +262,9 @@ private:
         glm::vec3 eye;
         glm::vec3 center;
     };
+
+    Config config_;
+
     UserViewport userViewport_;
 
     bool shouldTerminate_;

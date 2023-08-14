@@ -27,7 +27,7 @@ jobs:
           g++ --version
       - name: Try build on Windows
         run: |
-          make build-submodules
+          make build-submodule
           make -j
   macos:
     runs-on: macos-latest
@@ -44,6 +44,6 @@ jobs:
           clang++ --version
       - name: Try build on macOS
         run: |
-          make build-submodules
+          make build-submodule
           make -j
           make app

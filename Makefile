@@ -40,7 +40,7 @@ ifeq ($(shell uname),arm64)
 SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/osx_arm64/sokol-shdc
 PKGNAME_PLATFORM:=darwin-arm64
 else
-SOKOL.SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/osx/sokol-shdc
+SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/osx/sokol-shdc
 PKGNAME_PLATFORM:=darwin-x86_64
 endif
 endif

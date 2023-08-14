@@ -16,7 +16,11 @@ jobs:
         with:
           msystem: MINGW64
           release: false
-          install: mingw-w64-x86_64-cmake
+          install: >-
+            make
+            mingw-w64-x86_64-binutils
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
       - name: Show environment
         run: |
           uname -a

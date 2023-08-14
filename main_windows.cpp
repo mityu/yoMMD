@@ -1027,8 +1027,8 @@ std::optional<RECT> getMonitorWorkareaFromID(int monitorID) {
 
 }  // namespace
 
-int WINAPI WinMain(
-        HINSTANCE hInstance, HINSTANCE, LPSTR pCmdLine, int nCmdShow) {
+int WINAPI wWinMain(
+        HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow) {
     (void)hInstance;
     (void)pCmdLine;
     (void)nCmdShow;

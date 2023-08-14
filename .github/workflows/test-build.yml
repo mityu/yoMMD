@@ -1,0 +1,45 @@
+name: Build test
+on: [push, pull_reuquest]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          release: false
+          install: mingw-w64-x86_64-cmake
+      - name: Show environment
+        run: |
+          uname -a
+          g++ --version
+      - name: Try build on Windows
+        run: |
+          cd yoMMD
+          make build-submodules
+          make -j
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Setup build tools
+        run: brew install cmake
+      - name: Show environment
+        run: |
+          uname -a
+          clang++ --version
+      - name: Try build on macOS
+        run: |
+          cd yoMMD
+          make build-submodules
+          make -j
+          make app

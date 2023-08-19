@@ -206,7 +206,7 @@ void Routine::Init() {
     const auto distSup = std::reduce(motionWeights_.cbegin(), motionWeights_.cend(), 0u);
     if (!motionWeights_.empty() && distSup == 0)
         Err::Exit("Sum of motion weights is 0.");
-    randDist_.param(decltype(randDist_)::param_type(0, distSup - 1));
+    randDist_.param(decltype(randDist_)::param_type(1, distSup));
 
     auto physics = mmd_.GetModel()->GetMMDPhysics();
     physics->GetDynamicsWorld()->setGravity(btVector3(0, -config_.gravity * 5.0f, 0));

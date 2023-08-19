@@ -95,7 +95,7 @@ private:
         static constexpr size_t fieldLength_ = sizeof(UnderlyingType) * 8 / 2;
 
         static_assert(
-                Enum::cast(Kind::MenuCount) < (UnderlyingType(1) << fieldLength_),
+                Enum::underlyCast(Kind::MenuCount) < (UnderlyingType(1) << fieldLength_),
                 "Too many menu commands declared");
     };
 
@@ -610,19 +610,19 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
     }
 
     UniqueHMENU hmenu = CreatePopupMenu();
-    AppendMenuW(hmenu, MF_STRING, Enum::cast(Cmd::EnableMouse), L"&Enable Mouse");
-    AppendMenuW(hmenu, MF_STRING, Enum::cast(Cmd::ResetPosition), L"&Reset Position");
-    AppendMenuW(hmenu, MF_SEPARATOR, Enum::cast(Cmd::None), L"");
+    AppendMenuW(hmenu, MF_STRING, Enum::underlyCast(Cmd::EnableMouse), L"&Enable Mouse");
+    AppendMenuW(hmenu, MF_STRING, Enum::underlyCast(Cmd::ResetPosition), L"&Reset Position");
+    AppendMenuW(hmenu, MF_SEPARATOR, Enum::underlyCast(Cmd::None), L"");
     AppendMenuW(hmenu, MF_POPUP, reinterpret_cast<UINT_PTR>(hScreensMenu.GetRawHandler()), L"&Select screen");
-    AppendMenuW(hmenu, MF_SEPARATOR, Enum::cast(Cmd::None), L"");
-    AppendMenuW(hmenu, MF_STRING, Enum::cast(Cmd::Quit), L"&Quit");
+    AppendMenuW(hmenu, MF_SEPARATOR, Enum::underlyCast(Cmd::None), L"");
+    AppendMenuW(hmenu, MF_STRING, Enum::underlyCast(Cmd::Quit), L"&Quit");
 
     if (parentWinExStyle == 0) {
-        EnableMenuItem(hmenu, Enum::cast(Cmd::EnableMouse), MF_DISABLED);
+        EnableMenuItem(hmenu, Enum::underlyCast(Cmd::EnableMouse), MF_DISABLED);
     } else if (parentWinExStyle & WS_EX_TRANSPARENT) {
-        CheckMenuItem(hmenu, Enum::cast(Cmd::EnableMouse), MF_UNCHECKED);
+        CheckMenuItem(hmenu, Enum::underlyCast(Cmd::EnableMouse), MF_UNCHECKED);
     } else {
-        CheckMenuItem(hmenu, Enum::cast(Cmd::EnableMouse), MF_CHECKED);
+        CheckMenuItem(hmenu, Enum::underlyCast(Cmd::EnableMouse), MF_CHECKED);
     }
 
     if (monitorHandles.size() <= 1)
@@ -757,7 +757,7 @@ constexpr AppMenu::Cmd::UnderlyingType AppMenu::Cmd::GetUserData(AppMenu::Cmd::U
 constexpr AppMenu::Cmd::UnderlyingType AppMenu::Cmd::Combine(
         AppMenu::Cmd::Kind kind, AppMenu::Cmd::UnderlyingType userData) {
     userData <<= fieldLength_;
-    return Enum::cast(kind) | userData;
+    return Enum::underlyCast(kind) | userData;
 }
 
 bool MsgBox::initialized_ = false;

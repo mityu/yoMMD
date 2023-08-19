@@ -101,8 +101,8 @@ inline std::basic_string<T> wideToMulti(const std::wstring_view wstr) {
 
 namespace Enum {
 template <typename T>
-inline constexpr std::underlying_type_t<T> cast(T v) {
-    return static_cast<decltype(cast(v))>(v);
+inline constexpr std::underlying_type_t<T> underlyCast(T v) {
+    return static_cast<decltype(underlyCast(v))>(v);
 }
 }
 

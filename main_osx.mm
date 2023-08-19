@@ -238,7 +238,7 @@ inline NSScreen *findScreenFromID(NSInteger scID);
                         initWithTitle:@"Enable Mouse"
                                action:@selector(actionToggleHandleMouse:)
                         keyEquivalent:@""];
-    [enableMouse setTag:Enum::cast(MenuTag::None)];
+    [enableMouse setTag:Enum::underlyCast(MenuTag::None)];
     [enableMouse setTarget:self];
     [enableMouse setState:NSControlStateValueOff];
 
@@ -247,7 +247,7 @@ inline NSScreen *findScreenFromID(NSInteger scID);
                         initWithTitle:@"Reset Position"
                                action:@selector(actionResetModelPosition:)
                         keyEquivalent:@""];
-    [resetModelPosition setTag:Enum::cast(MenuTag::None)];
+    [resetModelPosition setTag:Enum::underlyCast(MenuTag::None)];
     [resetModelPosition setTarget:self];
 
     selectScreenMenuDelegate_ = [[SelectScreenMenuDelegate alloc] init];
@@ -255,14 +255,14 @@ inline NSScreen *findScreenFromID(NSInteger scID);
                         initWithTitle:@"Select screen"
                                action:nil
                         keyEquivalent:@""];
-    [selectScreen setTag:Enum::cast(MenuTag::SelectScreen)];
+    [selectScreen setTag:Enum::underlyCast(MenuTag::SelectScreen)];
     [selectScreen setSubmenu:[[NSMenu alloc] init]];
     [selectScreen.submenu setDelegate:selectScreenMenuDelegate_];
     [selectScreen setTarget:self];
 
     NSMenuItem *quit = [[NSMenuItem alloc]
             initWithTitle:@"Quit" action:@selector(actionQuit:) keyEquivalent:@""];
-    [quit setTag:Enum::cast(MenuTag::None)];
+    [quit setTag:Enum::underlyCast(MenuTag::None)];
     [quit setTarget:self];
 
     [appMenu_ addItem:enableMouse];
@@ -356,7 +356,7 @@ inline NSScreen *findScreenFromID(NSInteger scID);
 
 @implementation AppMenuDelegate
 -(void)menu:(NSMenu *)menu willHighlightItem:(NSMenuItem *)item {
-    if (!item || item.tag != Enum::cast(MenuTag::SelectScreen))
+    if (!item || item.tag != Enum::underlyCast(MenuTag::SelectScreen))
         return;
 
     AppMain *appMain = getAppMain();
@@ -382,7 +382,7 @@ inline NSScreen *findScreenFromID(NSInteger scID);
     }
 }
 -(void)menuNeedsUpdate:(NSMenu *)menu {
-    NSMenuItem *selectScreen = [menu itemWithTag:Enum::cast(MenuTag::SelectScreen)];
+    NSMenuItem *selectScreen = [menu itemWithTag:Enum::underlyCast(MenuTag::SelectScreen)];
     if (!selectScreen) {
         Err::Log("Internal error: \"Select screen\" menu not found");
         return;

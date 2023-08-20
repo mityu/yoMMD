@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <string_view>
 #include "stb_image.h"
-#include "yommd.hpp"
+#include "image.hpp"
 #include "platform.hpp"
 
 #ifdef PLATFORM_WINDOWS

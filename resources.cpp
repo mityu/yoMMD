@@ -1,7 +1,8 @@
 // Handles embedded data.
 #include <string_view>
 #include <filesystem>
-#include "yommd.hpp"
+#include "resources.hpp"
+#include "util.hpp"
 
 #define INCBIN_PREFIX _
 #include "incbin.h"

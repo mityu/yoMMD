@@ -20,7 +20,9 @@
 #include "Saba/Model/MMD/VMDCameraAnimation.h"
 #include "Saba/Model/MMD/VMDFile.h"
 #include "btBulletDynamicsCommon.h"
-#include "yommd.hpp"
+#include "viewer.hpp"
+#include "main.hpp"
+#include "constant.hpp"
 #include "yommd.glsl.h"
 
 namespace{

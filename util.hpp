@@ -7,6 +7,7 @@
 #include <iostream>
 #include <sstream>
 #include "main.hpp"
+#include "platform.hpp"
 
 struct NonCopyable {
     NonCopyable() = default;

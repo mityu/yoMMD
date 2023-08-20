@@ -19,6 +19,7 @@
 #include "glm/glm.hpp"
 #include "main.hpp"
 #include "viewer.hpp"
+#include "util.hpp"
 #include "constant.hpp"
 
 template <typename T> using ComPtr = Microsoft::WRL::ComPtr<T>;

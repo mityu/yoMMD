@@ -1,6 +1,7 @@
 #ifndef UTIL_HPP_
 #define UTIL_HPP_
 
+#include <vector>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>

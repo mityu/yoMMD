@@ -2,6 +2,8 @@
 #define CONFIG_HPP_
 
 #include <filesystem>
+#include <optional>
+#include <vector>
 #include "glm/glm.hpp"
 
 struct Config {

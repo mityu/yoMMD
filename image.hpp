@@ -1,6 +1,7 @@
 #ifndef IMAGE_HPP_
 #define IMAGE_HPP_
 
+#include <vector>
 #include "util.hpp"
 #include "resources.hpp"
 

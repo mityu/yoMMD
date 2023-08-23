@@ -12,6 +12,7 @@ class File : private NonCopyable {
 public:
     File();
     File(const std::string_view path);
+    ~File();
     void Open(const std::string_view path);
     void Close();
     operator FILE *();
@@ -26,6 +27,10 @@ File::File() :
 
 File::File(const std::string_view path) {
     Open(path);
+}
+
+File::~File() {
+    Close();
 }
 
 void File::Open(const std::string_view path) {

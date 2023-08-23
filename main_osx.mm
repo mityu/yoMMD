@@ -9,7 +9,9 @@
 #define SOKOL_METAL
 #include "sokol_gfx.h"
 
-#include "yommd.hpp"
+#include "main.hpp"
+#include "viewer.hpp"
+#include "constant.hpp"
 
 @interface AppDelegate: NSObject<NSApplicationDelegate>
 @end

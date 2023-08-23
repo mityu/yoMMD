@@ -2,7 +2,8 @@
 #include <filesystem>
 #include <vector>
 #include "toml.hpp"
-#include "yommd.hpp"
+#include "config.hpp"
+#include "util.hpp"
 
 Config::Config() :
     simulationFPS(60.0f), gravity(9.8f),

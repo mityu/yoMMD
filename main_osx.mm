@@ -55,8 +55,6 @@ enum class MenuTag : NSInteger {
 -(NSSize)getDrawableSize;
 -(NSNumber *)getCurrentScreenNumber;
 -(Routine&)getRoutine;
--(void)notifyInitializationDone;
--(bool)getInitialized;
 @end
 
 @interface AppMenuDelegate : NSObject<NSMenuDelegate>
@@ -90,8 +88,6 @@ inline NSScreen *findScreenFromID(NSInteger scID);
     [appMain createStatusItem];
 
     routine.Init();
-
-    [appMain notifyInitializationDone];
 }
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
     [getAppMain() getRoutine].Terminate();
@@ -141,8 +137,6 @@ inline NSScreen *findScreenFromID(NSInteger scID);
 - (void)mtkView:(nonnull MTKView*)view drawableSizeWillChange:(CGSize)size {
 }
 - (void)drawInMTKView:(nonnull MTKView*)view {
-    if (![getAppMain() getInitialized])
-        return;
     @autoreleasepool {
         auto& routine = [getAppMain() getRoutine];
         routine.Update();
@@ -164,13 +158,6 @@ inline NSScreen *findScreenFromID(NSInteger scID);
     SelectScreenMenuDelegate *selectScreenMenuDelegate_;
     NSRunningApplication *alterApp_;
     Routine routine_;
-    bool initialized_;
-}
--(instancetype)init {
-    self = [super init];
-    if (self)
-        initialized_ = false;
-    return self;
 }
 -(void)createMainWindow {
     const NSUInteger style = NSWindowStyleMaskBorderless;
@@ -347,12 +334,6 @@ inline NSScreen *findScreenFromID(NSInteger scID);
 }
 -(Routine&)getRoutine {
     return routine_;
-}
--(void)notifyInitializationDone {
-    initialized_ = true;
-}
--(bool)getInitialized {
-    return initialized_;
 }
 @end
 

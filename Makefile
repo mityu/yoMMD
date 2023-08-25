@@ -10,11 +10,11 @@ CFLAGS:=-O2 -Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb \
 		-Ilib/toml11 -Ilib/incbin -Ilib/bullet3/build/include/bullet \
 		-Wall -Wextra -pedantic -MMD -MP
 CPPFLAGS=-std=c++20
-OBJCFLAGS=
+OBJCFLAGS:=
 LDFLAGS:=-Llib/saba/build/src -lSaba -Llib/bullet3/build/lib \
 		 -lBulletDynamics -lBulletCollision -lBulletSoftBody -lLinearMath
 SOKOL_SHDC:=tool/sokol-shdc
-SOKOL_SHDC_URL=
+SOKOL_SHDC_URL:=
 PKGNAME_PLATFORM:=
 CMAKE_GENERATOR:=
 CMAKE_BUILDFILE:=Makefile
@@ -35,7 +35,7 @@ CC:=clang
 SRC+=main_osx.mm
 LDFLAGS+=-F$(shell xcrun --show-sdk-path)/System/Library/Frameworks  # Homebrew clang needs this.
 LDFLAGS+=-framework Foundation -framework Cocoa -framework Metal -framework MetalKit -framework QuartzCore
-OBJCFLAGS=-fobjc-arc
+OBJCFLAGS:=-fobjc-arc
 ifeq ($(shell uname -m),arm64)
 SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/osx_arm64/sokol-shdc
 PKGNAME_PLATFORM:=darwin-arm64
@@ -116,11 +116,11 @@ $(OBJDIR) tool/:
 
 # Make distribution package
 PKGNAME:=yoMMD-$(PKGNAME_PLATFORM)-$(shell date '+%Y%m%d%H%M').zip
-package-tiny: may-create-release-build
+package: may-create-release-build
 	@[ -d "package" ] || mkdir package
 	zip package/$(PKGNAME) $(TARGET)
 
-package: package-tiny
+package-huge: package
 	@[ -d "default-attachments" ] && cd default-attachments && \
 		zip -ur ../package/$(PKGNAME) \
 		$(notdir $(wildcard default-attachments/*)) -x "*/.*"
@@ -198,8 +198,8 @@ help:
 	@echo "run                 Build and run binary"
 	@echo "clean               Clean build related files"
 	@echo "app                 Make application bundle (Only available on macOS)"
-	@echo "package-tiny        Make distribution package without any MMD models/motions"
-	@echo "package             Make distribution package with default config,"
+	@echo "package             Make distribution package without any MMD models/motions"
+	@echo "package-huge        Make distribution package with default config,"
 	@echo "                        MMD model and motions included"
 	@echo "build-bullet        Build bullet physics library"
 	@echo "build-saba          Build saba library"
@@ -207,6 +207,6 @@ help:
 	@echo "bulid-submodule     Build submodule libraries"
 	@echo "help                Show this help"
 
-.PHONY: release debug help run clean package package-tiny app
+.PHONY: release debug help run clean package package-huge app
 .PHONY: may-create-release-build
 .PHONY: build-bullet build-saba update-sokol-shdc build-submodule

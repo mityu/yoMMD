@@ -21,7 +21,6 @@ struct NonCopyable {
 
 struct CmdArgs {
     using Path = std::filesystem::path;
-    Path cwd;
     Path configFile;
     Path logFile;
 
@@ -31,7 +30,8 @@ struct CmdArgs {
 namespace Yommd {
 void slogFunc(const char *tag, uint32_t logLevel, uint32_t logItem,
         const char *message, uint32_t linenr, const char *filename, void *user_data);
-void makeAbsolute(std::filesystem::path& path, const std::filesystem::path& cwd);
+std::filesystem::path makeAbsolute(
+        const std::filesystem::path& path, const std::filesystem::path& cwd);
 }
 
 namespace _internal {
@@ -92,6 +92,10 @@ template <typename T>
 inline constexpr std::underlying_type_t<T> underlyCast(T v) {
     return static_cast<decltype(underlyCast(v))>(v);
 }
+}
+
+namespace Path {
+std::filesystem::path getWorkingDirectory();
 }
 
 #endif  // UTIL_HPP_

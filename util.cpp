@@ -19,7 +19,6 @@ options:
     --logfile <file>    Output logs to <file>
     -h|--help           Show this help
 )";
-const std::filesystem::path homePath = getHomePath();
 }
 }
 
@@ -30,8 +29,6 @@ CmdArgs CmdArgs::Parse(const std::vector<std::string>& args) {
 
     std::filesystem::path executable(args[0]);
     CmdArgs cmdArgs;
-
-    cmdArgs.cwd = executable.parent_path();
 
     const auto end = args.cend();
     auto itr = ++args.cbegin();  // The first item is the executable path. Skip it.
@@ -67,10 +64,12 @@ CmdArgs CmdArgs::Parse(const std::vector<std::string>& args) {
 
     // Make absolute if necessary.
     if (!cmdArgs.configFile.empty())
-        Yommd::makeAbsolute(cmdArgs.configFile, cmdArgs.cwd);
+        cmdArgs.configFile = Yommd::makeAbsolute(
+                cmdArgs.configFile, ::Path::getWorkingDirectory());
 
     if (!cmdArgs.logFile.empty())
-        Yommd::makeAbsolute(cmdArgs.logFile, cmdArgs.cwd);
+        cmdArgs.logFile = Yommd::makeAbsolute(
+                cmdArgs.logFile, ::Path::getWorkingDirectory());
 
     return cmdArgs;
 }
@@ -116,15 +115,25 @@ void slogFunc(const char *tag, uint32_t logLevel, uint32_t logItem, const char *
     }
 }
 
-void makeAbsolute(std::filesystem::path& path, const std::filesystem::path& cwd) {
+std::filesystem::path makeAbsolute(
+        const std::filesystem::path& path, const std::filesystem::path& cwd) {
+    static const auto homePath = getHomePath();
     if (path.is_absolute())
-        return;
+        return path;
     else if (const auto u8path = path.generic_u8string(); u8path.starts_with(u8"~/"))
-        path = globals::homePath / std::filesystem::path(u8path.substr(2));
+        return homePath / std::filesystem::path(u8path.substr(2));
     else
-        path = cwd / path;
+        return cwd / path;
 }
 
+}
+
+namespace Path {
+std::filesystem::path getWorkingDirectory() {
+    // TODO: Can I truely initialize this here?
+    static const auto cwd = std::filesystem::current_path();
+    return cwd;
+}
 }
 
 namespace {

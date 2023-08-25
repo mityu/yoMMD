@@ -22,7 +22,7 @@ Config Config::Parse(const std::filesystem::path& configFile) {
         const auto entire = toml::parse(configFile);
 
         config.model = fs::path(String::tou8(toml::find<std::string>(entire, "model")));
-        Yommd::makeAbsolute(config.model, configDir);
+        config.model = Yommd::makeAbsolute(config.model, configDir);
 
         const toml::array motions = toml::find_or(
                 entire, "motion", toml::array());
@@ -34,7 +34,7 @@ Config Config::Parse(const std::filesystem::path& configFile) {
             std::vector<fs::path> path;
             for (const auto& p : raw_path) {
                 auto u8path = fs::path(String::tou8(p));
-                Yommd::makeAbsolute(u8path, configDir);
+                u8path = Yommd::makeAbsolute(u8path, configDir);
                 path.push_back(u8path);
             }
             config.motions.push_back(Motion{

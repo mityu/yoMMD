@@ -22,6 +22,7 @@
 #include "btBulletDynamicsCommon.h"
 #include "viewer.hpp"
 #include "main.hpp"
+#include "util.hpp"
 #include "constant.hpp"
 #include "yommd.glsl.h"
 
@@ -646,7 +647,7 @@ void Routine::ParseConfig(const CmdArgs& args) {
             "~/yoMMD/config.toml",
         };
         for (auto& file : paths) {
-            Yommd::makeAbsolute(file, args.cwd);
+            file = Yommd::makeAbsolute(file, ::Path::getWorkingDirectory());
             if (fs::exists(file)) {
                 configFile = file;
                 break;

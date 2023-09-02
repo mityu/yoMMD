@@ -20,3 +20,6 @@
 	path = lib/bullet3
 	url = https://github.com/bulletphysics/bullet3
 	ignore = dirty
+[submodule "lib/sokol-tools-bin"]
+	path = lib/sokol-tools-bin
+	url = https://github.com/floooh/sokol-tools-bin

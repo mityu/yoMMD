@@ -13,8 +13,6 @@ CPPFLAGS=-std=c++20
 OBJCFLAGS:=
 LDFLAGS:=-Llib/saba/build/src -lSaba -Llib/bullet3/build/lib \
 		 -lBulletDynamics -lBulletCollision -lBulletSoftBody -lLinearMath
-SOKOL_SHDC:=tool/sokol-shdc
-SOKOL_SHDC_URL:=
 PKGNAME_PLATFORM:=
 CMAKE_GENERATOR:=
 CMAKE_BUILDFILE:=Makefile
@@ -25,8 +23,7 @@ TARGET_DEBUG:=$(TARGET_DEBUG).exe
 SRC+=main_windows.cpp appicon_windows.rc
 CFLAGS+=-Wno-missing-field-initializers
 LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi -ldcomp -lgdi32 -ldwmapi -municode
-SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/win32/sokol-shdc.exe
-SOKOL_SHDC:=$(SOKOL_SHDC).exe
+SOKOL_SHDC_URL:=lib/sokol-tools-bin/bin/win32/sokol-shdc.exe
 PKGNAME_PLATFORM:=win-x86_64
 CMAKE_GENERATOR:=-G "MSYS Makefiles"
 else ifeq ($(shell uname),Darwin)
@@ -37,10 +34,10 @@ LDFLAGS+=-F$(shell xcrun --show-sdk-path)/System/Library/Frameworks  # Homebrew 
 LDFLAGS+=-framework Foundation -framework Cocoa -framework Metal -framework MetalKit -framework QuartzCore
 OBJCFLAGS:=-fobjc-arc
 ifeq ($(shell uname -m),arm64)
-SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/osx_arm64/sokol-shdc
+SOKOL_SHDC:=lib/sokol-tools-bin/bin/osx_arm64/sokol-shdc
 PKGNAME_PLATFORM:=darwin-arm64
 else
-SOKOL_SHDC_URL:=https://github.com/floooh/sokol-tools-bin/raw/master/bin/osx/sokol-shdc
+SOKOL_SHDC:=lib/sokol-tools-bin/bin/osx/sokol-shdc
 PKGNAME_PLATFORM:=darwin-x86_64
 endif
 endif
@@ -95,7 +92,7 @@ $(OBJDIR)/%.mm.o: %.mm
 $(OBJDIR)/%.rc.o: %.rc
 	windres -o $@ $^
 
-yommd.glsl.h: yommd.glsl $(SOKOL_SHDC)
+yommd.glsl.h: yommd.glsl
 	$(SOKOL_SHDC) --input $< --output $@ --slang metal_macos:hlsl5
 ifeq ($(OS),Windows_NT)
 	# CRLF -> LF
@@ -179,13 +176,6 @@ lib/saba/build/$(CMAKE_BUILDFILE):
 		-DSABA_ENABLE_TEST=OFF                  \
 		$(CMAKE_GENERATOR) ..
 
-$(SOKOL_SHDC): tool/
-	curl -L -o $@ $(SOKOL_SHDC_URL)
-	chmod u+x $@
-
-update-sokol-shdc:
-	$(RM) $(SOKOL_SHDC) && make $(SOKOL_SHDC)
-
 build-submodule:
 	$(MAKE) build-bullet
 	$(MAKE) build-saba
@@ -203,7 +193,6 @@ help:
 	@echo "                        MMD model and motions included"
 	@echo "build-bullet        Build bullet physics library"
 	@echo "build-saba          Build saba library"
-	@echo "update-sokol-shdc   Update sokol-shdc tool"
 	@echo "bulid-submodule     Build submodule libraries"
 	@echo "help                Show this help"
 

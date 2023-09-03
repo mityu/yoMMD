@@ -16,6 +16,7 @@
 
 #include "main.hpp"
 #include "viewer.hpp"
+#include "util.hpp"
 #include "constant.hpp"
 #include "util.hpp"
 #include "keyboard.hpp"
@@ -80,6 +81,7 @@ private:
 @interface AppMenuDelegate : NSObject<NSMenuDelegate>
 -(void)actionQuit:(NSMenuItem *)sender;
 -(void)actionToggleHandleMouse:(NSMenuItem *)sender;
+-(void)actionToggleHideWindow:(NSMenuItem *)sender;
 -(void)actionResetModelPosition:(NSMenuItem *)sender;
 -(void)actionChangeScreen:(NSMenuItem *)sender;
 @end
@@ -151,9 +153,6 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
 }
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
     [getAppMain() getRoutine].Terminate();
-}
-- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender {
-    return YES;
 }
 @end
 
@@ -250,6 +249,9 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
     if (!NSEqualRects(window.frame, screen.visibleFrame)) {
         [window setFrame:screen.visibleFrame display:YES animate:NO];
     }
+}
+-(void)windowWillClose:(NSNotification *)notification {
+    [NSApp terminate:self];
 }
 @end
 
@@ -463,6 +465,13 @@ enum class MenuTag : NSInteger {
         [selectScreen.submenu setAutoenablesItems:NO];
         [selectScreen setTarget:self];
 
+        NSMenuItem *hideWindow = [[NSMenuItem alloc]
+                        initWithTitle:@"Hide Window"
+                               action:@selector(actionToggleHideWindow:)
+                        keyEquivalent:@""];
+        [hideWindow setTag:Enum::underlyCast(MenuTag::None)];
+        [hideWindow setTarget:self];
+
         NSMenuItem *quit = [[NSMenuItem alloc]
                 initWithTitle:@"Quit" action:@selector(actionQuit:) keyEquivalent:@""];
         [quit setTag:Enum::underlyCast(MenuTag::None)];
@@ -473,6 +482,8 @@ enum class MenuTag : NSInteger {
             resetModelPosition,
             [NSMenuItem separatorItem],
             selectScreen,
+            [NSMenuItem separatorItem],
+            hideWindow,
             [NSMenuItem separatorItem],
             quit,
         ];
@@ -555,6 +566,17 @@ enum class MenuTag : NSInteger {
             [alterApp_ activateWithOptions:NSApplicationActivateIgnoringOtherApps];
         }
         alterApp_ = NULL;
+    }
+}
+-(void)actionToggleHideWindow:(NSMenuItem *)sender {
+    constexpr NSString *titleHide = @"Hide Window";
+    constexpr NSString *titleShow = @"Show Window";
+    if ([[sender title] compare:titleHide] == NSOrderedSame) {
+        [NSApp hide:self];
+        [sender setTitle:titleShow];
+    } else {
+        [NSApp unhide:self];
+        [sender setTitle:titleHide];
     }
 }
 -(void)actionResetModelPosition:(NSMenuItem *)sender {

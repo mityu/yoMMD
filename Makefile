@@ -103,8 +103,8 @@ run: $(TARGET)
 	./$(TARGET)
 
 clean:
-	$(RM) $(TARGET_DEBUG) $(OBJDIR)/debug/*.o
-	$(RM) $(OBJDIR)/*.o $(TARGET) yommd.glsl.h
+	$(RM) $(TARGET_DEBUG) $(OBJDIR)/debug/*.o $(OBJDIR)/debug/*.d
+	$(RM) $(OBJDIR)/*.o $(OBJDIR)/*.d $(TARGET) yommd.glsl.h
 
 all: clean $(TARGET);
 

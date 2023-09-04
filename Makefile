@@ -23,7 +23,7 @@ TARGET_DEBUG:=$(TARGET_DEBUG).exe
 SRC+=main_windows.cpp resource_windows.rc
 CFLAGS+=-Wno-missing-field-initializers
 LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi -ldcomp -lgdi32 -ldwmapi -municode
-SOKOL_SHDC_URL:=lib/sokol-tools-bin/bin/win32/sokol-shdc.exe
+SOKOL_SHDC:=lib/sokol-tools-bin/bin/win32/sokol-shdc.exe
 PKGNAME_PLATFORM:=win-x86_64
 CMAKE_GENERATOR:=-G "MSYS Makefiles"
 else ifeq ($(shell uname),Darwin)

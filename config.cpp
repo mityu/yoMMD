@@ -5,6 +5,17 @@
 #include "config.hpp"
 #include "util.hpp"
 
+namespace {
+inline glm::vec2 toVec2(const std::array<float, 2> a) {
+    return glm::vec2(a[0], a[1]);
+}
+
+inline glm::vec3 toVec3(const std::array<float, 3> a) {
+    return glm::vec3(a[0], a[1], a[2]);
+}
+
+}
+
 Config::Config() :
     simulationFPS(60.0f), gravity(9.8f),
     defaultModelPosition(0.0f, 0.0f), defaultScale(1.0f),
@@ -15,66 +26,75 @@ Config::Config() :
 Config Config::Parse(const std::filesystem::path& configFile) {
     namespace fs = std::filesystem;
 
+    constexpr auto warnUnsupportedKey = [](const toml::key& k, const toml::value& v) {
+        // TODO: Error message should point key, not its value
+        // TODO: Use "[warning]" header instead of "[error]"
+        const auto errmsg = toml::format_error(
+                "Ignoring unsupported config key.",
+                v,
+                "Key is not supported: " + k
+                );
+        Err::Log(errmsg);
+    };
+
     Config config;
     auto configDir = fs::path(configFile).parent_path();
 
     try {
         const auto entire = toml::parse(configFile);
 
-        config.model = fs::path(String::tou8(toml::find<std::string>(entire, "model")));
-        config.model = Yommd::makeAbsolute(config.model, configDir);
+        // Ensure all the required keys appear in config.toml
+        (void)toml::find(entire, "model");
 
-        const toml::array motions = toml::find_or(
-                entire, "motion", toml::array());
-        for (const auto& motion : motions) {
-            bool disabled = toml::find_or(motion, "disabled", false);
-            auto weight = toml::find_or<decltype(
-                    Motion::weight)>(motion, "weight", 1);
-            auto raw_path = toml::find<std::vector<std::string>>(motion, "path");
-            std::vector<fs::path> path;
-            for (const auto& p : raw_path) {
-                auto u8path = fs::path(String::tou8(p));
-                u8path = Yommd::makeAbsolute(u8path, configDir);
-                path.push_back(u8path);
+        for (const auto& [k, v] : entire.as_table()) {
+            if (k == "model") {
+                const auto path = String::tou8(toml::get<std::string>(v));
+                config.model = Yommd::makeAbsolute(fs::path(path), configDir);
+            } else if (k == "default-model-position") {
+                const auto pos = toml::get<std::array<float, 2>>(v);
+                config.defaultModelPosition = toVec2(pos);
+            } else if (k == "default-camera-position") {
+                const auto pos = toml::get<std::array<float, 3>>(v);
+                config.defaultCameraPosition = toVec3(pos);
+            } else if (k == "default-gaze-position") {
+                const auto pos = toml::get<std::array<float, 3>>(v);
+                config.defaultGazePosition = toVec3(pos);
+            } else if (k == "default-scale") {
+                config.defaultScale = v.as_floating();
+            } else if (k == "simulation-fps") {
+                config.simulationFPS = v.as_integer();
+            } else if (k == "gravity") {
+                config.gravity = v.as_floating();
+            } else if (k == "default-screen-number") {
+                config.defaultScreenNumber = v.as_integer();
+            } else if (k == "motion") {
+                for (const auto& m : v.as_array()) {
+                    // Ensure all the required key appear in "motion" table.
+                    (void)toml::find(m, "path");
+
+                    Motion c = {.disabled = false, .weight = 1};
+                    for (const auto& [k, v] : m.as_table()) {
+                        if (k == "path") {
+                            const auto raw_path = toml::get<std::vector<std::string>>(v);
+                            std::vector<fs::path> path;
+                            for (const auto& p : raw_path) {
+                                auto u8path = fs::path(String::tou8(p));
+                                path.push_back(Yommd::makeAbsolute(u8path, configDir));
+                            }
+                            c.paths = std::move(path);
+                        } else if (k == "weight") {
+                            c.weight = v.as_integer();
+                        } else if (k == "disabled") {
+                            c.disabled = v.as_boolean();
+                        } else {
+                            warnUnsupportedKey(k, v);
+                        }
+                    }
+                    config.motions.push_back(std::move(c));
+                }
+            } else {
+                warnUnsupportedKey(k, v);
             }
-            config.motions.push_back(Motion{
-                .disabled = disabled,
-                .weight = weight,
-                .paths = std::move(path),
-            });
-        }
-
-        if (entire.contains("default-model-position")) {
-            const auto pos = toml::find<std::array<float, 2>>(
-                    entire, "default-model-position");
-            config.defaultModelPosition.x = pos[0];
-            config.defaultModelPosition.y = pos[1];
-        }
-
-        if (entire.contains("default-camera-position")) {
-            const auto pos = toml::find<std::array<float, 3>>(
-                    entire, "default-camera-position");
-            config.defaultCameraPosition.x = pos[0];
-            config.defaultCameraPosition.y = pos[1];
-            config.defaultCameraPosition.z = pos[2];
-        }
-
-        if (entire.contains("default-gaze-position")) {
-            const auto pos = toml::find<std::array<float, 3>>(
-                    entire, "default-gaze-position");
-            config.defaultGazePosition.x = pos[0];
-            config.defaultGazePosition.y = pos[1];
-            config.defaultGazePosition.z = pos[2];
-        }
-
-        config.defaultScale = toml::find_or(
-                entire, "default-scale", config.defaultScale);
-        config.simulationFPS = toml::find_or(
-                entire, "simulation-fps", config.simulationFPS);
-        config.gravity = toml::find_or(entire, "gravity", config.gravity);
-        if (entire.contains("default-screen-number")) {
-            config.defaultScreenNumber =
-                toml::find<int>(entire, "default-screen-number");
         }
     } catch (std::runtime_error& e) {
         // File open error, file read error, etc...

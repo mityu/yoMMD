@@ -127,11 +127,17 @@ void UserViewport::OnMouseDown() {
 }
 
 void UserViewport::OnMouseDragged() {
-    // const auto winSize{Context::getWindowSize()};
-    // const float scale = (Context::getDrawableSize() / winSize).x;
-    constexpr float scale = 2.0f;  // FIXME: Why this seems working well?
     auto delta = Context::getMousePosition() - dragHelper_.firstMousePosition;
-    delta = delta / Context::getWindowSize() * scale;
+
+    // Translate distance in screen into distance in model world.
+    //
+    //              winsize.x                     2.0
+    //            +------------+                +------+
+    // winsize.y  |            |   ----->   2.0 |      |
+    //            |            |                |      |
+    //            +------------+                +------+
+    delta = 2.0f * delta / Context::getWindowSize();
+
     translate_.x = dragHelper_.firstTranslate.x + delta.x;
     translate_.y = dragHelper_.firstTranslate.y + delta.y;
 }

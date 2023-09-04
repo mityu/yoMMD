@@ -137,10 +137,9 @@ void UserViewport::OnMouseDragged() {
 }
 
 void UserViewport::OnWheelScrolled(float delta) {
-    scale_ -= delta / Context::getWindowSize().y;
-    if (scale_ < 0.4f) {
-        scale_ = 0.4f;
-    }
+    changeScale(
+            scale_ - delta / Context::getWindowSize().y,
+            Context::getMousePosition());
 }
 
 void UserViewport::SetDefaultTranslation(glm::vec2 pos) {
@@ -157,6 +156,35 @@ void UserViewport::SetDefaultScaling(float scale) {
 void UserViewport::ResetPosition() {
     scale_ = defaultScale_;
     translate_ = defaultTranslate_;
+}
+
+void UserViewport::changeScale(float newScale, glm::vec2 refpoint) {
+    if (scalingHelper_.firstScale == 0.0f ||
+            isDifferentPoint(scalingHelper_.firstRefpoint, refpoint)) {
+        scalingHelper_.firstScale = scale_;
+        scalingHelper_.firstRefpoint = refpoint;
+        scalingHelper_.firstTranslate = translate_;
+    }
+
+    if (newScale < 0.4f) {
+        scale_ = 0.4f;
+    } else {
+        scale_ = newScale;
+    }
+
+    // Translate screen coordinate into world coodinate.
+    refpoint =
+        2.0f * scalingHelper_.firstRefpoint / Context::getWindowSize()
+        - glm::vec2(1.0f, 1.0f)
+        - glm::vec2(scalingHelper_.firstTranslate.x, scalingHelper_.firstTranslate.y);
+
+    glm::vec2 delta(refpoint - (refpoint * scale_ / scalingHelper_.firstScale));
+    translate_.x = scalingHelper_.firstTranslate.x + delta.x;
+    translate_.y = scalingHelper_.firstTranslate.y + delta.y;
+}
+
+bool UserViewport::isDifferentPoint(const glm::vec2& p1, const glm::vec2& p2) {
+    return glm::length(p1 - p2) > 15.0f;
 }
 
 Routine::Routine() :

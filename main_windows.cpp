@@ -192,10 +192,6 @@ AppMain::~AppMain() {
 }
 
 void AppMain::Setup(const CmdArgs& cmdArgs) {
-    // Tell system not to take it account into size scaling.
-    // TODO: Use .manifest file.
-    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-
     routine_.ParseConfig(cmdArgs);
     createWindow();
     createDrawable();

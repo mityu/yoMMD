@@ -1,4 +1,5 @@
 #include <Winver.h>
+#include <winuser.h>
 #pragma code_page(65001)  // Use UTF-8
 
 CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "DpiAwareness.manifest"

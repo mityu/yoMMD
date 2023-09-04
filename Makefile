@@ -89,8 +89,8 @@ $(OBJDIR)/%.m.o: %.m
 $(OBJDIR)/%.mm.o: %.mm
 	$(CXX) -o $@ $(CPPFLAGS) $(OBJCFLAGS) $(CFLAGS) -c $<
 
-$(OBJDIR)/%.rc.o: %.rc
-	windres -o $@ $^
+$(OBJDIR)/resource_windows.rc.o: resource_windows.rc DpiAwareness.manifest
+	windres -o $@ $<
 
 yommd.glsl.h: yommd.glsl
 	$(SOKOL_SHDC) --input $< --output $@ --slang metal_macos:hlsl5

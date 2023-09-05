@@ -148,6 +148,17 @@ void UserViewport::OnWheelScrolled(float delta) {
             Context::getMousePosition());
 }
 
+void UserViewport::OnGestureZoom(GesturePhase phase, float delta) {
+    glm::vec2 refpoint;
+    if (phase == GesturePhase::Begin || phase == GesturePhase::Unknown) {
+        refpoint = Context::getMousePosition();
+    } else {
+        refpoint = scalingHelper_.firstRefpoint;
+    }
+    float newScale = scale_ + delta;
+    changeScale(newScale, refpoint);
+}
+
 void UserViewport::SetDefaultTranslation(glm::vec2 pos) {
     translate_.x = pos.x;
     translate_.y = -pos.y;
@@ -155,6 +166,7 @@ void UserViewport::SetDefaultTranslation(glm::vec2 pos) {
 }
 
 void UserViewport::SetDefaultScaling(float scale) {
+    // TODO: Ensure the default scale is not too small.
     scale_ = scale;
     defaultScale_ = scale;
 }
@@ -665,6 +677,10 @@ void Routine::OnMouseDragged() {
 
 void Routine::OnWheelScrolled(float delta) {
     userViewport_.OnWheelScrolled(delta);
+}
+
+void Routine::OnGestureZoom(GesturePhase phase, float delta) {
+    userViewport_.OnGestureZoom(phase, delta);
 }
 
 void Routine::ResetModelPosition() {

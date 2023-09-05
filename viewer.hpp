@@ -40,6 +40,13 @@ private:
     std::vector<Animation> animations_;
 };
 
+enum class GesturePhase {
+    Unknown,
+    Begin,
+    Ongoing,
+    End,
+};
+
 class UserViewport {
 public:
     UserViewport();
@@ -48,6 +55,7 @@ public:
     void OnMouseDown();
     void OnMouseDragged();
     void OnWheelScrolled(float delta);
+    void OnGestureZoom(GesturePhase phase, float delta);
     void SetDefaultTranslation(glm::vec2 pos);
     void SetDefaultScaling(float scale);
     void ResetPosition();
@@ -88,6 +96,7 @@ public:
     void OnMouseDragged();
     void OnMouseDown();
     void OnWheelScrolled(float delta);
+    void OnGestureZoom(GesturePhase phase, float delta);
     void ResetModelPosition();
     void ParseConfig(const CmdArgs& args);
     const Config& GetConfig() const;

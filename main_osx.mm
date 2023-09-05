@@ -109,9 +109,14 @@ inline NSScreen *findScreenFromID(NSInteger scID);
     [getAppMain() getRoutine].OnMouseDown();
 }
 - (void)scrollWheel:(NSEvent *)event {
-    if (event.hasPreciseScrollingDeltas) {
-        [getAppMain() getRoutine].OnWheelScrolled(event.scrollingDeltaY);
-    }
+    float delta = event.deltaY * 10.0f;  // TODO: Better factor
+    if (event.hasPreciseScrollingDeltas)
+        delta = event.scrollingDeltaY;
+
+    if (!event.directionInvertedFromDevice)
+        delta = -delta;
+
+    [getAppMain() getRoutine].OnWheelScrolled(delta);
 }
 -(void)magnifyWithEvent:(NSEvent *)event {
     // NOTE: It seems touchpad gesture events aren't dispatched when

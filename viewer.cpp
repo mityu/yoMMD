@@ -176,6 +176,10 @@ void UserViewport::ResetPosition() {
     translate_ = defaultTranslate_;
 }
 
+float UserViewport::GetScale() const {
+    return scale_;
+}
+
 void UserViewport::changeScale(float newScale, glm::vec2 refpoint) {
     if (scalingHelper_.firstScale == 0.0f ||
             isDifferentPoint(scalingHelper_.firstRefpoint, refpoint)) {
@@ -681,6 +685,10 @@ void Routine::OnWheelScrolled(float delta) {
 
 void Routine::OnGestureZoom(GesturePhase phase, float delta) {
     userViewport_.OnGestureZoom(phase, delta);
+}
+
+float Routine::GetModelScale() const {
+    return userViewport_.GetScale();
 }
 
 void Routine::ResetModelPosition() {

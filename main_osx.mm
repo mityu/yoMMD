@@ -113,8 +113,43 @@ inline NSScreen *findScreenFromID(NSInteger scID);
         [getAppMain() getRoutine].OnWheelScrolled(event.scrollingDeltaY);
     }
 }
+-(void)magnifyWithEvent:(NSEvent *)event {
+    // NOTE: It seems touchpad gesture events aren't dispatched when
+    // application isn't active.  Do try activate appliction when touchpad
+    // gesture doesn't work.
+    GesturePhase phase = GesturePhase::Unknown;
+    switch (event.phase) {
+    case NSEventPhaseMayBegin:  // fall-through
+    case NSEventPhaseBegan:
+        phase = GesturePhase::Begin;
+        break;
+    case NSEventPhaseChanged:
+        phase = GesturePhase::Ongoing;
+        break;
+    case NSEventPhaseEnded:  // fall-through
+    case NSEventPhaseCancelled:
+        phase = GesturePhase::End;
+        break;
+    }
+    [getAppMain() getRoutine].OnGestureZoom(phase, event.magnification);
+}
+-(void)smartMagnifyWithEvent:(NSEvent *)event {
+    Routine& routine = [getAppMain() getRoutine];
+    const float defaultScale = routine.GetConfig().defaultScale;
+    const float scale = routine.GetModelScale();
+    float delta = 0.6f;
+    GesturePhase phase = GesturePhase::Begin;
+    if (scale != defaultScale) {
+        // Reset scaling
+        delta = defaultScale - scale;
+        phase = GesturePhase::Ongoing;
+    }
+    routine.OnGestureZoom(phase, delta);
+}
 - (BOOL)canBecomeKeyWindow {
-    return NO;
+    // Return YES here to enable touch gesture events; by default, they're
+    // disabled for boderless windows.
+    return YES;
 }
 @end
 
@@ -292,6 +327,9 @@ inline NSScreen *findScreenFromID(NSInteger scID);
 
         [sender setState:NSControlStateValueOn];
         [window_ setIgnoresMouseEvents:NO];
+
+        // Activate this app to enable touchpad gesture.
+        [NSApp activateIgnoringOtherApps:YES];
     } else {
         [sender setState:NSControlStateValueOff];
         [window_ setIgnoresMouseEvents:YES];

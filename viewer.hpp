@@ -59,6 +59,7 @@ public:
     void SetDefaultTranslation(glm::vec2 pos);
     void SetDefaultScaling(float scale);
     void ResetPosition();
+    float GetScale() const;
 private:
     static bool isDifferentPoint(const glm::vec2& p1, const glm::vec2& p2);
 
@@ -97,6 +98,7 @@ public:
     void OnMouseDown();
     void OnWheelScrolled(float delta);
     void OnGestureZoom(GesturePhase phase, float delta);
+    float GetModelScale() const;
     void ResetModelPosition();
     void ParseConfig(const CmdArgs& args);
     const Config& GetConfig() const;

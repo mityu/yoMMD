@@ -40,6 +40,13 @@ private:
     std::vector<Animation> animations_;
 };
 
+enum class GesturePhase {
+    Unknown,
+    Begin,
+    Ongoing,
+    End,
+};
+
 class UserViewport {
 public:
     UserViewport();
@@ -48,12 +55,26 @@ public:
     void OnMouseDown();
     void OnMouseDragged();
     void OnWheelScrolled(float delta);
+    void OnGestureZoom(GesturePhase phase, float delta);
     void SetDefaultTranslation(glm::vec2 pos);
     void SetDefaultScaling(float scale);
     void ResetPosition();
+    float GetScale() const;
+private:
+    static bool isDifferentPoint(const glm::vec2& p1, const glm::vec2& p2);
+
+    // changeScale changes the scale of MMD model to "newScale".  The base
+    // point of scaling is the "refpoint", which specified in the coodinate on
+    // screen.
+    void changeScale(float newScale, glm::vec2 refpoint);
 private:
     struct DragHelper {
         glm::vec2 firstMousePosition;
+        glm::vec3 firstTranslate;
+    };
+    struct ScalingHelper {
+        float firstScale = 0.0f;
+        glm::vec2 firstRefpoint;
         glm::vec3 firstTranslate;
     };
 
@@ -62,6 +83,7 @@ private:
     float defaultScale_;
     glm::vec3 defaultTranslate_;
     DragHelper dragHelper_;
+    ScalingHelper scalingHelper_;
 };
 
 class Routine : private NonCopyable {
@@ -75,6 +97,8 @@ public:
     void OnMouseDragged();
     void OnMouseDown();
     void OnWheelScrolled(float delta);
+    void OnGestureZoom(GesturePhase phase, float delta);
+    float GetModelScale() const;
     void ResetModelPosition();
     void ParseConfig(const CmdArgs& args);
     const Config& GetConfig() const;

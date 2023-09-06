@@ -650,7 +650,12 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
         SendMessageW(parentWin, WM_DESTROY, 0, 0);
         break;
     case Cmd::None:
-        // Canceled. Do nothing.
+        // Menu is canceled.
+        // The mouse click to cancel right-click menu will dispatch
+        // WM_MOUSEMOVE message and it leads wrong and fake mouse drag event.
+        // As a workaround, in order to avoid this call OnMouseDown to update
+        // the cursor position.
+        globals::appMain.GetRoutine().OnMouseDown();
         break;
     case Cmd::MenuCount:
         Err::Log("Internal error: Command::MenuCount is used");

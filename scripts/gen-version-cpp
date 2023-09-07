@@ -1,0 +1,26 @@
+#!/bin/bash
+
+cd $(dirname $0)
+
+tmpfile=$(mktemp)
+outfile=../auto/version.cpp
+
+cat << EOF > $tmpfile
+// This file is programatically generated.  DO NOT EDIT.
+#include <string_view>
+
+namespace Version {
+std::string_view getString() {
+	return "$(./gen-version-string)";
+}
+}
+EOF
+
+test -d "$(dirname $outfile)" || mkdir "$(dirname $outfile)"
+
+if [ -f "$outfile" ] && diff $tmpfile $outfile > /dev/null; then
+	# No need to update version.cpp
+	rm $tmpfile
+else
+	mv $tmpfile $outfile
+fi

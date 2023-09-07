@@ -1,5 +1,6 @@
 #include <string>
 #include <sstream>
+#include <string_view>
 #include <vector>
 #include <iostream>
 #include <cstdlib>
@@ -7,6 +8,11 @@
 #include "util.hpp"
 #include "constant.hpp"
 #include "platform.hpp"
+
+// Forward declaration for functions in auto/version.cpp
+namespace Version {
+std::string_view getString();
+}
 
 namespace {
 std::filesystem::path getHomePath();
@@ -17,6 +23,7 @@ Usage: yommd <options>
 options:
     --config <toml>     Specify config file
     --logfile <file>    Output logs to <file>
+    -v|--version        Show software version
     -h|--help           Show this help
 )";
 }
@@ -35,6 +42,9 @@ CmdArgs CmdArgs::Parse(const std::vector<std::string>& args) {
     while (itr != end) {
         if (*itr == "-h" || *itr == "--help") {
             Info::Log(globals::usage);
+            std::exit(0);
+        } else if (*itr == "-v" || *itr == "--version") {
+            Info::Log("version:", Version::getString());
             std::exit(0);
         } else if (*itr == "--config") {
             if (++itr == end) {

@@ -12,6 +12,7 @@
 #include "main.hpp"
 #include "viewer.hpp"
 #include "constant.hpp"
+#include "util.hpp"
 
 @interface AppDelegate: NSObject<NSApplicationDelegate>
 @end
@@ -37,17 +38,12 @@
 @end
 
 @interface AppMain: NSObject
-enum class MenuTag : NSInteger {
-    None,
-    SelectScreen,
-};
 -(void)createMainWindow;
 -(void)createStatusItem;
--(void)actionQuit:(NSMenuItem *)sender;
--(void)actionToggleHandleMouse:(NSMenuItem *)sender;
--(void)actionResetModelPosition:(NSMenuItem *)sender;
--(void)actionChangeScreen:(NSMenuItem *)sender;
--(const NSMenu *)getAppMenu;
+-(void)setIgnoreMouse:(bool)enable;
+-(bool)getIgnoreMouse;
+-(void)changeWindowScreen:(NSUInteger)scID;
+-(NSMenu *)getAppMenu;
 -(sg_context_desc)getSokolContext;
 -(id<CAMetalDrawable>)getDrawable;
 -(MTLRenderPassDescriptor *)getRenderPassDescriptor;
@@ -60,6 +56,10 @@ enum class MenuTag : NSInteger {
 @end
 
 @interface AppMenuDelegate : NSObject<NSMenuDelegate>
+-(void)actionQuit:(NSMenuItem *)sender;
+-(void)actionToggleHandleMouse:(NSMenuItem *)sender;
+-(void)actionResetModelPosition:(NSMenuItem *)sender;
+-(void)actionChangeScreen:(NSMenuItem *)sender;
 @end
 
 @interface SelectScreenMenuDelegate : NSObject<NSMenuDelegate>
@@ -169,11 +169,11 @@ inline NSScreen *findScreenFromID(NSInteger scID);
 @end
 
 @implementation View
++ (NSMenu *)defaultMenu {
+    return [getAppMain() getAppMenu];
+}
 -(BOOL)acceptsFirstMouse:(NSEvent *)event {
     return NO;
-}
-- (const NSMenu *)menuForEvent:(NSEvent *)event {
-    return [getAppMain() getAppMenu];
 }
 @end
 
@@ -202,7 +202,6 @@ inline NSScreen *findScreenFromID(NSInteger scID);
     NSMenu *appMenu_;
     AppMenuDelegate *appMenuDelegate_;
     SelectScreenMenuDelegate *selectScreenMenuDelegate_;
-    NSRunningApplication *alterApp_;
     Routine routine_;
     bool initialized_;
 }
@@ -275,90 +274,31 @@ inline NSScreen *findScreenFromID(NSInteger scID);
     appMenuDelegate_ = [[AppMenuDelegate alloc] init];
     appMenu_ = [[NSMenu alloc] init];
     [appMenu_ setDelegate:appMenuDelegate_];
-
-    NSMenuItem *enableMouse = [[NSMenuItem alloc]
-                        initWithTitle:@"Enable Mouse"
-                               action:@selector(actionToggleHandleMouse:)
-                        keyEquivalent:@""];
-    [enableMouse setTag:Enum::underlyCast(MenuTag::None)];
-    [enableMouse setTarget:self];
-    [enableMouse setState:NSControlStateValueOff];
-
-
-    NSMenuItem *resetModelPosition = [[NSMenuItem alloc]
-                        initWithTitle:@"Reset Position"
-                               action:@selector(actionResetModelPosition:)
-                        keyEquivalent:@""];
-    [resetModelPosition setTag:Enum::underlyCast(MenuTag::None)];
-    [resetModelPosition setTarget:self];
-
-    selectScreenMenuDelegate_ = [[SelectScreenMenuDelegate alloc] init];
-    NSMenuItem *selectScreen = [[NSMenuItem alloc]
-                        initWithTitle:@"Select screen"
-                               action:nil
-                        keyEquivalent:@""];
-    [selectScreen setTag:Enum::underlyCast(MenuTag::SelectScreen)];
-    [selectScreen setSubmenu:[[NSMenu alloc] init]];
-    [selectScreen.submenu setDelegate:selectScreenMenuDelegate_];
-    [selectScreen setTarget:self];
-
-    NSMenuItem *quit = [[NSMenuItem alloc]
-            initWithTitle:@"Quit" action:@selector(actionQuit:) keyEquivalent:@""];
-    [quit setTag:Enum::underlyCast(MenuTag::None)];
-    [quit setTarget:self];
-
-    [appMenu_ addItem:enableMouse];
-    [appMenu_ addItem:resetModelPosition];
-    [appMenu_ addItem:[NSMenuItem separatorItem]];
-    [appMenu_ addItem:selectScreen];
-    [appMenu_ addItem:[NSMenuItem separatorItem]];
-    [appMenu_ addItem:quit];
     [statusItem_ setMenu:appMenu_];
-
-    alterApp_ = NULL;
 }
--(void)actionQuit:(id)sender {
-    [NSApp terminate:sender];
+-(void)setIgnoreMouse:(bool)enable {
+    [window_ setIgnoresMouseEvents:enable];
 }
--(void)actionToggleHandleMouse:(NSMenuItem *)sender {
-    if (sender.state == NSControlStateValueOff) {
-        NSArray *appList = [[NSWorkspace sharedWorkspace] runningApplications];
-        for (NSRunningApplication *app in appList) {
-            if (app.active) {
-                alterApp_ = app;
-                break;
-            }
-        }
-
-        [sender setState:NSControlStateValueOn];
-        [window_ setIgnoresMouseEvents:NO];
-
-        // Activate this app to enable touchpad gesture.
-        [NSApp activateIgnoringOtherApps:YES];
-    } else {
-        [sender setState:NSControlStateValueOff];
-        [window_ setIgnoresMouseEvents:YES];
-        if (NSApp.active && alterApp_) {
-            [alterApp_ activateWithOptions:NSApplicationActivateIgnoringOtherApps];
-        }
-        alterApp_ = NULL;
-    }
+-(bool)getIgnoreMouse {
+    return [window_ ignoresMouseEvents];
 }
--(void)actionResetModelPosition:(NSMenuItem *)sender {
-    routine_.ResetModelPosition();
-}
--(void)actionChangeScreen:(NSMenuItem *)sender {
-    NSScreen *dst = findScreenFromID(sender.tag);
+-(void)changeWindowScreen:(NSUInteger)scID {
+    NSScreen *dst = findScreenFromID(scID);
     if (!dst) {
         // Display not found.  Maybe the connection for the target display is
         // removed.
-        Info::Log("Display not found: %ld", sender.tag);
+        Info::Log("Display not found: %ld", scID);
         return;
     }
     [window_ setFrame:dst.visibleFrame display:YES animate:NO];
 }
--(const NSMenu *)getAppMenu {
-    return appMenu_;
+-(NSMenu *)getAppMenu {
+    // NOTE: Appropriating "appMenu_" here will break status menu after using
+    // right click menu.  (Status menu will disappear after a use of right
+    // click menu.)  As a workaround, make a new NSMenu object and use it.
+    NSMenu * menu = [[NSMenu alloc] init];
+    [menu setDelegate:appMenuDelegate_];
+    return menu;
 }
 -(sg_context_desc)getSokolContext {
     return sg_context_desc{
@@ -399,12 +339,67 @@ inline NSScreen *findScreenFromID(NSInteger scID);
 }
 @end
 
-@implementation AppMenuDelegate
+@implementation AppMenuDelegate {
+    NSArray<NSMenuItem *> *menuItems_;
+    SelectScreenMenuDelegate *selectScreenMenuDelegate_;
+    NSRunningApplication *alterApp_;
+}
+enum class MenuTag : NSInteger {
+    None,
+    EnableMouse,
+    SelectScreen,
+};
+-(instancetype)init {
+    self = [super init];
+    if (self) {
+        alterApp_ = nil;
+
+        NSMenuItem *enableMouse = [[NSMenuItem alloc]
+                            initWithTitle:@"Enable Mouse"
+                                   action:@selector(actionToggleHandleMouse:)
+                            keyEquivalent:@""];
+        [enableMouse setTag:Enum::underlyCast(MenuTag::EnableMouse)];
+        [enableMouse setTarget:self];
+        [enableMouse setState:NSControlStateValueOff];
+
+
+        NSMenuItem *resetModelPosition = [[NSMenuItem alloc]
+                            initWithTitle:@"Reset Position"
+                                   action:@selector(actionResetModelPosition:)
+                            keyEquivalent:@""];
+        [resetModelPosition setTag:Enum::underlyCast(MenuTag::None)];
+        [resetModelPosition setTarget:self];
+
+        selectScreenMenuDelegate_ = [[SelectScreenMenuDelegate alloc] init];
+        NSMenuItem *selectScreen = [[NSMenuItem alloc]
+                            initWithTitle:@"Select screen"
+                                   action:nil
+                            keyEquivalent:@""];
+        [selectScreen setTag:Enum::underlyCast(MenuTag::SelectScreen)];
+        [selectScreen setSubmenu:[[NSMenu alloc] init]];
+        [selectScreen.submenu setDelegate:selectScreenMenuDelegate_];
+        [selectScreen setTarget:self];
+
+        NSMenuItem *quit = [[NSMenuItem alloc]
+                initWithTitle:@"Quit" action:@selector(actionQuit:) keyEquivalent:@""];
+        [quit setTag:Enum::underlyCast(MenuTag::None)];
+        [quit setTarget:self];
+
+        menuItems_ = @[
+            enableMouse,
+            resetModelPosition,
+            [NSMenuItem separatorItem],
+            selectScreen,
+            [NSMenuItem separatorItem],
+            quit,
+        ];
+    }
+    return self;
+}
 -(void)menu:(NSMenu *)menu willHighlightItem:(NSMenuItem *)item {
     if (!item || item.tag != Enum::underlyCast(MenuTag::SelectScreen))
         return;
 
-    AppMain *appMain = getAppMain();
     NSNumber *currentScreenID = [getAppMain() getCurrentScreenNumber];
 
     NSMenu *subMenu = item.submenu;
@@ -418,7 +413,7 @@ inline NSScreen *findScreenFromID(NSInteger scID);
                                action:@selector(actionChangeScreen:)
                         keyEquivalent:@""];
         [subItem setTag:[scID integerValue]];
-        [subItem setTarget:appMain];
+        [subItem setTarget:self];
         if ([scID isEqualToNumber:currentScreenID]) {
             // FIXME: Menu item is not disabled on the first display of menus.
             [subItem setEnabled:NO];
@@ -427,6 +422,22 @@ inline NSScreen *findScreenFromID(NSInteger scID);
     }
 }
 -(void)menuNeedsUpdate:(NSMenu *)menu {
+    if ([menu numberOfItems] != static_cast<NSInteger>([menuItems_ count])) {
+        [menu removeAllItems];  // Initialize menu
+        [menu setItemArray:[[NSArray alloc] initWithArray:menuItems_ copyItems:YES]];
+    }
+
+    NSMenuItem *enableMouse = [menu itemWithTag:Enum::underlyCast(MenuTag::EnableMouse)];
+    if (!enableMouse) {
+        Err::Log("Internal error: \"Enable Mouse\" menu not found");
+        return;
+    }
+
+    if ([getAppMain() getIgnoreMouse])
+        [enableMouse setState:NSControlStateValueOff];
+    else
+        [enableMouse setState:NSControlStateValueOn];
+
     NSMenuItem *selectScreen = [menu itemWithTag:Enum::underlyCast(MenuTag::SelectScreen)];
     if (!selectScreen) {
         Err::Log("Internal error: \"Select screen\" menu not found");
@@ -438,6 +449,37 @@ inline NSScreen *findScreenFromID(NSInteger scID);
     } else {
         [selectScreen setEnabled:YES];
     }
+}
+-(void)actionQuit:(id)sender {
+    [NSApp terminate:sender];
+}
+-(void)actionToggleHandleMouse:(NSMenuItem *)sender {
+    if (sender.state == NSControlStateValueOff) {
+        NSArray *appList = [[NSWorkspace sharedWorkspace] runningApplications];
+        for (NSRunningApplication *app in appList) {
+            if (app.active) {
+                alterApp_ = app;
+                break;
+            }
+        }
+
+        [getAppMain() setIgnoreMouse:false];
+
+        // Activate this app to enable touchpad gesture.
+        [NSApp activateIgnoringOtherApps:YES];
+    } else {
+        [getAppMain() setIgnoreMouse:true];
+        if (NSApp.active && alterApp_) {
+            [alterApp_ activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+        }
+        alterApp_ = NULL;
+    }
+}
+-(void)actionResetModelPosition:(NSMenuItem *)sender {
+    [getAppMain() getRoutine].ResetModelPosition();
+}
+-(void)actionChangeScreen:(NSMenuItem *)sender {
+    [getAppMain() changeWindowScreen:sender.tag];
 }
 @end
 

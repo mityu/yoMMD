@@ -51,8 +51,7 @@
 -(NSSize)getDrawableSize;
 -(NSNumber *)getCurrentScreenNumber;
 -(Routine&)getRoutine;
--(void)notifyInitializationDone;
--(bool)getInitialized;
+-(void)startDrawingModel;
 @end
 
 @interface AppMenuDelegate : NSObject<NSMenuDelegate>
@@ -91,7 +90,7 @@ inline NSScreen *findScreenFromID(NSInteger scID);
 
     routine.Init();
 
-    [appMain notifyInitializationDone];
+    [appMain startDrawingModel];
 }
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
     [getAppMain() getRoutine].Terminate();
@@ -181,8 +180,6 @@ inline NSScreen *findScreenFromID(NSInteger scID);
 - (void)mtkView:(nonnull MTKView*)view drawableSizeWillChange:(CGSize)size {
 }
 - (void)drawInMTKView:(nonnull MTKView*)view {
-    if (![getAppMain() getInitialized])
-        return;
     @autoreleasepool {
         auto& routine = [getAppMain() getRoutine];
         routine.Update();
@@ -203,13 +200,6 @@ inline NSScreen *findScreenFromID(NSInteger scID);
     AppMenuDelegate *appMenuDelegate_;
     SelectScreenMenuDelegate *selectScreenMenuDelegate_;
     Routine routine_;
-    bool initialized_;
-}
--(instancetype)init {
-    self = [super init];
-    if (self)
-        initialized_ = false;
-    return self;
 }
 -(void)createMainWindow {
     const NSUInteger style = NSWindowStyleMaskBorderless;
@@ -251,10 +241,13 @@ inline NSScreen *findScreenFromID(NSInteger scID);
     metalDevice_ = MTLCreateSystemDefaultDevice();
     view_ = [[View alloc] init];
     [view_ setPreferredFramesPerSecond:static_cast<NSInteger>(Constant::FPS)];
-    [view_ setDelegate:viewDelegate_];
     [view_ setDevice: metalDevice_];
     [view_ setColorPixelFormat:MTLPixelFormatBGRA8Unorm];
     [view_ setDepthStencilPixelFormat:MTLPixelFormatDepth32Float_Stencil8];
+    // Postpone setting view delegate until every initialization process is
+    // done in order to prohibit MMD drawer to draw models while showing errors
+    // due to failure of loading MMD models (e.g. MMD model path is given, but
+    // the path is invalid).
 
     [window_ setContentView:view_];
     [[view_ layer] setMagnificationFilter:kCAFilterNearest];
@@ -331,11 +324,8 @@ inline NSScreen *findScreenFromID(NSInteger scID);
 -(Routine&)getRoutine {
     return routine_;
 }
--(void)notifyInitializationDone {
-    initialized_ = true;
-}
--(bool)getInitialized {
-    return initialized_;
+-(void)startDrawingModel {
+    [view_ setDelegate:viewDelegate_];
 }
 @end
 

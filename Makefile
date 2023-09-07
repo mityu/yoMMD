@@ -4,7 +4,7 @@ TARGET:=yoMMD
 TARGET_DEBUG:=yoMMD-debug
 OBJDIR:=./obj
 SRC:=viewer.cpp config.cpp resources.cpp image.cpp util.cpp libs.mm
-OBJ=$(addsuffix .o,$(addprefix $(OBJDIR)/,$(SRC)))
+OBJ=$(addsuffix .o,$(addprefix $(OBJDIR)/,$(SRC))) $(OBJDIR)/version.cpp.o
 DEP=$(OBJ:%.o=%.d)
 CFLAGS:=-O2 -Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb \
 		-Ilib/toml11 -Ilib/incbin -Ilib/bullet3/build/include/bullet \
@@ -92,12 +92,19 @@ $(OBJDIR)/%.mm.o: %.mm
 $(OBJDIR)/resource_windows.rc.o: resource_windows.rc DpiAwareness.manifest
 	windres -o $@ $<
 
+$(OBJDIR)/version.cpp.o: auto/version.cpp
+	$(CXX) -o $@ $(CPPFLAGS) $(CFLAGS) -c $<
+
 yommd.glsl.h: yommd.glsl
 	$(SOKOL_SHDC) --input $< --output $@ --slang metal_macos:hlsl5
 ifeq ($(OS),Windows_NT)
 	# CRLF -> LF
 	tr -d \\r < $@ > $@.tmp && mv $@.tmp $@
 endif
+
+.PHONY: FORCE-EXECUTE
+auto/version.cpp: FORCE-EXECUTE
+	./scripts/gen-version-cpp
 
 run: $(TARGET)
 	./$(TARGET)

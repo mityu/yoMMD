@@ -117,13 +117,14 @@ void slogFunc(const char *tag, uint32_t logLevel, uint32_t logItem, const char *
 
 std::filesystem::path makeAbsolute(
         const std::filesystem::path& path, const std::filesystem::path& cwd) {
+    namespace fs = std::filesystem;
     static const auto homePath = getHomePath();
     if (path.is_absolute())
         return path;
     else if (const auto u8path = path.generic_u8string(); u8path.starts_with(u8"~/"))
-        return homePath / std::filesystem::path(u8path.substr(2));
+        return fs::weakly_canonical(homePath / fs::path(u8path.substr(2)));
     else
-        return cwd / path;
+        return fs::weakly_canonical(cwd / path);
 }
 
 }

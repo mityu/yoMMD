@@ -378,6 +378,8 @@ enum class MenuTag : NSInteger {
         [selectScreen setTag:Enum::underlyCast(MenuTag::SelectScreen)];
         [selectScreen setSubmenu:[[NSMenu alloc] init]];
         [selectScreen.submenu setDelegate:selectScreenMenuDelegate_];
+        // In order to be able to disable menu items manually.
+        [selectScreen.submenu setAutoenablesItems:NO];
         [selectScreen setTarget:self];
 
         NSMenuItem *quit = [[NSMenuItem alloc]
@@ -415,7 +417,6 @@ enum class MenuTag : NSInteger {
         [subItem setTag:[scID integerValue]];
         [subItem setTarget:self];
         if ([scID isEqualToNumber:currentScreenID]) {
-            // FIXME: Menu item is not disabled on the first display of menus.
             [subItem setEnabled:NO];
         }
         [subMenu addItem:subItem];

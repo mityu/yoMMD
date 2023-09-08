@@ -27,7 +27,7 @@ jobs:
           if [[ "${{ steps.pull_latest_release.outcome }}" == 'failure' ]]; then
             echo "skip=no" >> $GITHUB_OUTPUT
           else
-            version_release=$(yoMMD.exe --version)
+            version_release=$(yoMMD.exe --version | sed 's/^version: *//i')
             version_source=$(./scripts/gen-version-string)
             if [[ $version_release == $version_source ]]; then
               echo "skip=yes" >> $GITHUB_OUTPUT

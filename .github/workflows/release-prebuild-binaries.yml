@@ -1,0 +1,69 @@
+name: Release prebuild binaries
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: robinraju/release-downloader@v1.8
+        id: pull_latest_release
+        continue-on-error: true
+        with:
+          filename: "yoMMD-win-*.zip"
+          zipBall: true
+          latest: true
+          extract: true
+      - name: Check version between latest release and latest source code
+        id: check
+        shell: bash
+        run: |
+          if [[ "${{ steps.pull_latest_release.outcome }}" == 'failure' ]]; then
+            echo "skip=no" >> $GITHUB_OUTPUT
+          else
+            version_release=$(yoMMD.exe --version | sed 's/^version: *//i')
+            version_source=$(./scripts/gen-version-string)
+            if [[ $version_release == $version_source ]]; then
+              echo "skip=yes" >> $GITHUB_OUTPUT
+            else
+              echo "skip=no" >> $GITHUB_OUTPUT
+            fi
+          fi
+      - uses: msys2/setup-msys2@v2
+        if: steps.check.outputs.skip == 'no'
+        with:
+          msystem: MINGW64
+          release: false
+          install: >-
+            make
+            zip
+            git
+            mingw-w64-x86_64-binutils
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+      - name: Clone submodules
+        if: steps.check.outputs.skip == 'no'
+        run:
+          git submodule update --init --recursive --recommend-shallow --depth 1
+      - name: Build binary and package it
+        if: steps.check.outputs.skip == 'no'
+        id: build
+        run: |
+          make build-submodule
+          make release -j
+          version_string=$(./scripts/gen-version-string)
+          package_name="yoMMD-win-${version_string}.zip"
+          zip $package_name yoMMD.exe
+          echo "package_name=$package_name" >> $GITHUB_OUTPUT
+          echo "tag_name=$version_string" >> $GITHUB_OUTPUT
+      - name: Upload releases
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ steps.build.outputs.package_name }}
+          tag_name: ${{ steps.build.outputs.tag_name }}

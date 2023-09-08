@@ -64,6 +64,7 @@ jobs:
           echo "tag_name=$version_string" >> $GITHUB_OUTPUT
       - name: Upload releases
         uses: softprops/action-gh-release@v1
+        if: steps.check.outputs.skip == 'no'
         with:
           files: ${{ steps.build.outputs.package_name }}
           tag_name: ${{ steps.build.outputs.tag_name }}

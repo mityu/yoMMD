@@ -10,6 +10,8 @@ jobs:
     defaults:
       run:
         shell: msys2 {0}
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v3
       - uses: robinraju/release-downloader@v1.8

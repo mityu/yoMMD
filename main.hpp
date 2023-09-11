@@ -13,6 +13,9 @@ namespace Context {
 sg_context_desc getSokolContext();
 glm::vec2 getWindowSize();
 glm::vec2 getDrawableSize();
+
+// Get mouse position of local to window.  The origin should be left-bottom of
+// window.
 glm::vec2 getMousePosition();
 }
 

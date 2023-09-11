@@ -48,6 +48,7 @@
 -(id<CAMetalDrawable>)getDrawable;
 -(MTLRenderPassDescriptor *)getRenderPassDescriptor;
 -(NSSize)getWindowSize;
+-(NSPoint)getWindowPosition;
 -(NSSize)getDrawableSize;
 -(NSNumber *)getCurrentScreenNumber;
 -(Routine&)getRoutine;
@@ -311,6 +312,9 @@ inline NSScreen *findScreenFromID(NSInteger scID);
 }
 -(NSSize)getWindowSize {
     return window_.frame.size;
+}
+-(NSPoint)getWindowPosition {
+    return window_.frame.origin;
 }
 -(NSSize)getDrawableSize {
     return view_.drawableSize;
@@ -664,7 +668,8 @@ glm::vec2 Context::getDrawableSize() {
 
 glm::vec2 Context::getMousePosition() {
     const auto pos = [NSEvent mouseLocation];
-    return glm::vec2(pos.x, pos.y);
+    const auto origin = [getAppMain() getWindowPosition];
+    return glm::vec2(pos.x - origin.x, pos.y - origin.y);
 }
 
 namespace Dialog {

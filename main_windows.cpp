@@ -952,11 +952,30 @@ glm::vec2 getDrawableSize() {
     return globals::appMain.GetDrawableSize();
 }
 glm::vec2 getMousePosition() {
+    // The origin of device positions given by WinAPI is top-left of
+    // screens/windows.
     POINT pos;
     if (!GetCursorPos(&pos))
         return glm::vec2();
-    int sizeY = GetSystemMetrics(SM_CYSCREEN);
-    return glm::vec2(pos.x, sizeY - pos.y);  // Make origin bottom-left.
+
+    HMONITOR curMonitorHandle =
+        MonitorFromWindow(globals::appMain.GetWindowHandle(), MONITOR_DEFAULTTONULL);
+    if (!curMonitorHandle)
+        Err::Exit("Internal error: failed to get current monitor handle.");
+
+    MONITORINFO monitorInfo = {.cbSize = sizeof(monitorInfo)};
+    GetMonitorInfoW(curMonitorHandle, &monitorInfo);
+
+    RECT wr = {};
+    GetClientRect(globals::appMain.GetWindowHandle(), &wr);
+
+    // Get the mouse position that relative to the main window.  Note that
+    // origin is top-left of window.
+    pos.x = pos.x - monitorInfo.rcMonitor.left - wr.left;
+    pos.y = pos.y - monitorInfo.rcMonitor.top - wr.top;
+
+    const auto winHeight = wr.bottom - wr.top;
+    return glm::vec2(pos.x, winHeight - pos.y);  // Make origin bottom-left.
 }
 }
 

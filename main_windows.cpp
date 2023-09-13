@@ -21,6 +21,7 @@
 #include "viewer.hpp"
 #include "util.hpp"
 #include "constant.hpp"
+#include "keyboard.hpp"
 
 template <typename T> using ComPtr = Microsoft::WRL::ComPtr<T>;
 
@@ -467,6 +468,24 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
         PostQuitMessage(0);
         isRunning_ = false;
         return 0;
+    case WM_KEYDOWN:  // fallthrough
+    case WM_KEYUP:
+        {
+            std::optional<Keycode> key;
+            switch (wParam) {
+            case VK_SHIFT:
+                key = Keycode::Shift;
+                break;
+            }
+            if (!key.has_value())
+                break;
+
+            if (uMsg == WM_KEYDOWN)
+                Keyboard::OnKeyDown(*key);
+            else
+                Keyboard::OnKeyUp(*key);
+            return 0;
+        }
     case WM_LBUTTONDOWN:
         routine_.OnMouseDown();
         return 0;
@@ -492,9 +511,8 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
     case WM_RBUTTONDOWN:
         menu_.ShowMenu();
         return 0;
-    default:
-        return DefWindowProc(hwnd_, uMsg, wParam, lParam);
     }
+    return DefWindowProc(hwnd_, uMsg, wParam, lParam);
 }
 
 AppMenu::AppMenu() :

@@ -125,13 +125,13 @@ void UserView::SetCallback(const Callback& callback) {
 glm::mat4 UserView::GetViewportMatrix() const {
     glm::mat4 m(1.0f);
     m = glm::translate(std::move(m), transform_.translation);
-    m = glm::scale(std::move(m), glm::vec3(transform_.scale, transform_.scale, 1.0f));
     return m;
 }
 
 glm::mat4 UserView::GetWorldViewMatrix() const {
     glm::mat4 m(1.0f);
     m = glm::rotate(std::move(m), transform_.rotation, glm::vec3(0.0f, 0.0f, 1.0f));
+    m = glm::scale(std::move(m), glm::vec3(transform_.scale, transform_.scale, 1.0f));
     return m;
 }
 

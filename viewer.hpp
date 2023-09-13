@@ -8,12 +8,12 @@
 #include "Saba/Model/MMD/MMDModel.h"
 #include "Saba/Model/MMD/VMDAnimation.h"
 #include "Saba/Model/MMD/VMDCameraAnimation.h"
+#include "btBulletDynamicsCommon.h"
 #include "sokol_gfx.h"
 #include "util.hpp"
 #include "config.hpp"
 #include "image.hpp"
 
-// viewer.cpp
 class Material {
 public:
     explicit Material(const saba::MMDMaterial& mat);
@@ -47,11 +47,21 @@ enum class GesturePhase {
     End,
 };
 
-class UserViewport {
+// Treats extra transformations given by user interactions.
+class UserView {
 public:
-    UserViewport();
-    glm::mat4 GetMatrix() const;
-    operator glm::mat4() const;
+    struct Callback {
+        std::function<void()> OnRotationChanged;
+    };
+public:
+    void SetCallback(const Callback& callback);
+
+    // Get a transformer matrix of user's viewport.
+    glm::mat4 GetViewportMatrix() const;
+
+    // Get a transformer matrix of model world.
+    glm::mat4 GetWorldViewMatrix() const;
+
     void OnMouseDown();
     void OnMouseDragged();
     void OnWheelScrolled(float delta);
@@ -60,30 +70,40 @@ public:
     void SetDefaultScaling(float scale);
     void ResetPosition();
     float GetScale() const;
+    float GetRotation() const;
 private:
     static bool isDifferentPoint(const glm::vec2& p1, const glm::vec2& p2);
+
+    // Translate a position in the main window into one in the model world.
+    static glm::vec2 toWorldCoord(const glm::vec2& src, const glm::vec2& translation);
+    static glm::vec2 toWindowCoord(const glm::vec2& src, const glm::vec2& translation);
 
     // changeScale changes the scale of MMD model to "newScale".  The base
     // point of scaling is the "refpoint", which specified in the coodinate on
     // screen.
     void changeScale(float newScale, glm::vec2 refpoint);
+
+    // changeRotation rotates the world view by "delta". The base point of
+    // scaling is the "refpoint", which specified in the coodinate on screen.
+    // NOTE: "delta" should be in radian, not in digree.
+    // NOTE: Different from changeScale function, the first argument should be
+    // amount of change of rotation, not a new rotateion.
+    void changeRotation(float delta, glm::vec2 refpoint);
 private:
-    struct DragHelper {
-        glm::vec2 firstMousePosition;
-        glm::vec3 firstTranslate;
+    struct Transform {
+        float rotation = 0.0f;  // View rotation in radian
+        float scale = 1.0f;
+        glm::vec3 translation = glm::vec3(0.0f, 0.0f, 0.0f);
     };
-    struct ScalingHelper {
-        float firstScale = 0.0f;
-        glm::vec2 firstRefpoint;
-        glm::vec3 firstTranslate;
+    struct ActionHelper {
+        glm::vec2 refPoint;
+        Transform firstTransform;
     };
 
-    float scale_;
-    glm::vec3 translate_;
-    float defaultScale_;
-    glm::vec3 defaultTranslate_;
-    DragHelper dragHelper_;
-    ScalingHelper scalingHelper_;
+    Transform transform_, defaultTransform_;
+    std::optional<ActionHelper> actionHelper_;
+
+    Callback callback_;
 };
 
 class Routine : private NonCopyable {
@@ -110,6 +130,7 @@ private:
     void selectNextMotion();
     std::optional<ImageMap::const_iterator> loadImage(const std::string& path);
     std::optional<sg_image> getTexture(const std::string& path);
+    void updateGravity();
 private:
     struct Camera {
         glm::vec3 eye;
@@ -118,7 +139,7 @@ private:
 
     Config config_;
 
-    UserViewport userViewport_;
+    UserView userView_;
 
     bool shouldTerminate_;
 
@@ -126,7 +147,7 @@ private:
     sg_shader shaderMMD_;
 
     std::vector<uint32_t> induces_;
-    sg_buffer posVB_;  // VB stands for vertex buffer
+    sg_buffer posVB_;  // VB stands for "vertex buffer"
     sg_buffer normVB_;
     sg_buffer uvVB_;
     sg_buffer ibo_;
@@ -134,8 +155,8 @@ private:
     sg_pipeline pipeline_bothface_;
     sg_bindings binds_;
 
-    glm::mat4 viewMatrix_;
-    glm::mat4 projectionMatrix_;
+    glm::mat4 viewMatrix_;  // For model-view transformation
+    glm::mat4 projectionMatrix_;  // For projection transformation
     MMD mmd_;
 
     sg_image dummyTex_;

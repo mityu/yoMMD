@@ -3,7 +3,7 @@ CC:=gcc
 TARGET:=yoMMD
 TARGET_DEBUG:=yoMMD-debug
 OBJDIR:=./obj
-SRC:=viewer.cpp config.cpp resources.cpp image.cpp util.cpp libs.mm
+SRC:=viewer.cpp config.cpp resources.cpp image.cpp keyboard.cpp util.cpp libs.mm
 OBJ=$(addsuffix .o,$(addprefix $(OBJDIR)/,$(SRC))) $(OBJDIR)/version.cpp.o
 DEP=$(OBJ:%.o=%.d)
 CFLAGS:=-O2 -Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb \

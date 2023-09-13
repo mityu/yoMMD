@@ -6,6 +6,9 @@
 #import <Metal/Metal.h>
 #import <MetalKit/MetalKit.h>
 
+#include <array>
+#include <utility>
+
 #define SOKOL_METAL
 #include "sokol_gfx.h"
 
@@ -13,6 +16,7 @@
 #include "viewer.hpp"
 #include "constant.hpp"
 #include "util.hpp"
+#include "keyboard.hpp"
 
 @interface AppDelegate: NSObject<NSApplicationDelegate>
 @end
@@ -102,6 +106,18 @@ inline NSScreen *findScreenFromID(NSInteger scID);
 @end
 
 @implementation Window
+- (void)flagsChanged:(NSEvent *)event {
+    using KeycodeMap = std::pair<NSEventModifierFlags, Keycode>;
+    constexpr std::array<KeycodeMap, static_cast<size_t>(Keycode::Count)> keys({
+            {NSEventModifierFlagShift, Keycode::Shift},
+    });
+    for (const auto& [mask, keycode] : keys) {
+        if (event.modifierFlags & mask)
+            Keyboard::OnKeyDown(keycode);
+        else
+            Keyboard::OnKeyUp(keycode);
+    }
+}
 - (void)mouseDragged:(NSEvent *)event {
     [getAppMain() getRoutine].OnMouseDragged();
 }
@@ -272,6 +288,8 @@ inline NSScreen *findScreenFromID(NSInteger scID);
 }
 -(void)setIgnoreMouse:(bool)enable {
     [window_ setIgnoresMouseEvents:enable];
+    if (!enable)
+        Keyboard::ResetAllState();
 }
 -(bool)getIgnoreMouse {
     return [window_ ignoresMouseEvents];

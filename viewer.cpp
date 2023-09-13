@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <random>
+#include <numbers>
 #include "sokol_gfx.h"
 #include "sokol_time.h"
 #include "Saba/Base/Path.h"
@@ -24,6 +25,7 @@
 #include "main.hpp"
 #include "util.hpp"
 #include "constant.hpp"
+#include "keyboard.hpp"
 #include "yommd.glsl.h"
 
 namespace{
@@ -39,6 +41,15 @@ const std::filesystem::path getXdgConfigHomePath() {
 #endif
     return "~/.config";
 }
+
+inline glm::vec2 toVec2(glm::vec3 v) {
+    return glm::vec2(v.x, v.y);
+}
+
+inline glm::vec3 toVec3(glm::vec2 xy, decltype(xy)::value_type z) {
+    return glm::vec3(xy.x, xy.y, z);
+}
+
 }
 
 Material::Material(const saba::MMDMaterial& mat) :
@@ -107,27 +118,34 @@ const std::vector<MMD::Animation>& MMD::GetAnimations() const {
     return animations_;
 }
 
-UserViewport::UserViewport() :
-    scale_(1.0f), translate_(0.0f, 0.0f, 0.0f),
-    defaultScale_(scale_), defaultTranslate_(translate_)
-{}
-
-glm::mat4 UserViewport::GetMatrix() const {
-    const glm::vec3 scale(scale_, scale_, 1.0f);
-    return glm::scale(glm::translate(glm::mat4(1.0f), translate_), scale);
+void UserView::SetCallback(const Callback& callback) {
+    callback_ = callback;
 }
 
-UserViewport::operator glm::mat4() const {
-    return GetMatrix();
+glm::mat4 UserView::GetViewportMatrix() const {
+    glm::mat4 m(1.0f);
+    m = glm::translate(std::move(m), transform_.translation);
+    m = glm::scale(std::move(m), glm::vec3(transform_.scale, transform_.scale, 1.0f));
+    return m;
 }
 
-void UserViewport::OnMouseDown() {
-    dragHelper_.firstMousePosition = Context::getMousePosition();
-    dragHelper_.firstTranslate = translate_;
+glm::mat4 UserView::GetWorldViewMatrix() const {
+    glm::mat4 m(1.0f);
+    m = glm::rotate(std::move(m), transform_.rotation, glm::vec3(0.0f, 0.0f, 1.0f));
+    return m;
 }
 
-void UserViewport::OnMouseDragged() {
-    auto delta = Context::getMousePosition() - dragHelper_.firstMousePosition;
+void UserView::OnMouseDown() {
+    actionHelper_ = {
+        .refPoint = Context::getMousePosition(),
+        .firstTransform = {
+            .translation = transform_.translation,
+        },
+    };
+}
+
+void UserView::OnMouseDragged() {
+    auto delta = Context::getMousePosition() - actionHelper_->refPoint;
 
     // Translate distance in screen into distance in model world.
     //
@@ -136,77 +154,124 @@ void UserViewport::OnMouseDragged() {
     // winsize.y  |            |   ----->   2.0 |      |
     //            |            |                |      |
     //            +------------+                +------+
+    //
+    // Note that "toWorldCoord" shouldn't be used here.
     delta = 2.0f * delta / Context::getWindowSize();
-
-    translate_.x = dragHelper_.firstTranslate.x + delta.x;
-    translate_.y = dragHelper_.firstTranslate.y + delta.y;
+    transform_.translation =
+        actionHelper_->firstTransform.translation + toVec3(delta, 0.0f);
 }
 
-void UserViewport::OnWheelScrolled(float delta) {
-    changeScale(
-            scale_ - delta / Context::getWindowSize().y,
-            Context::getMousePosition());
+void UserView::OnWheelScrolled(float delta) {
+    if (Keyboard::IsKeyPressed(Keycode::Shift)) {
+        changeRotation(delta / 1000.0f, Context::getMousePosition());
+        if (callback_.OnRotationChanged)
+            callback_.OnRotationChanged();
+    } else {
+        changeScale(
+                transform_.scale - delta / Context::getWindowSize().y,
+                Context::getMousePosition());
+    }
 }
 
-void UserViewport::OnGestureZoom(GesturePhase phase, float delta) {
+void UserView::OnGestureZoom(GesturePhase phase, float delta) {
     glm::vec2 refpoint;
     if (phase == GesturePhase::Begin || phase == GesturePhase::Unknown) {
         refpoint = Context::getMousePosition();
     } else {
-        refpoint = scalingHelper_.firstRefpoint;
+        // "actionHelper_" must not be "std::nullopt" here.
+        refpoint = actionHelper_->refPoint;
     }
-    float newScale = scale_ + delta;
+    float newScale = transform_.scale + delta;
+    actionHelper_ = std::nullopt;
     changeScale(newScale, refpoint);
+    actionHelper_ = std::nullopt;
 }
 
-void UserViewport::SetDefaultTranslation(glm::vec2 pos) {
-    translate_.x = pos.x;
-    translate_.y = -pos.y;
-    defaultTranslate_ = translate_;
+void UserView::SetDefaultTranslation(glm::vec2 pos) {
+    transform_.translation.x = pos.x;
+    transform_.translation.y = -pos.y;
+    defaultTransform_.translation = transform_.translation;
 }
 
-void UserViewport::SetDefaultScaling(float scale) {
+void UserView::SetDefaultScaling(float scale) {
     // TODO: Ensure the default scale is not too small.
-    scale_ = scale;
-    defaultScale_ = scale;
+    transform_.scale = scale;
+    defaultTransform_.scale = scale;
 }
 
-void UserViewport::ResetPosition() {
-    scale_ = defaultScale_;
-    translate_ = defaultTranslate_;
+void UserView::ResetPosition() {
+    transform_ = defaultTransform_;
 }
 
-float UserViewport::GetScale() const {
-    return scale_;
+float UserView::GetScale() const {
+    return transform_.scale;
 }
 
-void UserViewport::changeScale(float newScale, glm::vec2 refpoint) {
-    if (scalingHelper_.firstScale == 0.0f ||
-            isDifferentPoint(scalingHelper_.firstRefpoint, refpoint)) {
-        scalingHelper_.firstScale = scale_;
-        scalingHelper_.firstRefpoint = refpoint;
-        scalingHelper_.firstTranslate = translate_;
+float UserView::GetRotation() const {
+    return transform_.rotation;
+}
+
+void UserView::changeScale(float newScale, glm::vec2 refpoint) {
+    if (!actionHelper_.has_value() ||
+            isDifferentPoint(actionHelper_->refPoint, refpoint)) {
+        actionHelper_ = {
+            .refPoint = refpoint,
+            .firstTransform = transform_,
+        };
     }
 
     if (newScale < 0.4f) {
-        scale_ = 0.4f;
+        transform_.scale = 0.4f;
     } else {
-        scale_ = newScale;
+        transform_.scale = newScale;
     }
 
-    // Translate screen coordinate into world coodinate.
-    refpoint =
-        2.0f * scalingHelper_.firstRefpoint / Context::getWindowSize()
-        - glm::vec2(1.0f, 1.0f)
-        - glm::vec2(scalingHelper_.firstTranslate.x, scalingHelper_.firstTranslate.y);
+    const auto& firstTranslation = actionHelper_->firstTransform.translation;
+    refpoint = toWorldCoord(actionHelper_->refPoint, toVec2(firstTranslation));
 
-    glm::vec2 delta(refpoint - (refpoint * scale_ / scalingHelper_.firstScale));
-    translate_.x = scalingHelper_.firstTranslate.x + delta.x;
-    translate_.y = scalingHelper_.firstTranslate.y + delta.y;
+    const glm::vec2 delta(
+            refpoint - (refpoint * transform_.scale / actionHelper_->firstTransform.scale));
+    transform_.translation = firstTranslation + toVec3(delta, 0.0f);
 }
 
-bool UserViewport::isDifferentPoint(const glm::vec2& p1, const glm::vec2& p2) {
+void UserView::changeRotation(float delta, glm::vec2 refpoint) {
+    constexpr float PI2 = 2.0f * std::numbers::pi;
+    if (!actionHelper_.has_value() ||
+            isDifferentPoint(actionHelper_->refPoint, refpoint)) {
+        actionHelper_ = {
+            .refPoint = refpoint,
+            .firstTransform = transform_,
+        };
+    }
+
+    transform_.rotation += delta;
+    while (transform_.rotation >= PI2)
+        transform_.rotation -= PI2;
+    while (transform_.rotation < 0.0f)
+        transform_.rotation += PI2;
+
+    // Adjust translation.
+    delta = transform_.rotation - actionHelper_->firstTransform.rotation;
+    const float c = std::cos(delta), s = std::sin(delta);
+    const glm::vec2 origin = toWindowCoord(
+            glm::vec2(0, 0), actionHelper_->firstTransform.translation);
+    const glm::vec2 src = actionHelper_->refPoint - origin;
+    const glm::vec2 dst(src.x * c - src.y * s, src.x * s + src.y * c);
+    const glm::vec2 adjustment = 2.0f * (src - dst) / Context::getWindowSize();
+    transform_.translation =
+        actionHelper_->firstTransform.translation + toVec3(adjustment, 0.0f);
+}
+
+bool UserView::isDifferentPoint(const glm::vec2& p1, const glm::vec2& p2) {
     return glm::length(p1 - p2) > 15.0f;
+}
+
+glm::vec2 UserView::toWorldCoord(const glm::vec2& src, const glm::vec2& translation) {
+    return 2.0f * src / Context::getWindowSize() - glm::vec2(1.0f, 1.0f) - translation;
+}
+
+glm::vec2 UserView::toWindowCoord(const glm::vec2& src, const glm::vec2& translation) {
+    return (src + translation + glm::vec2(1.0f, 1.0f)) * Context::getWindowSize() / 2.0f;
 }
 
 Routine::Routine() :
@@ -214,7 +279,11 @@ Routine::Routine() :
     binds_({}),
     timeBeginAnimation_(0), timeLastFrame_(0), motionID_(0), needBridgeMotions_(false),
     rand_(static_cast<int>(std::time(nullptr)))
-{}
+{
+    userView_.SetCallback({
+            .OnRotationChanged = [this](){updateGravity();},
+    });
+}
 
 Routine::~Routine() {
     Terminate();
@@ -262,12 +331,12 @@ void Routine::Init() {
     randDist_.param(decltype(randDist_)::param_type(1, distSup));
 
     auto physics = mmd_.GetModel()->GetMMDPhysics();
-    physics->GetDynamicsWorld()->setGravity(btVector3(0, -config_.gravity * 5.0f, 0));
     physics->SetMaxSubStepCount(INT_MAX);
     physics->SetFPS(config_.simulationFPS);
+    updateGravity();
 
-    userViewport_.SetDefaultTranslation(config_.defaultModelPosition);
-    userViewport_.SetDefaultScaling(config_.defaultScale);
+    userView_.SetDefaultTranslation(config_.defaultModelPosition);
+    userView_.SetDefaultScaling(config_.defaultScale);
 
     selectNextMotion();
     needBridgeMotions_ = false;
@@ -485,6 +554,8 @@ void Routine::Update() {
                     10000.0f);
         }
 
+        viewMatrix_ = userView_.GetWorldViewMatrix() * viewMatrix_;
+
         model->BeginAnimation();
         if (needBridgeMotions_) {
             vmdAnim->Evaluate(0.0f, stm_sec(stm_since(timeBeginAnimation_)));
@@ -531,25 +602,17 @@ void Routine::Update() {
 void Routine::Draw() {
     const auto size{Context::getWindowSize()};
     const auto model = mmd_.GetModel();
-    // const auto& dxMat = glm::mat4(
-    //     1.0f, 0.0f, 0.0f, 0.0f,
-    //     0.0f, 1.0f, 0.0f, 0.0f,
-    //     0.0f, 0.0f, 0.5f, 0.0f,
-    //     0.0f, 0.0f, 0.5f, 1.0f
-    // );
 
-    auto userView = userViewport_.GetMatrix();
+    auto userView = userView_.GetViewportMatrix();
     auto world = glm::mat4(1.0f);
     auto wv = userView * viewMatrix_ * world;
     auto wvp = userView * projectionMatrix_ * viewMatrix_ * world;
-    // wvp = dxMat * wvp;
     auto wvit = glm::mat3(userView * viewMatrix_ * world);
     wvit = glm::inverse(wvit);
     wvit = glm::transpose(wvit);
 
     auto lightColor = glm::vec3(1, 1, 1);
     auto lightDir = glm::vec3(-0.5f, -1.0f, -0.5f);
-    // auto viewMat = glm::mat3(viewMatrix);
     lightDir = glm::mat3(viewMatrix_) * lightDir;
 
     sg_begin_default_pass(&passAction_, size.x, size.y);
@@ -672,27 +735,27 @@ void Routine::Terminate() {
 }
 
 void Routine::OnMouseDown() {
-    userViewport_.OnMouseDown();
+    userView_.OnMouseDown();
 }
 
 void Routine::OnMouseDragged() {
-    userViewport_.OnMouseDragged();
+    userView_.OnMouseDragged();
 }
 
 void Routine::OnWheelScrolled(float delta) {
-    userViewport_.OnWheelScrolled(delta);
+    userView_.OnWheelScrolled(delta);
 }
 
 void Routine::OnGestureZoom(GesturePhase phase, float delta) {
-    userViewport_.OnGestureZoom(phase, delta);
+    userView_.OnGestureZoom(phase, delta);
 }
 
 float Routine::GetModelScale() const {
-    return userViewport_.GetScale();
+    return userView_.GetScale();
 }
 
 void Routine::ResetModelPosition() {
-    userViewport_.ResetPosition();
+    userView_.ResetPosition();
 }
 
 void Routine::ParseConfig(const CmdArgs& args) {
@@ -765,4 +828,11 @@ std::optional<sg_image> Routine::getTexture(const std::string& path) {
     const sg_image handler = sg_make_image(&image_desc);
     textures_.emplace(path, handler);
     return handler;
+}
+
+void Routine::updateGravity() {
+    float g = -config_.gravity * 5.0f;
+    const float r = userView_.GetRotation();
+    const btVector3 gravity(std::sin(r) * g, std::cos(r) * g, 0);
+    mmd_.GetModel()->GetMMDPhysics()->GetDynamicsWorld()->setGravity(gravity);
 }

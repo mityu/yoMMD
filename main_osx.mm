@@ -8,6 +8,8 @@
 
 #include <array>
 #include <utility>
+#include <functional>
+#include <type_traits>
 
 #define SOKOL_METAL
 #include "sokol_gfx.h"
@@ -17,6 +19,22 @@
 #include "constant.hpp"
 #include "util.hpp"
 #include "keyboard.hpp"
+
+class GestureController {
+public:
+    GestureController();
+
+    void SkipThisGesture();
+
+    // Run "worker" unless this gesture should be skipped.
+    template <typename T>
+    void Emit(NSEvent *event, std::function<void()> worker, const T& cancelKeys);
+public:
+    static constexpr std::array<Keycode, 0> WontCancel{};
+private:
+    bool shouldSkip_;  // TRUE while gesture should be skipped
+    std::array<bool, static_cast<std::size_t>(Keycode::Count)> prevKeyState_;
+};
 
 @interface AppDelegate: NSObject<NSApplicationDelegate>
 @end
@@ -78,6 +96,40 @@ inline AppMain *getAppMain(void);
 inline NSScreen *findScreenFromID(NSInteger scID);
 }
 
+GestureController::GestureController() :
+    shouldSkip_(false)
+{}
+
+void GestureController::SkipThisGesture() {
+    shouldSkip_ = true;
+}
+
+template <typename T>
+void GestureController::Emit(NSEvent *event, std::function<void()> worker, const T& cancelKeys) {
+    static_assert(
+                std::is_same_v<typename T::value_type, Keycode>,
+                "Contained value type must be Keycode.");
+    if (shouldSkip_) {
+        if (event.phase == NSEventPhaseBegan)
+            // Switched to a new gesture.  Cancel skipping gesture.
+            shouldSkip_ = false;
+        else
+            return;
+    }
+    if (event.phase == NSEventPhaseBegan) {
+        for (auto key : cancelKeys) {
+            prevKeyState_[static_cast<std::size_t>(key)] = Keyboard::IsKeyPressed(key);
+        }
+    }
+    for (auto key : cancelKeys) {
+        if (prevKeyState_[static_cast<std::size_t>(key)] != Keyboard::IsKeyPressed(key)) {
+            SkipThisGesture();
+            return;
+        }
+    }
+    worker();
+}
+
 @implementation AppDelegate
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
     NSArray *argsArray = [[NSProcessInfo processInfo] arguments];
@@ -105,7 +157,9 @@ inline NSScreen *findScreenFromID(NSInteger scID);
 }
 @end
 
-@implementation Window
+@implementation Window {
+    GestureController gestureController_;
+}
 - (void)flagsChanged:(NSEvent *)event {
     using KeycodeMap = std::pair<NSEventModifierFlags, Keycode>;
     constexpr std::array<KeycodeMap, static_cast<size_t>(Keycode::Count)> keys({
@@ -125,6 +179,9 @@ inline NSScreen *findScreenFromID(NSInteger scID);
     [getAppMain() getRoutine].OnMouseDown();
 }
 - (void)scrollWheel:(NSEvent *)event {
+    constexpr std::array<Keycode, 1> cancelKeys = {
+        Keycode::Shift
+    };
     float delta = event.deltaY * 10.0f;  // TODO: Better factor
     if (event.hasPreciseScrollingDeltas)
         delta = event.scrollingDeltaY;
@@ -132,7 +189,8 @@ inline NSScreen *findScreenFromID(NSInteger scID);
     if (!event.directionInvertedFromDevice)
         delta = -delta;
 
-    [getAppMain() getRoutine].OnWheelScrolled(delta);
+    const auto worker = [delta](){[getAppMain() getRoutine].OnWheelScrolled(delta);};
+    gestureController_.Emit(event, worker, cancelKeys);
 }
 -(void)magnifyWithEvent:(NSEvent *)event {
     // NOTE: It seems touchpad gesture events aren't dispatched when
@@ -152,7 +210,10 @@ inline NSScreen *findScreenFromID(NSInteger scID);
         phase = GesturePhase::End;
         break;
     }
-    [getAppMain() getRoutine].OnGestureZoom(phase, event.magnification);
+    const auto worker = [&phase, &event](){
+        [getAppMain() getRoutine].OnGestureZoom(phase, event.magnification);
+    };
+    gestureController_.Emit(event, worker, GestureController::WontCancel);
 }
 -(void)smartMagnifyWithEvent:(NSEvent *)event {
     Routine& routine = [getAppMain() getRoutine];

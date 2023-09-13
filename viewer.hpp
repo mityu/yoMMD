@@ -54,13 +54,6 @@ public:
     struct Callback {
         std::function<void()> OnRotationChanged;
     };
-private:
-    enum class Action {
-        None,
-        Drag,
-        Zoom,
-        Rotate,
-    };
 public:
     void SetCallback(const Callback& callback);
 
@@ -99,6 +92,12 @@ private:
     // amount of change of rotation, not a new rotateion.
     void changeRotation(float delta, glm::vec2 refpoint);
 private:
+    enum class Action {
+        None,
+        Drag,
+        Zoom,
+        Rotate,
+    };
     struct Transform {
         float rotation = 0.0f;  // View rotation in radian
         float scale = 1.0f;

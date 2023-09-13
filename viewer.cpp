@@ -135,17 +135,26 @@ glm::mat4 UserView::GetWorldViewMatrix() const {
     return m;
 }
 
-void UserView::OnMouseDown() {
-    actionHelper_ = {
-        .refPoint = Context::getMousePosition(),
-        .firstTransform = {
-            .translation = transform_.translation,
-        },
-    };
+void UserView::OnGestureBegin() {
+    actionHelper_.action = Action::None;
+}
+
+void UserView::OnGestureEnd() {
+    actionHelper_.action = Action::None;
 }
 
 void UserView::OnMouseDragged() {
-    auto delta = Context::getMousePosition() - actionHelper_->refPoint;
+    if (actionHelper_.action != Action::Drag) {
+        actionHelper_ = {
+            .action = Action::Drag,
+            .refPoint = Context::getMousePosition(),
+            .firstTransform = {
+                .translation = transform_.translation,
+            },
+        };
+    }
+
+    auto delta = Context::getMousePosition() - actionHelper_.refPoint;
 
     // Translate distance in screen into distance in model world.
     //
@@ -158,7 +167,7 @@ void UserView::OnMouseDragged() {
     // Note that "toWorldCoord" shouldn't be used here.
     delta = 2.0f * delta / Context::getWindowSize();
     transform_.translation =
-        actionHelper_->firstTransform.translation + toVec3(delta, 0.0f);
+        actionHelper_.firstTransform.translation + toVec3(delta, 0.0f);
 }
 
 void UserView::OnWheelScrolled(float delta) {
@@ -175,16 +184,14 @@ void UserView::OnWheelScrolled(float delta) {
 
 void UserView::OnGestureZoom(GesturePhase phase, float delta) {
     glm::vec2 refpoint;
+    // TODO: Switch by referring actionHelper_.action ?
     if (phase == GesturePhase::Begin || phase == GesturePhase::Unknown) {
         refpoint = Context::getMousePosition();
     } else {
-        // "actionHelper_" must not be "std::nullopt" here.
-        refpoint = actionHelper_->refPoint;
+        refpoint = actionHelper_.refPoint;
     }
     float newScale = transform_.scale + delta;
-    actionHelper_ = std::nullopt;
     changeScale(newScale, refpoint);
-    actionHelper_ = std::nullopt;
 }
 
 void UserView::SetDefaultTranslation(glm::vec2 pos) {
@@ -212,9 +219,10 @@ float UserView::GetRotation() const {
 }
 
 void UserView::changeScale(float newScale, glm::vec2 refpoint) {
-    if (!actionHelper_.has_value() ||
-            isDifferentPoint(actionHelper_->refPoint, refpoint)) {
+    if (actionHelper_.action != Action::Zoom ||
+            isDifferentPoint(actionHelper_.refPoint, refpoint)) {
         actionHelper_ = {
+            .action = Action::Zoom,
             .refPoint = refpoint,
             .firstTransform = transform_,
         };
@@ -226,19 +234,20 @@ void UserView::changeScale(float newScale, glm::vec2 refpoint) {
         transform_.scale = newScale;
     }
 
-    const auto& firstTranslation = actionHelper_->firstTransform.translation;
-    refpoint = toWorldCoord(actionHelper_->refPoint, toVec2(firstTranslation));
+    const auto& firstTranslation = actionHelper_.firstTransform.translation;
+    refpoint = toWorldCoord(actionHelper_.refPoint, toVec2(firstTranslation));
 
     const glm::vec2 delta(
-            refpoint - (refpoint * transform_.scale / actionHelper_->firstTransform.scale));
+            refpoint - (refpoint * transform_.scale / actionHelper_.firstTransform.scale));
     transform_.translation = firstTranslation + toVec3(delta, 0.0f);
 }
 
 void UserView::changeRotation(float delta, glm::vec2 refpoint) {
     constexpr float PI2 = 2.0f * std::numbers::pi;
-    if (!actionHelper_.has_value() ||
-            isDifferentPoint(actionHelper_->refPoint, refpoint)) {
+    if (actionHelper_.action != Action::Rotate ||
+            isDifferentPoint(actionHelper_.refPoint, refpoint)) {
         actionHelper_ = {
+            .action = Action::Rotate,
             .refPoint = refpoint,
             .firstTransform = transform_,
         };
@@ -251,15 +260,15 @@ void UserView::changeRotation(float delta, glm::vec2 refpoint) {
         transform_.rotation += PI2;
 
     // Adjust translation.
-    delta = transform_.rotation - actionHelper_->firstTransform.rotation;
+    delta = transform_.rotation - actionHelper_.firstTransform.rotation;
     const float c = std::cos(delta), s = std::sin(delta);
     const glm::vec2 origin = toWindowCoord(
-            glm::vec2(0, 0), actionHelper_->firstTransform.translation);
-    const glm::vec2 src = actionHelper_->refPoint - origin;
+            glm::vec2(0, 0), actionHelper_.firstTransform.translation);
+    const glm::vec2 src = actionHelper_.refPoint - origin;
     const glm::vec2 dst(src.x * c - src.y * s, src.x * s + src.y * c);
     const glm::vec2 adjustment = 2.0f * (src - dst) / Context::getWindowSize();
     transform_.translation =
-        actionHelper_->firstTransform.translation + toVec3(adjustment, 0.0f);
+        actionHelper_.firstTransform.translation + toVec3(adjustment, 0.0f);
 }
 
 bool UserView::isDifferentPoint(const glm::vec2& p1, const glm::vec2& p2) {
@@ -734,8 +743,12 @@ void Routine::Terminate() {
     shouldTerminate_ = false;
 }
 
-void Routine::OnMouseDown() {
-    userView_.OnMouseDown();
+void Routine::OnGestureBegin() {
+    userView_.OnGestureBegin();
+}
+
+void Routine::OnGestureEnd() {
+    userView_.OnGestureEnd();
 }
 
 void Routine::OnMouseDragged() {

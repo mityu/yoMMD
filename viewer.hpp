@@ -54,6 +54,13 @@ public:
     struct Callback {
         std::function<void()> OnRotationChanged;
     };
+private:
+    enum class Action {
+        None,
+        Drag,
+        Zoom,
+        Rotate,
+    };
 public:
     void SetCallback(const Callback& callback);
 
@@ -63,7 +70,8 @@ public:
     // Get a transformer matrix of model world.
     glm::mat4 GetWorldViewMatrix() const;
 
-    void OnMouseDown();
+    void OnGestureBegin();
+    void OnGestureEnd();
     void OnMouseDragged();
     void OnWheelScrolled(float delta);
     void OnGestureZoom(GesturePhase phase, float delta);
@@ -97,12 +105,13 @@ private:
         glm::vec3 translation = glm::vec3(0.0f, 0.0f, 0.0f);
     };
     struct ActionHelper {
+        Action action = Action::None;
         glm::vec2 refPoint;
         Transform firstTransform;
     };
 
     Transform transform_, defaultTransform_;
-    std::optional<ActionHelper> actionHelper_;
+    ActionHelper actionHelper_;
 
     Callback callback_;
 };
@@ -115,8 +124,9 @@ public:
     void Update();
     void Draw();
     void Terminate();
+    void OnGestureBegin();
+    void OnGestureEnd();
     void OnMouseDragged();
-    void OnMouseDown();
     void OnWheelScrolled(float delta);
     void OnGestureZoom(GesturePhase phase, float delta);
     float GetModelScale() const;

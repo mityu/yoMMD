@@ -176,7 +176,10 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
     [getAppMain() getRoutine].OnMouseDragged();
 }
 - (void)mouseDown:(NSEvent *)event {
-    [getAppMain() getRoutine].OnMouseDown();
+    [getAppMain() getRoutine].OnGestureBegin();
+}
+- (void)mouseUp:(NSEvent *)event {
+    [getAppMain() getRoutine].OnGestureEnd();
 }
 - (void)scrollWheel:(NSEvent *)event {
     constexpr std::array<Keycode, 1> cancelKeys = {
@@ -196,10 +199,12 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
     // NOTE: It seems touchpad gesture events aren't dispatched when
     // application isn't active.  Do try activate appliction when touchpad
     // gesture doesn't work.
+    auto& routine = [getAppMain() getRoutine];
     GesturePhase phase = GesturePhase::Unknown;
     switch (event.phase) {
     case NSEventPhaseMayBegin:  // fall-through
     case NSEventPhaseBegan:
+        routine.OnGestureBegin();
         phase = GesturePhase::Begin;
         break;
     case NSEventPhaseChanged:
@@ -207,6 +212,7 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
         break;
     case NSEventPhaseEnded:  // fall-through
     case NSEventPhaseCancelled:
+        routine.OnGestureEnd();
         phase = GesturePhase::End;
         break;
     }
@@ -226,7 +232,9 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
         delta = defaultScale - scale;
         phase = GesturePhase::Ongoing;
     }
+    routine.OnGestureBegin();
     routine.OnGestureZoom(phase, delta);
+    routine.OnGestureEnd();
 }
 - (BOOL)canBecomeKeyWindow {
     // Return YES here to enable touch gesture events; by default, they're

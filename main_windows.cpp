@@ -486,8 +486,11 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
                 Keyboard::OnKeyUp(*key);
             return 0;
         }
-    case WM_LBUTTONDOWN:
-        routine_.OnMouseDown();
+    case WM_LBUTTONDOWN:  // fallthrough
+        routine_.OnGestureBegin();
+        return 0;
+    case WM_LBUTTONUP:
+        routine_.OnGestureEnd()
         return 0;
     case WM_MOUSEMOVE:
         if (wParam & MK_LBUTTON) {
@@ -509,6 +512,7 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
             return 0;
         // Fallthrough
     case WM_RBUTTONDOWN:
+        routine_.OnGestureEnd();
         menu_.ShowMenu();
         return 0;
     }

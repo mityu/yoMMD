@@ -486,11 +486,11 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
                 Keyboard::OnKeyUp(*key);
             return 0;
         }
-    case WM_LBUTTONDOWN:  // fallthrough
+    case WM_LBUTTONDOWN:
         routine_.OnGestureBegin();
         return 0;
     case WM_LBUTTONUP:
-        routine_.OnGestureEnd()
+        routine_.OnGestureEnd();
         return 0;
     case WM_MOUSEMOVE:
         if (wParam & MK_LBUTTON) {
@@ -675,9 +675,9 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
         // Menu is canceled.
         // The mouse click to cancel right-click menu will dispatch
         // WM_MOUSEMOVE message and it leads wrong and fake mouse drag event.
-        // As a workaround, in order to avoid this call OnMouseDown to update
-        // the cursor position.
-        globals::appMain.GetRoutine().OnMouseDown();
+        // As a workaround, in order to avoid this call OnGestureEnd to update
+        // the action context.
+        globals::appMain.GetRoutine().OnGestureEnd();
         break;
     case Cmd::MenuCount:
         Err::Log("Internal error: Command::MenuCount is used");

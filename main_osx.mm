@@ -162,9 +162,9 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
 }
 - (void)flagsChanged:(NSEvent *)event {
     using KeycodeMap = std::pair<NSEventModifierFlags, Keycode>;
-    constexpr std::array<KeycodeMap, static_cast<size_t>(Keycode::Count)> keys({
+    constexpr std::array<KeycodeMap, static_cast<size_t>(Keycode::Count)> keys({{
             {NSEventModifierFlagShift, Keycode::Shift},
-    });
+    }});
     for (const auto& [mask, keycode] : keys) {
         if (event.modifierFlags & mask)
             Keyboard::OnKeyDown(keycode);

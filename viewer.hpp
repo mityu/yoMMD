@@ -4,6 +4,7 @@
 #include <random>
 #include <map>
 #include <filesystem>
+#include <functional>
 #include "Saba/Model/MMD/MMDMaterial.h"
 #include "Saba/Model/MMD/MMDModel.h"
 #include "Saba/Model/MMD/VMDAnimation.h"

@@ -49,7 +49,7 @@ Config Config::Parse(const std::filesystem::path& configFile) {
         for (const auto& [k, v] : entire.as_table()) {
             if (k == "model") {
                 const auto path = String::tou8(toml::get<std::string>(v));
-                config.model = Yommd::makeAbsolute(fs::path(path), configDir);
+                config.model = ::Path::makeAbsolute(fs::path(path), configDir);
             } else if (k == "default-model-position") {
                 const auto pos = toml::get<std::array<float, 2>>(v);
                 config.defaultModelPosition = toVec2(pos);
@@ -79,7 +79,7 @@ Config Config::Parse(const std::filesystem::path& configFile) {
                             std::vector<fs::path> path;
                             for (const auto& p : raw_path) {
                                 auto u8path = fs::path(String::tou8(p));
-                                path.push_back(Yommd::makeAbsolute(u8path, configDir));
+                                path.push_back(::Path::makeAbsolute(u8path, configDir));
                             }
                             c.paths = std::move(path);
                         } else if (k == "weight") {

@@ -74,18 +74,55 @@ CmdArgs CmdArgs::Parse(const std::vector<std::string>& args) {
 
     // Make absolute if necessary.
     if (!cmdArgs.configFile.empty())
-        cmdArgs.configFile = Yommd::makeAbsolute(
+        cmdArgs.configFile = ::Path::makeAbsolute(
                 cmdArgs.configFile, ::Path::getWorkingDirectory());
 
     if (!cmdArgs.logFile.empty())
-        cmdArgs.logFile = Yommd::makeAbsolute(
+        cmdArgs.logFile = ::Path::makeAbsolute(
                 cmdArgs.logFile, ::Path::getWorkingDirectory());
 
     return cmdArgs;
 }
 
-namespace Yommd {
-void slogFunc(const char *tag, uint32_t logLevel, uint32_t logItem, const char *message, uint32_t linenr, const char *filename, void *user_data) {
+namespace Path {
+std::filesystem::path getWorkingDirectory() {
+    // TODO: Can I truely initialize this here?
+    static const auto cwd = std::filesystem::current_path();
+    return cwd;
+}
+
+std::filesystem::path makeAbsolute(
+        const std::filesystem::path& path, const std::filesystem::path& cwd) {
+    namespace fs = std::filesystem;
+    static const auto homePath = getHomePath();
+    if (path.is_absolute())
+        return path;
+    else if (const auto u8path = path.generic_u8string(); u8path.starts_with(u8"~/"))
+        return fs::weakly_canonical(homePath / fs::path(u8path.substr(2)));
+    else
+        return fs::weakly_canonical(cwd / path);
+}
+
+}
+
+namespace {
+std::filesystem::path getHomePath() {
+#ifdef PLATFORM_WINDOWS
+    const wchar_t *wpath = _wgetenv(L"USERPROFILE");
+    if (!wpath)
+        Err::Exit("%USERPROFILE% is not set");
+    return std::filesystem::path(String::wideToMulti<char8_t>(wpath));
+#else
+    const char *path = std::getenv("HOME");
+    if (!path)
+        Err::Exit("$HOME is not set");
+    return std::filesystem::path(String::tou8(std::string_view(path)));
+#endif
+}
+}
+
+namespace Slog {
+void Logger(const char *tag, uint32_t logLevel, uint32_t logItem, const char *message, uint32_t linenr, const char *filename, void *user_data) {
     (void)user_data;
 
     std::stringstream ss;
@@ -123,42 +160,5 @@ void slogFunc(const char *tag, uint32_t logLevel, uint32_t logItem, const char *
     } else {
         Err::Log(ss.str());
     }
-}
-
-std::filesystem::path makeAbsolute(
-        const std::filesystem::path& path, const std::filesystem::path& cwd) {
-    namespace fs = std::filesystem;
-    static const auto homePath = getHomePath();
-    if (path.is_absolute())
-        return path;
-    else if (const auto u8path = path.generic_u8string(); u8path.starts_with(u8"~/"))
-        return fs::weakly_canonical(homePath / fs::path(u8path.substr(2)));
-    else
-        return fs::weakly_canonical(cwd / path);
-}
-
-}
-
-namespace Path {
-std::filesystem::path getWorkingDirectory() {
-    // TODO: Can I truely initialize this here?
-    static const auto cwd = std::filesystem::current_path();
-    return cwd;
-}
-}
-
-namespace {
-std::filesystem::path getHomePath() {
-#ifdef PLATFORM_WINDOWS
-    const wchar_t *wpath = _wgetenv(L"USERPROFILE");
-    if (!wpath)
-        Err::Exit("%USERPROFILE% is not set");
-    return std::filesystem::path(String::wideToMulti<char8_t>(wpath));
-#else
-    const char *path = std::getenv("HOME");
-    if (!path)
-        Err::Exit("$HOME is not set");
-    return std::filesystem::path(String::tou8(std::string_view(path)));
-#endif
 }
 }

@@ -315,7 +315,7 @@ void Routine::Init() {
 
     sg_desc desc = {
         .logger = {
-            .func = Yommd::slogFunc,
+            .func = Slog::Logger,
         },
         .context = Context::getSokolContext(),
     };
@@ -781,7 +781,7 @@ void Routine::ParseConfig(const CmdArgs& args) {
             "~/yoMMD/config.toml",
         };
         for (auto& file : paths) {
-            file = Yommd::makeAbsolute(file, ::Path::getWorkingDirectory());
+            file = Path::makeAbsolute(file, ::Path::getWorkingDirectory());
             if (fs::exists(file)) {
                 configFile = file;
                 break;

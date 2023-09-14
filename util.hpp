@@ -27,13 +27,6 @@ struct CmdArgs {
     static CmdArgs Parse(const std::vector<std::string>& args);
 };
 
-namespace Yommd {
-void slogFunc(const char *tag, uint32_t logLevel, uint32_t logItem,
-        const char *message, uint32_t linenr, const char *filename, void *user_data);
-std::filesystem::path makeAbsolute(
-        const std::filesystem::path& path, const std::filesystem::path& cwd);
-}
-
 namespace _internal {
 template <typename T> void _log(std::ostream& os, T&& car) {
     os << car << std::endl;
@@ -96,6 +89,13 @@ inline constexpr std::underlying_type_t<T> underlyCast(T v) {
 
 namespace Path {
 std::filesystem::path getWorkingDirectory();
+std::filesystem::path makeAbsolute(
+        const std::filesystem::path& path, const std::filesystem::path& cwd);
+}
+
+namespace Slog {
+void Logger(const char *tag, uint32_t logLevel, uint32_t logItem,
+        const char *message, uint32_t linenr, const char *filename, void *user_data);
 }
 
 #endif  // UTIL_HPP_

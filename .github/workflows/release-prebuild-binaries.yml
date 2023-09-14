@@ -65,15 +65,12 @@ jobs:
         if: steps.check.outputs.skip == 'no'
         id: package
         run: |
-          hash=$(./latest-release/yoMMD.exe --version | sed 's/^.*-//')
           version_string=$(./scripts/gen-version-string)
           package_name="../package/yoMMD-win-${version_string}.zip"
           changelog_file="../package/changelog.md"
           mkdir ../package
           zip $package_name yoMMD.exe
-          git log --format='%H %s' $hash..HEAD | \
-            awk '{print "https://github.com/mityu/yoMMD/commit/"$0}' | \
-            tee $changelog_file
+          echo "Version: $version_string" > $changelog_file
           echo "package_name=$package_name" >> $GITHUB_OUTPUT
           echo "tag_name=$version_string" >> $GITHUB_OUTPUT
           echo "changelog_file=$changelog_file" >> $GITHUB_OUTPUT

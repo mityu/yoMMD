@@ -15,7 +15,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v3
-      - uses: robinraju/release-downloader@v1.8
+      - name: Download the latest release
+        uses: robinraju/release-downloader@v1.8
         id: pull_latest_release
         continue-on-error: true
         with:
@@ -23,6 +24,7 @@ jobs:
           zipBall: true
           latest: true
           extract: true
+          out-file-path: "latest-release"
       - name: Check version between latest release and latest source code
         id: check
         shell: bash
@@ -30,7 +32,7 @@ jobs:
           if [[ "${{ steps.pull_latest_release.outcome }}" == 'failure' ]]; then
             echo "skip=no" >> $GITHUB_OUTPUT
           else
-            version_release=$(./yoMMD.exe --version | sed 's/^version: *//i')
+            version_release=$(./latest-release/yoMMD.exe --version | sed 's/^version: *//i')
             version_source=$(./scripts/gen-version-string)
             if [[ $version_release == $version_source ]]; then
               echo "skip=yes" >> $GITHUB_OUTPUT
@@ -54,20 +56,33 @@ jobs:
         if: steps.check.outputs.skip == 'no'
         run:
           git submodule update --init --recursive --recommend-shallow --depth 1
-      - name: Build binary and package it
+      - name: Build binary
         if: steps.check.outputs.skip == 'no'
-        id: build
         run: |
           make build-submodule
           make release -j
+      - name: Package
+        if: steps.check.outputs.skip == 'no'
+        id: package
+        run: |
+          hash=$(./latest-release/yoMMD.exe --version | sed 's/^.*-//')
           version_string=$(./scripts/gen-version-string)
-          package_name="yoMMD-win-${version_string}.zip"
+          package_name="../package/yoMMD-win-${version_string}.zip"
+          changelog_file="../package/changelog.md"
+          mkdir ../package
           zip $package_name yoMMD.exe
+          git log --format='%H %s' $hash..HEAD | \
+            awk '{print "https://github.com/mityu/yoMMD/commit/"$0}' | \
+            tee $changelog_file
           echo "package_name=$package_name" >> $GITHUB_OUTPUT
           echo "tag_name=$version_string" >> $GITHUB_OUTPUT
+          echo "changelog_file=$changelog_file" >> $GITHUB_OUTPUT
       - name: Upload releases
         uses: softprops/action-gh-release@v1
         if: steps.check.outputs.skip == 'no'
         with:
-          files: ${{ steps.build.outputs.package_name }}
-          tag_name: ${{ steps.build.outputs.tag_name }}
+          files: ${{ steps.package.outputs.package_name }}
+          tag_name: ${{ steps.package.outputs.tag_name }}
+          body_path: ${{ steps.package.outputs.changelog_file }}
+          draft: false
+          prerelease: false

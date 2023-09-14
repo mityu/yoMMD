@@ -21,6 +21,7 @@
 #include "viewer.hpp"
 #include "util.hpp"
 #include "constant.hpp"
+#include "keyboard.hpp"
 
 template <typename T> using ComPtr = Microsoft::WRL::ComPtr<T>;
 
@@ -467,8 +468,29 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
         PostQuitMessage(0);
         isRunning_ = false;
         return 0;
+    case WM_KEYDOWN:  // fallthrough
+    case WM_KEYUP:
+        {
+            std::optional<Keycode> key;
+            switch (wParam) {
+            case VK_SHIFT:
+                key = Keycode::Shift;
+                break;
+            }
+            if (!key.has_value())
+                break;
+
+            if (uMsg == WM_KEYDOWN)
+                Keyboard::OnKeyDown(*key);
+            else
+                Keyboard::OnKeyUp(*key);
+            return 0;
+        }
     case WM_LBUTTONDOWN:
-        routine_.OnMouseDown();
+        routine_.OnGestureBegin();
+        return 0;
+    case WM_LBUTTONUP:
+        routine_.OnGestureEnd();
         return 0;
     case WM_MOUSEMOVE:
         if (wParam & MK_LBUTTON) {
@@ -490,11 +512,11 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
             return 0;
         // Fallthrough
     case WM_RBUTTONDOWN:
+        routine_.OnGestureEnd();
         menu_.ShowMenu();
         return 0;
-    default:
-        return DefWindowProc(hwnd_, uMsg, wParam, lParam);
     }
+    return DefWindowProc(hwnd_, uMsg, wParam, lParam);
 }
 
 AppMenu::AppMenu() :
@@ -653,9 +675,9 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
         // Menu is canceled.
         // The mouse click to cancel right-click menu will dispatch
         // WM_MOUSEMOVE message and it leads wrong and fake mouse drag event.
-        // As a workaround, in order to avoid this call OnMouseDown to update
-        // the cursor position.
-        globals::appMain.GetRoutine().OnMouseDown();
+        // As a workaround, in order to avoid this call OnGestureEnd to update
+        // the action context.
+        globals::appMain.GetRoutine().OnGestureEnd();
         break;
     case Cmd::MenuCount:
         Err::Log("Internal error: Command::MenuCount is used");

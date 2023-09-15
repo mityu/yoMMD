@@ -54,7 +54,7 @@ install any libraries.
 $ git clone https://github.com/mityu/yoMMD
 $ cd yoMMD
 $ git submodule update --init --recursive  # Initialize submodule. This takes a bit long time...
-$ make build-submodules
+$ make build-submodule
 $ make -j4  # Build ./yoMMD executable
 ```
 
@@ -75,7 +75,7 @@ building yoMMD.
 $ git clone https://github.com/mityu/yoMMD
 $ cd yoMMD
 $ git submodule update --init --recursive  # Initialize submodule. This takes a bit long time...
-$ make build-submodules
+$ make build-submodule
 $ make release -j4  # Build ./yoMMD.exe executable.
 ```
 

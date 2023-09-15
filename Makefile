@@ -48,7 +48,7 @@ CMAKE_BUILDFILE:=build.ninja
 endif
 
 $(TARGET): $(OBJDIR) $(OBJ)
-	$(CXX) -o $@ $(LDFLAGS) $(OBJ)
+	$(CXX) -o $@ $(OBJ) $(LDFLAGS)
 
 ifeq ($(OS),Windows_NT)
 release:

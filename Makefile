@@ -47,8 +47,8 @@ CMAKE_GENERATOR:=-G Ninja
 CMAKE_BUILDFILE:=build.ninja
 endif
 
-$(TARGET): $(OBJ) | $(OBJDIR)
-	$(CXX) -o $@ $(LDFLAGS) $^
+$(TARGET): $(OBJDIR) $(OBJ)
+	$(CXX) -o $@ $(LDFLAGS) $(OBJ)
 
 ifeq ($(OS),Windows_NT)
 release:

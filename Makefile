@@ -4,7 +4,7 @@ TARGET:=yoMMD
 TARGET_DEBUG:=yoMMD-debug
 OBJDIR:=./obj
 SRC:=viewer.cpp config.cpp resources.cpp image.cpp keyboard.cpp util.cpp libs.mm
-OBJ=$(addsuffix .o,$(addprefix $(OBJDIR)/,$(SRC))) $(OBJDIR)/version.cpp.o
+OBJ=$(SRC:%=$(OBJDIR)/%.o) $(OBJDIR)/version.cpp.o
 DEP=$(OBJ:%.o=%.d)
 CFLAGS:=-O2 -Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb \
 		-Ilib/toml11 -Ilib/incbin -Ilib/bullet3/build/include/bullet \
@@ -47,8 +47,8 @@ CMAKE_GENERATOR:=-G Ninja
 CMAKE_BUILDFILE:=build.ninja
 endif
 
-$(TARGET): $(OBJDIR) $(OBJ)
-	$(CXX) -o $@ $(OBJ) $(LDFLAGS)
+$(TARGET): $(OBJ) | $(OBJDIR)
+	$(CXX) -o $@ $(LDFLAGS) $^
 
 ifeq ($(OS),Windows_NT)
 release:
@@ -71,10 +71,7 @@ debug:
 
 -include $(DEP)
 
-$(OBJDIR)/viewer.cpp.o: viewer.cpp yommd.glsl.h
-	$(CXX) -o $@ $(CPPFLAGS) $(CFLAGS) -c $<
-
-$(OBJDIR)/%.cpp.o: %.cpp
+$(OBJDIR)/version.cpp.o: auto/version.cpp
 	$(CXX) -o $@ $(CPPFLAGS) $(CFLAGS) -c $<
 
 ifneq ($(shell uname),Darwin)
@@ -83,17 +80,15 @@ $(OBJDIR)/libs.mm.o: libs.mm
 	$(CC) -o $@ $(CFLAGS) -c -x c $<
 endif
 
-$(OBJDIR)/%.m.o: %.m
-	$(CC) -o $@ $(OBJCFLAGS) $(CFLAGS) -c $<
+$(OBJDIR)/viewer.cpp.o: yommd.glsl.h
+$(OBJDIR)/%.cpp.o: %.cpp
+	$(CXX) -o $@ $(CPPFLAGS) $(CFLAGS) -c $<
 
 $(OBJDIR)/%.mm.o: %.mm
 	$(CXX) -o $@ $(CPPFLAGS) $(OBJCFLAGS) $(CFLAGS) -c $<
 
 $(OBJDIR)/resource_windows.rc.o: resource_windows.rc DpiAwareness.manifest
 	windres -o $@ $<
-
-$(OBJDIR)/version.cpp.o: auto/version.cpp
-	$(CXX) -o $@ $(CPPFLAGS) $(CFLAGS) -c $<
 
 yommd.glsl.h: yommd.glsl
 	$(SOKOL_SHDC) --input $< --output $@ --slang metal_macos:hlsl5

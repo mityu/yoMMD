@@ -26,7 +26,7 @@
 #include "util.hpp"
 #include "constant.hpp"
 #include "keyboard.hpp"
-#include "yommd.glsl.h"
+#include "auto/yommd.glsl.h"
 
 namespace{
 const std::filesystem::path getXdgConfigHomePath() {

@@ -80,7 +80,7 @@ $(OBJDIR)/libs.mm.o: libs.mm
 	$(CC) -o $@ $(CFLAGS) -c -x c $<
 endif
 
-$(OBJDIR)/viewer.cpp.o: yommd.glsl.h
+$(OBJDIR)/viewer.cpp.o: auto/yommd.glsl.h
 $(OBJDIR)/%.cpp.o: %.cpp
 	$(CXX) -o $@ $(CPPFLAGS) $(CFLAGS) -c $<
 
@@ -90,7 +90,7 @@ $(OBJDIR)/%.mm.o: %.mm
 $(OBJDIR)/resource_windows.rc.o: resource_windows.rc DpiAwareness.manifest
 	windres -o $@ $<
 
-yommd.glsl.h: yommd.glsl
+auto/yommd.glsl.h: yommd.glsl | auto/
 	$(SOKOL_SHDC) --input $< --output $@ --slang metal_macos:hlsl5
 ifeq ($(OS),Windows_NT)
 	# CRLF -> LF
@@ -106,11 +106,12 @@ run: $(TARGET)
 
 clean:
 	$(RM) $(TARGET_DEBUG) $(OBJDIR)/debug/*.o $(OBJDIR)/debug/*.d
-	$(RM) $(OBJDIR)/*.o $(OBJDIR)/*.d $(TARGET) yommd.glsl.h
+	$(RM) $(OBJDIR)/*.o $(OBJDIR)/*.d $(TARGET)
+	$(RM) auto/*
 
 all: clean $(TARGET);
 
-$(OBJDIR) tool/:
+$(OBJDIR) auto/ tool/:
 	mkdir -p $@
 
 # Make distribution package

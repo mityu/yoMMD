@@ -87,6 +87,7 @@ private:
             EnableMouse,
             ResetPosition,
             SelectScreen,
+            HideWindow,
             Quit,
             MenuCount,
         };
@@ -636,6 +637,11 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
     AppendMenuW(hmenu, MF_SEPARATOR, Enum::underlyCast(Cmd::None), L"");
     AppendMenuW(hmenu, MF_POPUP, reinterpret_cast<UINT_PTR>(hScreensMenu.GetRawHandler()), L"&Select screen");
     AppendMenuW(hmenu, MF_SEPARATOR, Enum::underlyCast(Cmd::None), L"");
+    if (GetWindowLongPtrW(parentWin, GWL_STYLE) & WS_VISIBLE)
+        AppendMenuW(hmenu, MF_STRING, Enum::underlyCast(Cmd::HideWindow), L"&Hide Window");
+    else
+        AppendMenuW(hmenu, MF_STRING, Enum::underlyCast(Cmd::HideWindow), L"&Show Window");
+    AppendMenuW(hmenu, MF_SEPARATOR, Enum::underlyCast(Cmd::None), L"");
     AppendMenuW(hmenu, MF_STRING, Enum::underlyCast(Cmd::Quit), L"&Quit");
 
     if (parentWinExStyle == 0) {
@@ -667,6 +673,12 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
         break;
     case Cmd::SelectScreen:
         globals::appMain.ChangeScreen(Cmd::GetUserData(op));
+        break;
+    case Cmd::HideWindow:
+        if (GetWindowLongPtrW(parentWin, GWL_STYLE) & WS_VISIBLE)
+            ShowWindow(parentWin, SW_HIDE);
+        else
+            ShowWindow(parentWin, SW_SHOWNORMAL);
         break;
     case Cmd::Quit:
         SendMessageW(parentWin, WM_DESTROY, 0, 0);

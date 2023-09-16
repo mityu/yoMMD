@@ -16,7 +16,6 @@
 
 #include "main.hpp"
 #include "viewer.hpp"
-#include "util.hpp"
 #include "constant.hpp"
 #include "util.hpp"
 #include "keyboard.hpp"

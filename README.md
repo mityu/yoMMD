@@ -8,6 +8,9 @@ for Windows and macOS.
 - MMD Model: つみ式ミクさんv4(https://3d.nicovideo.jp/works/td56081)
 - Motion: ぼんやり待ちループ(https://3d.nicovideo.jp/works/td30405)
 
+# Pre-build binary
+
+For windows user, you can download pre-build binary from here: https://github.com/mityu/yoMMD/releases/latest
 
 # Development environment
 

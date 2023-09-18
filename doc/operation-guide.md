@@ -2,7 +2,7 @@
 
 ## Toolbar menu
 
-yoMMD provides a menu on toolbar.  Menu items under the menu are:
+yoMMD provides a menu on toolbar with icon ![Application menu icon](../icons/statusicon.png).  Menu items under the menu are:
 
  - Enable Mouse
  - Reset Position
@@ -24,7 +24,7 @@ Reset model's position and scale to the initial state.
 
 ### Select Screen
 
-Change screen where model is shown.  Only valid when there's one more monitors available.
+Change screen where model is shown.  Only valid when there're multiple monitors.
 
 ### Hide Window
 

@@ -18,7 +18,7 @@ This is the list of available configuration items.
 
 - `model`: string (required)
 
-    Path to MMD model file (`.vmd`, or `.vmx` file)
+    Path to MMD model file (`.pmd` or `.pmx` file)
 
 - `motion`: array of tables (optional, default: empty)
 
@@ -26,7 +26,7 @@ This is the list of available configuration items.
 
     - `path`: list of strings (required)
 
-        List of paths to MMD motion files.
+        List of paths to MMD motion files (`.vmd` files).
 
     - `weight`: integer (optional, default: 1)
 
@@ -38,7 +38,7 @@ This is the list of available configuration items.
 
 - `default-model-position`: float\[2\] (optional, default: \[0, 0\])
 
-    The default position on the main window.  The coordinate system is like this:
+    The default MMD model position on the main window.  The coordinate system is like this:
 
 ```
            Second element    +---------- yoMMD window (nearly equals to the screen)
@@ -59,7 +59,9 @@ This is the list of available configuration items.
 
 - `default-camera-position`: float\[3\] (optional, default: \[0, 10, 50\])
 
-    The default camera position on model world.  The value should be specified in the order of \[x, y, z\].
+    The default camera position on model world.  The value should be specified in the order of \[x, y, z\].  The coordinate system is right-handed coordinate system; right side of screen is where x > 0, upper side of screen is where y > 0, and back of screen is where z > 0.
+    Note: This option is to change camera position.  To change gaze position, see `default-gaze-position` option below.
+    Note: Basically, the center of the MMD model position matches to the origin in the model world coordinate system.  (The exception is when MMD motion changed MMD model position)
 
 - `default-gaze-position`: float\[3\] (optional, default: \[0, 10, 0\])
 

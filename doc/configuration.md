@@ -65,7 +65,7 @@ This is the list of available configuration items.
 
 - `default-gaze-position`: float\[3\] (optional, default: \[0, 10, 0\])
 
-    The default gaze position on model world.  The value should be specified in the order of \[x, y, z\].
+    The default gaze position on model world.  The value should be specified in the order of \[x, y, z\].  The coordinate system is right-handed coordinate system, as described in `default-camera-potision` option.
 
 - `default-scale`: float (optional, default: 1.0)
 

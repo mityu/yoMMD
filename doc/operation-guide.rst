@@ -6,11 +6,11 @@ Toolbar menu
 
 yoMMD provides a menu on toolbar with icon |appicon|.  Menu items under the menu are:
 
- - Enable Mouse
- - Reset Position
- - Select Screen
- - Hide Window
- - Quit
+- Enable Mouse
+- Reset Position
+- Select Screen
+- Hide Window
+- Quit
 
 Descriptions for each item are the following.
 

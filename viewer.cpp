@@ -619,9 +619,8 @@ void Routine::Draw() {
     wvit = glm::inverse(wvit);
     wvit = glm::transpose(wvit);
 
-    auto lightColor = glm::vec3(1, 1, 1);
-    auto lightDir = glm::vec3(-0.5f, -1.0f, -0.5f);
-    lightDir = glm::mat3(viewMatrix_) * lightDir;
+    constexpr auto lightColor = glm::vec3(1, 1, 1);
+    const auto lightDir = glm::mat3(viewMatrix_) * config_.lightDirection;
 
     sg_begin_default_pass(&passAction_, size.x, size.y);
 

@@ -20,6 +20,7 @@ struct Config {
     std::vector<Motion> motions;
     float simulationFPS;
     float gravity;
+    glm::vec3 lightDirection;
     glm::vec2 defaultModelPosition;
     float defaultScale;
     glm::vec3 defaultCameraPosition;

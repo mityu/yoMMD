@@ -63,8 +63,8 @@ Here is the list of available configuration items.
     - ``disabled``: boolean (optional, default: false)
         When this value is ``true``, this motion is disabled.
 
-- ``default-model-position``: array of floats with 2 elements (optional, default: \[0, 0\])
-    The default MMD model position on the main window.  Values should be specified in the order of \[x, y\], and the coordinate system is like this::
+- ``default-model-position``: array of floats with 2 elements (optional, default: [0, 0])
+    The default MMD model position on the main window.  Values should be specified in the order of [x, y], and the coordinate system is like this::
 
                           Y          +---------- yoMMD window (nearly equals to the screen)
                           ^          |
@@ -81,9 +81,9 @@ Here is the list of available configuration items.
                           |-1.0
                           |
 
-- ``default-camera-position``: array of floats with 3 elements (optional, default: \[0, 10, 50\])
+- ``default-camera-position``: array of floats with 3 elements (optional, default: [0, 10, 50])
     The default camera position on model world.
-    The value should be specified in the order of \[x, y, z\].
+    The value should be specified in the order of [x, y, z].
     The coordinate system is right-handed coordinate system; right side of screen is where x > 0, upper side of screen is where y > 0, and front of screen is where z > 0.
 
     ::
@@ -112,14 +112,17 @@ Here is the list of available configuration items.
 
 
 
-- ``default-gaze-position``: array of floats with 3 elements (optional, default: \[0, 10, 0\])
-    The default gaze position on model world.  The value should be specified in the order of \[x, y, z\].  The coordinate system is right-handed coordinate system, as described in ``default-camera-potision`` option.
+- ``default-gaze-position``: array of floats with 3 elements (optional, default: [0, 10, 0])
+    The default gaze position on model world.  The value should be specified in the order of [x, y, z].  The coordinate system is right-handed coordinate system, as described in ``default-camera-potision`` option.
 
 - ``default-scale``: float (optional, default: 1.0)
     The default scale factor of MMD model.
 
 - ``gravity``: float (optional, default: 9.8)
     The gravity value used in physics simulation.
+
+- ``light-direction``: array of floats with 3 elements. (optional, default: [-0.5, -1.0, -0.5])
+    The direction vector of light.  yoMMD automatically normalizes this vector, so you don't have to normalize this vector.
 
 - ``simulation-fps``: float (optional, default: 60.0)
     A parameter of physics simulation.

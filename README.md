@@ -91,11 +91,9 @@ $ make
 
 See `$ make help` result for other available subcommands.
 
-# Configuration
+# Usage, configuration
 
-You can write configurations in `config.toml`.
-
-TODO: Write more
+Please see files under `doc/` directory: https://github.com/mityu/yoMMD/tree/main/doc
 
 # Example configration
 

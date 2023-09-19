@@ -4,7 +4,7 @@ Operation guide
 Toolbar menu
 ************
 
-yoMMD provides a menu on toolbar with icon |appicon|.  Menu items under the menu are:
+yoMMD provides a menu on toolbar with icon |menuicon|.  Menu items under the menu are:
 
 - Enable Mouse
 - Reset Position
@@ -72,6 +72,6 @@ Pinch zoom gesture/smart zoom gesture on trackpad (macOS)
 
 Change model scale.  Reference point of scaling is the mouse position.
 
-.. |appicon| image:: ../icons/statusicon.png
+.. |menuicon| image:: ../icons/statusicon.png
    :height: 1em
    :class: no-scaled-link

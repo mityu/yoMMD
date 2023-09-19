@@ -195,8 +195,7 @@ void UserView::OnGestureZoom(GesturePhase phase, float delta) {
 }
 
 void UserView::SetDefaultTranslation(glm::vec2 pos) {
-    transform_.translation.x = pos.x;
-    transform_.translation.y = -pos.y;
+    transform_.translation = toVec3(pos, 0.0f);
     defaultTransform_.translation = transform_.translation;
 }
 

@@ -1,0 +1,35 @@
+description: 'Build submodule libraries'
+inputs:
+  shell:
+    description: 'Shell to run build steps on'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Get commit hash of libraries
+      id: lib-hash
+      shell: bash
+      run: |
+        echo "bullet3=$(git rev-parse HEAD:lib/bullet3)" >> $GITHUB_OUTPUT
+        echo "saba=$(git rev-parse HEAD:lib/saba)" >> $GITHUB_OUTPUT
+    - name: Pull cache of lib/bullet3 build
+      uses: actions/cache@v3
+      id: cache-bullet3
+      with:
+        path: lib/bullet3
+        key: bullet3-${{ steps.lib-hash.outputs.bullet3 }}-${{ runner.os }}
+    - name: Build bullet3
+      if: steps.cache-bullet3.outputs.cache-hit != 'true'
+      shell: ${{ inputs.shell }}
+      run: make build-bullet
+    - name: Pull cache of lib/saba build
+      uses: actions/cache@v3
+      id: cache-saba
+      with:
+        path: lib/saba
+        key: saba-${{ steps.lib-hash.outputs.saba }}-${{ runner.os }}
+    - name: Build saba
+      if: steps.cache-saba.outputs.cache-hit != 'true'
+      shell: ${{ inputs.shell }}
+      run: make build-saba

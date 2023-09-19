@@ -56,10 +56,14 @@ jobs:
         if: steps.check.outputs.skip == 'no'
         run:
           git submodule update --init --recursive --recommend-shallow --depth 1
+      - name: Build submodule libraries
+        if: steps.check.outputs.skip == 'no'
+        uses: ./.github/actions/build-submodules
+        with:
+          shell: msys2 {0}
       - name: Build binary
         if: steps.check.outputs.skip == 'no'
         run: |
-          make build-submodule
           make release -j
       - name: Package
         if: steps.check.outputs.skip == 'no'

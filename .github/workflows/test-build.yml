@@ -25,9 +25,12 @@ jobs:
         run: |
           uname -a
           g++ --version
+      - name: Build submodules
+        uses: ./.github/actions/build-submodules/
+        with:
+          shell: msys2 {0}
       - name: Try build on Windows
         run: |
-          make build-submodule
           make -j
   macos:
     runs-on: macos-latest
@@ -42,8 +45,11 @@ jobs:
         run: |
           uname -a
           clang++ --version
+      - name: Build submodules
+        uses: ./.github/actions/build-submodules/
+        with:
+          shell: bash
       - name: Try build on macOS
         run: |
-          make build-submodule
           make -j
           make app

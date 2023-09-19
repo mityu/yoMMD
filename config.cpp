@@ -62,7 +62,7 @@ Config Config::Parse(const std::filesystem::path& configFile) {
             } else if (k == "default-scale") {
                 config.defaultScale = v.as_floating();
             } else if (k == "simulation-fps") {
-                config.simulationFPS = v.as_integer();
+                config.simulationFPS = v.as_floating();
             } else if (k == "gravity") {
                 config.gravity = v.as_floating();
             } else if (k == "default-screen-number") {

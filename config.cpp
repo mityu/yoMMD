@@ -84,6 +84,12 @@ Config Config::Parse(const std::filesystem::path& configFile) {
                             c.paths = std::move(path);
                         } else if (k == "weight") {
                             c.weight = v.as_integer();
+                            if (c.weight <= 0) {
+                                const auto errmsg = toml::format_error(
+                                        "Invalid value for \"weight\"", v,
+                                        "Value must be bigger than or equals to 1.");
+                                Err::Log(errmsg);
+                            }
                         } else if (k == "disabled") {
                             c.disabled = v.as_boolean();
                         } else {

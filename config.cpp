@@ -17,7 +17,7 @@ inline glm::vec3 toVec3(const std::array<float, 3> a) {
 }
 
 Config::Config() :
-    simulationFPS(60.0f), gravity(9.8f),
+    simulationFPS(60.0f), gravity(9.8f), lightDirection(-0.5f, -1.0f, -0.5f),
     defaultModelPosition(0.0f, 0.0f), defaultScale(1.0f),
     defaultCameraPosition(0, 10, 50), defaultGazePosition(0, 10, 0),
     defaultScreenNumber(std::nullopt)
@@ -65,6 +65,9 @@ Config Config::Parse(const std::filesystem::path& configFile) {
                 config.simulationFPS = v.as_floating();
             } else if (k == "gravity") {
                 config.gravity = v.as_floating();
+            } else if (k == "light-direction") {
+                const auto d = toml::get<std::array<float, 3>>(v);
+                config.lightDirection = toVec3(d);
             } else if (k == "default-screen-number") {
                 config.defaultScreenNumber = v.as_integer();
             } else if (k == "motion") {

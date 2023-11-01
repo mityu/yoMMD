@@ -1,3 +1,21 @@
+#include "sokol_gfx.h"
+#include "sokol_time.h"
+#include "btBulletDynamicsCommon.h"  // IWYU pragma: keep; supress warning from clangd.
+#include "Saba/Model/MMD/MMDCamera.h"
+#include "Saba/Model/MMD/MMDMaterial.h"
+#include "Saba/Model/MMD/MMDModel.h"
+#include "Saba/Model/MMD/MMDPhysics.h"
+#include "Saba/Model/MMD/PMDModel.h"
+#include "Saba/Model/MMD/PMXModel.h"
+#include "Saba/Model/MMD/VMDAnimation.h"
+#include "Saba/Model/MMD/VMDCameraAnimation.h"
+#include "Saba/Model/MMD/VMDFile.h"
+#include "viewer.hpp"
+#include "main.hpp"
+#include "util.hpp"
+#include "constant.hpp"
+#include "keyboard.hpp"
+#include "auto/yommd.glsl.h"
 #include <ctime>
 #include <filesystem>
 #include <functional>
@@ -8,25 +26,6 @@
 #include <string_view>
 #include <random>
 #include <numbers>
-#include "sokol_gfx.h"
-#include "sokol_time.h"
-#include "Saba/Base/Path.h"
-#include "Saba/Model/MMD/MMDCamera.h"
-#include "Saba/Model/MMD/MMDMaterial.h"
-#include "Saba/Model/MMD/MMDModel.h"
-#include "Saba/Model/MMD/MMDPhysics.h"
-#include "Saba/Model/MMD/PMDModel.h"
-#include "Saba/Model/MMD/PMXModel.h"
-#include "Saba/Model/MMD/VMDAnimation.h"
-#include "Saba/Model/MMD/VMDCameraAnimation.h"
-#include "Saba/Model/MMD/VMDFile.h"
-#include "btBulletDynamicsCommon.h"
-#include "viewer.hpp"
-#include "main.hpp"
-#include "util.hpp"
-#include "constant.hpp"
-#include "keyboard.hpp"
-#include "auto/yommd.glsl.h"
 
 namespace{
 const std::filesystem::path getXdgConfigHomePath() {

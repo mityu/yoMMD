@@ -1,13 +1,13 @@
 #ifndef UTIL_HPP_
 #define UTIL_HPP_
 
+#include "main.hpp"
+#include "platform.hpp"
 #include <vector>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <sstream>
-#include "main.hpp"
-#include "platform.hpp"
 
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>

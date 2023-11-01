@@ -1,3 +1,6 @@
+#include "util.hpp"
+#include "constant.hpp"
+#include "platform.hpp"
 #include <string>
 #include <sstream>
 #include <string_view>
@@ -5,9 +8,6 @@
 #include <iostream>
 #include <cstdlib>
 #include <filesystem>
-#include "util.hpp"
-#include "constant.hpp"
-#include "platform.hpp"
 
 // Forward declaration for functions in auto/version.cpp
 namespace Version {

@@ -1,9 +1,8 @@
-#include <string_view>
-#include <filesystem>
-#include <vector>
-#include "toml.hpp"
 #include "config.hpp"
 #include "util.hpp"
+#include "toml.hpp" // IWYU pragma: keep; supress warning from clangd.
+#include <filesystem>
+#include <vector>
 
 namespace {
 inline glm::vec2 toVec2(const std::array<float, 2> a) {

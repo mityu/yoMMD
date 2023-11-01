@@ -1,4 +1,12 @@
 #define WINVER 0x0605
+#include "sokol_gfx.h"
+#include "sokol_time.h"
+#include "glm/vec2.hpp" // IWYU pragma: keep; silence clangd.
+#include "main.hpp"
+#include "viewer.hpp"
+#include "util.hpp"
+#include "constant.hpp"
+#include "keyboard.hpp"
 #include <string>
 #include <vector>
 #include <string_view>
@@ -14,14 +22,6 @@
 #include <dcomp.h>
 #include <dxgi.h>
 #include <wrl.h>
-#include "sokol_gfx.h"
-#include "sokol_time.h"
-#include "glm/glm.hpp"
-#include "main.hpp"
-#include "viewer.hpp"
-#include "util.hpp"
-#include "constant.hpp"
-#include "keyboard.hpp"
 
 template <typename T> using ComPtr = Microsoft::WRL::ComPtr<T>;
 

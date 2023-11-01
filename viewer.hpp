@@ -1,19 +1,18 @@
 #ifndef VIEWER_HPP_
 #define VIEWER_HPP_
 
-#include <random>
-#include <map>
-#include <filesystem>
-#include <functional>
 #include "Saba/Model/MMD/MMDMaterial.h"
 #include "Saba/Model/MMD/MMDModel.h"
 #include "Saba/Model/MMD/VMDAnimation.h"
 #include "Saba/Model/MMD/VMDCameraAnimation.h"
-#include "btBulletDynamicsCommon.h"
 #include "sokol_gfx.h"
 #include "util.hpp"
 #include "config.hpp"
 #include "image.hpp"
+#include <random>
+#include <map>
+#include <filesystem>
+#include <functional>
 
 class Material {
 public:

@@ -1,10 +1,11 @@
 #ifndef CONFIG_HPP_
 #define CONFIG_HPP_
 
+#include "glm/vec2.hpp" // IWYU pragma: keep; supress warning from clangd.
+#include "glm/vec3.hpp" // IWYU pragma: keep; supress warning from clangd.
 #include <filesystem>
 #include <optional>
 #include <vector>
-#include "glm/glm.hpp"
 
 struct Config {
     using Path = std::filesystem::path;

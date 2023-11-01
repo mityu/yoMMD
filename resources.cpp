@@ -1,11 +1,12 @@
 // Handles embedded data.
-#include <string_view>
-#include <filesystem>
 #include "resources.hpp"
 #include "util.hpp"
 
 #define INCBIN_PREFIX _
 #include "incbin.h"
+
+#include <string_view>
+#include <filesystem>
 
 extern "C" {
 INCBIN(Toon01, "toons/toon01.bmp");

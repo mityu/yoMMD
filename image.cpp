@@ -1,8 +1,8 @@
-#include <cstdio>
-#include <string_view>
 #include "stb_image.h"
 #include "image.hpp"
 #include "platform.hpp"
+#include <cstdio>
+#include <string_view>
 
 #ifdef PLATFORM_WINDOWS
 #  include <windows.h>

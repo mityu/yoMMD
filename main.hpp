@@ -1,9 +1,9 @@
 #ifndef MAIN_HPP_
 #define MAIN_HPP_
 
-#include <string_view>
-#include "glm/glm.hpp"
+#include "glm/vec2.hpp" // IWYU pragma: keep; silence clangd.
 #include "sokol_gfx.h"
+#include <string_view>
 
 namespace Dialog {
 void messageBox(std::string_view msg);

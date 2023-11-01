@@ -1,3 +1,12 @@
+#define SOKOL_METAL
+#include "sokol_gfx.h"
+
+#include "main.hpp"
+#include "viewer.hpp"
+#include "constant.hpp"
+#include "util.hpp"
+#include "keyboard.hpp"
+
 #import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
 #import <Cocoa/Cocoa.h>
@@ -10,15 +19,6 @@
 #include <utility>
 #include <functional>
 #include <type_traits>
-
-#define SOKOL_METAL
-#include "sokol_gfx.h"
-
-#include "main.hpp"
-#include "viewer.hpp"
-#include "constant.hpp"
-#include "util.hpp"
-#include "keyboard.hpp"
 
 class GestureController {
 public:

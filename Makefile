@@ -90,7 +90,7 @@ $(OBJDIR)/%.mm.o: %.mm
 $(OBJDIR)/resource_windows.rc.o: resource_windows.rc DpiAwareness.manifest
 	windres -o $@ $<
 
-auto/yommd.glsl.h: yommd.glsl | auto/
+auto/yommd.glsl.h: yommd.glsl $(SOKOL_SHDC) | auto/
 	$(SOKOL_SHDC) --input $< --output $@ --slang metal_macos:hlsl5
 ifeq ($(OS),Windows_NT)
 	# CRLF -> LF

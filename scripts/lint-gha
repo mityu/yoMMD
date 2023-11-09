@@ -3,7 +3,11 @@
 cd $(dirname $0)
 cd ..
 
-for f in .github/**/*.yml; do
-	echo $f
-	actionlint $f
-done
+if which actionlint &> /dev/null; then
+	for f in .github/workflows/*.yml; do
+		echo "actionlint $f"
+		actionlint $f
+	done
+else
+	echo 'No actionlint'
+fi

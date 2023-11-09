@@ -1,0 +1,9 @@
+#!/bin/bash
+
+cd $(dirname $0)
+cd ..
+
+for f in .github/**/*.yml; do
+	echo $f
+	actionlint $f
+done

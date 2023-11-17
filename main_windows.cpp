@@ -31,7 +31,7 @@ const void *getDepthStencilView();
 SIZE rectToSize(RECT rect);
 std::vector<HMONITOR> getAllMonitorHandles();
 std::optional<HMONITOR> getMonitorHandleFromID(int monitorID);
-std::optional<RECT> getMonitorWorkareaFromID(int screenID);
+std::optional<RECT> getMonitorWorkareaFromID(int monitorID);
 
 template <typename T, typename DeleteFunc, DeleteFunc deleteFunc>
 class UniqueHandler {
@@ -232,7 +232,7 @@ void AppMain::ChangeScreen(int screenID) {
     const auto cx = r->right - r->left;
     const auto cy = r->bottom - r->top;
     constexpr UINT uFlags = SWP_SHOWWINDOW | SWP_NOACTIVATE;
-    SetWindowPos(hwnd_, HWND_TOP, r->left, r->top, cx, cy, uFlags);  // TODO: HWND_TOPMOST?
+    SetWindowPos(hwnd_, HWND_TOPMOST, r->left, r->top, cx, cy, uFlags);
 }
 
 Routine& AppMain::GetRoutine() {

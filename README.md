@@ -15,7 +15,7 @@ For windows user, you can download pre-build binary from here: https://github.co
 # Development environment
 
 - Apple/homebrew clang on macOS Ventura 13
-- GCC on MinGW64 on MSYS2 on Windows 10
+- GCC on MinGW64 on MSYS2 on Windows 11
 
 yoMMD must work on these environment.
 
@@ -95,13 +95,13 @@ See `$ make help` result for other available subcommands.
 
 Please see files under `doc/` directory: https://github.com/mityu/yoMMD/tree/main/doc
 
-# Example configration
+# Example configuration
 
 The example configuration for the screenshot on the top of this README.
 
 ```toml
 model = "./つみ式ミクさんv4/つみ式ミクさんv4.pmx"
-default-model-position = [0.65, 0.85]
+default-model-position = [0.65, -0.85]
 default-camera-position = [0.0, 20.0, 50.0]
 default-scale = 2.0
 

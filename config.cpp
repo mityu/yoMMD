@@ -2,6 +2,7 @@
 #include "util.hpp"
 #include "toml.hpp" // IWYU pragma: keep; supress warning from clangd.
 #include <filesystem>
+#include <string_view>
 #include <vector>
 
 namespace {
@@ -27,13 +28,19 @@ Config Config::Parse(const std::filesystem::path& configFile) {
 
     constexpr auto warnUnsupportedKey = [](const toml::key& k, const toml::value& v) {
         // TODO: Error message should point key, not its value
-        // TODO: Use "[warning]" header instead of "[error]"
-        const auto errmsg = toml::format_error(
+        constexpr std::string_view header = "[error]";
+        const std::string rawmsg = toml::format_error(
                 "Ignoring unsupported config key.",
                 v,
                 "Key is not supported: " + k
                 );
-        Err::Log(errmsg);
+        std::string_view errmsg = rawmsg;
+        if (errmsg.starts_with(header)) {
+            errmsg.remove_prefix(header.size());
+            while (errmsg.front() == ' ')
+                errmsg.remove_prefix(1);
+        }
+        Err::Log("[warning]", errmsg);
     };
 
     Config config;

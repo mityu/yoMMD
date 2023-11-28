@@ -517,7 +517,7 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
         menu_.ShowMenu();
         return 0;
     }
-    return DefWindowProc(hwnd_, uMsg, wParam, lParam);
+    return DefWindowProcW(hwnd_, uMsg, wParam, lParam);
 }
 
 AppMenu::AppMenu() :

@@ -140,12 +140,7 @@ void Logger(const char *tag, uint32_t logLevel, uint32_t logItem, const char *me
 
     ss << " [id:" << logItem << ']';
     if (filename) {
-        ss << ' ';
-#if defined(_MSC_VER)
-        ss << filename << '(' << linenr << "): ";  // MSVC compiler error format
-#else
-        ss << filename << ':' << linenr << ":0: ";  // gcc/clang compiler error format
-#endif
+        ss << ' ' << filename << ':' << linenr << ":0: ";
     } else {
         ss << "[line:" << linenr << "] ";
     }

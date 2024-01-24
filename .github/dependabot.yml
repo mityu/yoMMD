@@ -4,7 +4,8 @@ updates:
   - package-ecosystem: "gitsubmodule"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "friday"
     open-pull-requests-limit: 10
     groups:
       sokol:

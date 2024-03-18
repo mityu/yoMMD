@@ -447,6 +447,7 @@ enum class MenuTag : NSInteger {
     None,
     EnableMouse,
     SelectScreen,
+    HideWindow,
 };
 -(instancetype)init {
     self = [super init];
@@ -484,7 +485,7 @@ enum class MenuTag : NSInteger {
                         initWithTitle:@"Hide Window"
                                action:@selector(actionToggleHideWindow:)
                         keyEquivalent:@""];
-        [hideWindow setTag:Enum::underlyCast(MenuTag::None)];
+        [hideWindow setTag:Enum::underlyCast(MenuTag::HideWindow)];
         [hideWindow setTarget:self];
 
         NSMenuItem *quit = [[NSMenuItem alloc]
@@ -535,6 +536,30 @@ enum class MenuTag : NSInteger {
         [menu setItemArray:[[NSArray alloc] initWithArray:menuItems_ copyItems:YES]];
     }
 
+    NSMenuItem *enableMouse = [menu itemWithTag:Enum::underlyCast(MenuTag::EnableMouse)];
+    if (!enableMouse) {
+        Err::Log("Internal error: \"Enable Mouse\" or \"Disable Mouse\" menu not found");
+        return;
+    }
+
+    if ([getAppMain() getIgnoreMouse]) {
+        [enableMouse setTitle:@"Enable Mouse"];
+    } else {
+        [enableMouse setTitle:@"Disable Mouse"];
+    }
+
+    NSMenuItem *hideWindow = [menu itemWithTag:Enum::underlyCast(MenuTag::HideWindow)];
+    if (!hideWindow) {
+        Err::Log("Internal error: \"Hide Window\" or \"Show Window\" menu not found");
+        return;
+    }
+
+    if (NSApp.hidden) {
+        [hideWindow setTitle:@"Show Window"];
+    } else {
+        [hideWindow setTitle:@"Hide Window"];
+    }
+
     NSMenuItem *selectScreen = [menu itemWithTag:Enum::underlyCast(MenuTag::SelectScreen)];
     if (!selectScreen) {
         Err::Log("Internal error: \"Select screen\" menu not found");
@@ -551,9 +576,7 @@ enum class MenuTag : NSInteger {
     [NSApp terminate:sender];
 }
 -(void)actionToggleHandleMouse:(NSMenuItem *)sender {
-    constexpr NSString *titleEnable = @"Enable Mouse";
-    constexpr NSString *titleDisable = @"Disable Mouse";
-    if ([[sender title] compare:titleEnable] == NSOrderedSame) {
+    if ([[sender title] compare:@"Enable Mouse"] == NSOrderedSame) {
         NSArray *appList = [[NSWorkspace sharedWorkspace] runningApplications];
         for (NSRunningApplication *app in appList) {
             if (app.active) {
@@ -563,7 +586,6 @@ enum class MenuTag : NSInteger {
         }
 
         [getAppMain() setIgnoreMouse:false];
-        [sender setTitle:titleDisable];
 
         // Activate this app to enable touchpad gesture.
         [NSApp activateIgnoringOtherApps:YES];
@@ -573,18 +595,13 @@ enum class MenuTag : NSInteger {
             [alterApp_ activateWithOptions:NSApplicationActivateIgnoringOtherApps];
         }
         alterApp_ = NULL;
-        [sender setTitle:titleEnable];
     }
 }
 -(void)actionToggleHideWindow:(NSMenuItem *)sender {
-    constexpr NSString *titleHide = @"Hide Window";
-    constexpr NSString *titleShow = @"Show Window";
-    if ([[sender title] compare:titleHide] == NSOrderedSame) {
+    if ([[sender title] compare:@"Hide Window"] == NSOrderedSame) {
         [NSApp hide:self];
-        [sender setTitle:titleShow];
     } else {
         [NSApp unhide:self];
-        [sender setTitle:titleHide];
     }
 }
 -(void)actionResetModelPosition:(NSMenuItem *)sender {

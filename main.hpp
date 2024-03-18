@@ -10,7 +10,8 @@ void messageBox(std::string_view msg);
 }
 
 namespace Context {
-sg_context_desc getSokolContext();
+sg_environment getSokolEnvironment();
+sg_swapchain getSokolSwapchain();
 glm::vec2 getWindowSize();
 glm::vec2 getDrawableSize();
 

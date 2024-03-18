@@ -26,8 +26,6 @@
 template <typename T> using ComPtr = Microsoft::WRL::ComPtr<T>;
 
 namespace {
-const void *getRenderTargetView();
-const void *getDepthStencilView();
 SIZE rectToSize(RECT rect);
 std::vector<HMONITOR> getAllMonitorHandles();
 std::optional<HMONITOR> getMonitorHandleFromID(int monitorID);
@@ -123,7 +121,8 @@ public:
     void ChangeScreen(int screenID);
     Routine& GetRoutine();
     const HWND& GetWindowHandle() const;
-    sg_context_desc GetSokolContext() const;
+    sg_environment GetSokolEnvironment() const;
+    sg_swapchain GetSokolSwapchain() const;
     glm::vec2 GetWindowSize() const;
     glm::vec2 GetDrawableSize() const;
     const ID3D11RenderTargetView *GetRenderTargetView() const;
@@ -242,16 +241,34 @@ const HWND& AppMain::GetWindowHandle() const {
     return hwnd_;
 }
 
-sg_context_desc AppMain::GetSokolContext() const {
-    return sg_context_desc {
-        .sample_count = Constant::SampleCount,
+sg_environment AppMain::GetSokolEnvironment() const {
+    return sg_environment {
+        .defaults = {
+            .color_format = SG_PIXELFORMAT_BGRA8,
+            .depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
+            .sample_count = Constant::SampleCount,
+        },
         .d3d11 = {
             .device = reinterpret_cast<const void *>(d3Device_.Get()),
             .device_context = reinterpret_cast<const void *>(
                     deviceContext_.Get()),
-            .render_target_view_cb = getRenderTargetView,
-            .depth_stencil_view_cb = getDepthStencilView,
-        }
+        },
+    };
+}
+
+sg_swapchain AppMain::GetSokolSwapchain() const {
+    const auto size{Context::getWindowSize()};
+    return sg_swapchain {
+        .width = static_cast<int>(size.x),
+        .height = static_cast<int>(size.y),
+        .sample_count = Constant::SampleCount,
+        .color_format = SG_PIXELFORMAT_BGRA8,
+        .depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
+        .d3d11 = {
+            .render_view = renderTargetView_.Get(),
+            .resolve_view = renderTargetView_.Get(),
+            .depth_stencil_view = depthStencilView_.Get(),
+        },
     };
 }
 
@@ -976,8 +993,11 @@ void MsgBox::drawContents(HWND hwnd) {
 }
 
 namespace Context {
-sg_context_desc getSokolContext() {
-    return globals::appMain.GetSokolContext();
+sg_environment getSokolEnvironment() {
+    return globals::appMain.GetSokolEnvironment();
+}
+sg_swapchain getSokolSwapchain() {
+    return globals::appMain.GetSokolSwapchain();
 }
 glm::vec2 getWindowSize() {
     return globals::appMain.GetWindowSize();
@@ -1020,14 +1040,6 @@ void messageBox(std::string_view msg) {
 }
 
 namespace {
-const void *getRenderTargetView() {
-    return reinterpret_cast<const void *>(
-            globals::appMain.GetRenderTargetView());
-}
-const void *getDepthStencilView() {
-    return reinterpret_cast<const void *>(
-            globals::appMain.GetDepthStencilView());
-}
 SIZE rectToSize(RECT rect) {
     return {rect.right - rect.left, rect.bottom - rect.top};
 }

@@ -315,7 +315,7 @@ void Routine::Init() {
         .logger = {
             .func = Slog::Logger,
         },
-        .context = Context::getSokolContext(),
+        .environment = Context::getSokolEnvironment(),
     };
     sg_setup(&desc);
     stm_setup();
@@ -607,7 +607,6 @@ void Routine::Update() {
 }
 
 void Routine::Draw() {
-    const auto size{Context::getWindowSize()};
     const auto model = mmd_.GetModel();
 
     auto userView = userView_.GetViewportMatrix();
@@ -621,7 +620,11 @@ void Routine::Draw() {
     constexpr auto lightColor = glm::vec3(1, 1, 1);
     const auto lightDir = glm::mat3(viewMatrix_) * config_.lightDirection;
 
-    sg_begin_default_pass(&passAction_, size.x, size.y);
+    const sg_pass pass = {
+        .action = passAction_,
+        .swapchain = Context::getSokolSwapchain(),
+    };
+    sg_begin_pass(&pass);
 
     const size_t subMeshCount = model->GetSubMeshCount();
     for (size_t i = 0; i < subMeshCount; ++i) {

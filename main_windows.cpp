@@ -649,7 +649,13 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
     }
 
     UniqueHMENU hmenu = CreatePopupMenu();
-    AppendMenuW(hmenu, MF_STRING, Enum::underlyCast(Cmd::EnableMouse), L"&Enable Mouse");
+    if (parentWinExStyle & WS_EX_TRANSPARENT) {
+        AppendMenuW(hmenu, MF_STRING,
+                Enum::underlyCast(Cmd::EnableMouse), L"&Enable Mouse");
+    } else {
+        AppendMenuW(hmenu, MF_STRING,
+                Enum::underlyCast(Cmd::EnableMouse), L"&Disable Mouse");
+    }
     AppendMenuW(hmenu, MF_STRING, Enum::underlyCast(Cmd::ResetPosition), L"&Reset Position");
     AppendMenuW(hmenu, MF_SEPARATOR, Enum::underlyCast(Cmd::None), L"");
     AppendMenuW(hmenu, MF_POPUP, reinterpret_cast<UINT_PTR>(hScreensMenu.GetRawHandler()), L"&Select screen");
@@ -663,10 +669,6 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
 
     if (parentWinExStyle == 0) {
         EnableMenuItem(hmenu, Enum::underlyCast(Cmd::EnableMouse), MF_DISABLED);
-    } else if (parentWinExStyle & WS_EX_TRANSPARENT) {
-        CheckMenuItem(hmenu, Enum::underlyCast(Cmd::EnableMouse), MF_UNCHECKED);
-    } else {
-        CheckMenuItem(hmenu, Enum::underlyCast(Cmd::EnableMouse), MF_CHECKED);
     }
 
     if (monitorHandles.size() <= 1)

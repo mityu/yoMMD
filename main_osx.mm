@@ -535,17 +535,6 @@ enum class MenuTag : NSInteger {
         [menu setItemArray:[[NSArray alloc] initWithArray:menuItems_ copyItems:YES]];
     }
 
-    NSMenuItem *enableMouse = [menu itemWithTag:Enum::underlyCast(MenuTag::EnableMouse)];
-    if (!enableMouse) {
-        Err::Log("Internal error: \"Enable Mouse\" menu not found");
-        return;
-    }
-
-    if ([getAppMain() getIgnoreMouse])
-        [enableMouse setState:NSControlStateValueOff];
-    else
-        [enableMouse setState:NSControlStateValueOn];
-
     NSMenuItem *selectScreen = [menu itemWithTag:Enum::underlyCast(MenuTag::SelectScreen)];
     if (!selectScreen) {
         Err::Log("Internal error: \"Select screen\" menu not found");

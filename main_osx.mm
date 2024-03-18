@@ -66,7 +66,8 @@ private:
 -(bool)getIgnoreMouse;
 -(void)changeWindowScreen:(NSUInteger)scID;
 -(NSMenu *)getAppMenu;
--(sg_context_desc)getSokolContext;
+-(sg_environment)getSokolEnvironment;
+-(sg_swapchain)getSokolSwapchain;
 -(id<CAMetalDrawable>)getDrawable;
 -(MTLRenderPassDescriptor *)getRenderPassDescriptor;
 -(NSSize)getWindowSize;
@@ -89,8 +90,6 @@ private:
 @end
 
 namespace{
-const void *getSokolDrawable(void);
-const void *getSokolRenderpassDescriptor(void);
 inline AppMain *getAppMain(void);
 
 // Find NSScreen from NSScreenNumber.  If screen is not found, returns nil.
@@ -331,6 +330,7 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
     [view_ setDevice: metalDevice_];
     [view_ setColorPixelFormat:MTLPixelFormatBGRA8Unorm];
     [view_ setDepthStencilPixelFormat:MTLPixelFormatDepth32Float_Stencil8];
+    [view_ setSampleCount:static_cast<NSUInteger>(Constant::SampleCount)];
     // Postpone setting view delegate until every initialization process is
     // done in order to prohibit MMD drawer to draw models while showing errors
     // due to failure of loading MMD models (e.g. MMD model path is given, but
@@ -382,13 +382,30 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
     [menu setDelegate:appMenuDelegate_];
     return menu;
 }
--(sg_context_desc)getSokolContext {
-    return sg_context_desc{
-        .sample_count = Constant::SampleCount,
+-(sg_environment)getSokolEnvironment {
+    return sg_environment {
+        .defaults = {
+            .color_format = SG_PIXELFORMAT_BGRA8,
+            .depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
+            .sample_count = Constant::SampleCount
+        },
         .metal = {
             .device = (__bridge const void *)metalDevice_,
-            .renderpass_descriptor_cb = getSokolRenderpassDescriptor,
-            .drawable_cb = getSokolDrawable,
+        },
+    };
+}
+-(sg_swapchain)getSokolSwapchain {
+    const auto size{Context::getWindowSize()};
+    return sg_swapchain {
+        .width = static_cast<int>(size.x),
+        .height= static_cast<int>(size.y),
+        .sample_count = Constant::SampleCount,
+        .color_format = SG_PIXELFORMAT_BGRA8,
+        .depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
+        .metal = {
+            .current_drawable = (__bridge const void *)[view_ currentDrawable],
+            .depth_stencil_texture = (__bridge const void *)[view_ depthStencilTexture],
+            .msaa_color_texture = (__bridge const void *)[view_ multisampleColorTexture],
         },
     };
 }
@@ -735,14 +752,6 @@ static constexpr float paddingY_ = 5.0;
 @end
 
 namespace{
-const void *getSokolDrawable() {
-    return (__bridge const void *)[getAppMain() getDrawable];
-}
-
-const void *getSokolRenderpassDescriptor(void) {
-    return (__bridge const void *)[getAppMain() getRenderPassDescriptor];
-}
-
 AppMain *getAppMain(void) {
     static AppMain *appMain = [[AppMain alloc] init];
     return appMain;
@@ -760,8 +769,12 @@ NSScreen *findScreenFromID(NSInteger scID) {
 }
 } // namespace
 
-sg_context_desc Context::getSokolContext() {
-    return [getAppMain() getSokolContext];
+sg_environment Context::getSokolEnvironment() {
+    return [getAppMain() getSokolEnvironment];
+}
+
+sg_swapchain Context::getSokolSwapchain() {
+    return [getAppMain() getSokolSwapchain];
 }
 
 glm::vec2 Context::getWindowSize() {

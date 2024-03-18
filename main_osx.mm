@@ -459,7 +459,6 @@ enum class MenuTag : NSInteger {
                             keyEquivalent:@""];
         [enableMouse setTag:Enum::underlyCast(MenuTag::EnableMouse)];
         [enableMouse setTarget:self];
-        [enableMouse setState:NSControlStateValueOff];
 
 
         NSMenuItem *resetModelPosition = [[NSMenuItem alloc]
@@ -563,7 +562,9 @@ enum class MenuTag : NSInteger {
     [NSApp terminate:sender];
 }
 -(void)actionToggleHandleMouse:(NSMenuItem *)sender {
-    if (sender.state == NSControlStateValueOff) {
+    constexpr NSString *titleEnable = @"Enable Mouse";
+    constexpr NSString *titleDisable = @"Disable Mouse";
+    if ([[sender title] compare:titleEnable] == NSOrderedSame) {
         NSArray *appList = [[NSWorkspace sharedWorkspace] runningApplications];
         for (NSRunningApplication *app in appList) {
             if (app.active) {
@@ -573,6 +574,7 @@ enum class MenuTag : NSInteger {
         }
 
         [getAppMain() setIgnoreMouse:false];
+        [sender setTitle:titleDisable];
 
         // Activate this app to enable touchpad gesture.
         [NSApp activateIgnoringOtherApps:YES];
@@ -582,6 +584,7 @@ enum class MenuTag : NSInteger {
             [alterApp_ activateWithOptions:NSApplicationActivateIgnoringOtherApps];
         }
         alterApp_ = NULL;
+        [sender setTitle:titleEnable];
     }
 }
 -(void)actionToggleHideWindow:(NSMenuItem *)sender {

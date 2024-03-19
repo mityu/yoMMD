@@ -16,6 +16,7 @@
 #include "constant.hpp"
 #include "keyboard.hpp"
 #include "auto/yommd.glsl.h"
+#include "auto/quad.glsl.h"
 #include <ctime>
 #include <filesystem>
 #include <functional>
@@ -115,6 +116,78 @@ const std::shared_ptr<saba::MMDModel> MMD::GetModel() const {
 
 const std::vector<MMD::Animation>& MMD::GetAnimations() const {
     return animations_;
+}
+
+// ModelEmphasizer::Init() and ModelEmphasizer::Draw() is based on quad-sapp in
+// sokol-samples, which published under MIT License.
+// https://github.com/floooh/sokol-samples/blob/801de1f6ef8acc7f824efe259293eb88a4476479/sapp/quad-sapp.c
+void ModelEmphasizer::Init() {
+#ifdef PLATFORM_WINDOWS
+    // FIXME: On Windows, using any color other than black makes window have
+    // color.  In order to make only MMD models be highlighted, use black color
+    // as blend color.
+    constexpr float vertices[] = {
+        // positions    colors
+        -1.0f,  1.0f,   0.0f, 0.0f, 0.0f, 0.5f,
+         1.0f,  1.0f,   0.0f, 0.0f, 0.0f, 0.5f,
+         1.0f, -1.0f,   0.0f, 0.0f, 0.0f, 0.5f,
+        -1.0f, -1.0f,   0.0f, 0.0f, 0.0f, 0.5f,
+    };
+#else
+    constexpr float vertices[] = {
+        // positions    colors
+        -1.0f,  1.0f,   1.0f, 1.0f, 1.0f, 0.3f,
+         1.0f,  1.0f,   1.0f, 1.0f, 1.0f, 0.3f,
+         1.0f, -1.0f,   1.0f, 1.0f, 1.0f, 0.3f,
+        -1.0f, -1.0f,   1.0f, 1.0f, 1.0f, 0.3f,
+    };
+#endif
+    binds_.vertex_buffers[0] = sg_make_buffer(sg_buffer_desc{
+        .type = SG_BUFFERTYPE_VERTEXBUFFER,
+        .data = SG_RANGE(vertices),
+    });
+
+    constexpr uint16_t indices[] = {0, 1, 2,  0, 2, 3};
+    binds_.index_buffer = sg_make_buffer(sg_buffer_desc{
+        .type = SG_BUFFERTYPE_INDEXBUFFER,
+        .data = SG_RANGE(indices),
+    });
+
+    shader_ = sg_make_shader(quad_shader_desc(sg_query_backend()));
+
+    constexpr sg_color_target_state colorState = {
+        .blend = {
+            .enabled = true,
+            .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
+            .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+            .src_factor_alpha = SG_BLENDFACTOR_ZERO,
+            .dst_factor_alpha = SG_BLENDFACTOR_ONE,
+        }
+    };
+    const sg_pipeline_desc pipelineDesc = {
+        .shader = shader_,
+        .layout = {
+            .attrs = {
+                {
+                    .offset = 0,
+                    .format = SG_VERTEXFORMAT_FLOAT2,
+                },
+                {
+                    .offset = sizeof(float) * 2,
+                    .format = SG_VERTEXFORMAT_FLOAT4,
+                },
+            }
+        },
+        .colors = {{colorState}},
+        .index_type = SG_INDEXTYPE_UINT16,
+    };
+    pipeline_ = sg_make_pipeline(&pipelineDesc);
+}
+
+void ModelEmphasizer::Draw() {
+    sg_apply_pipeline(pipeline_);
+    sg_apply_bindings(&binds_);
+    sg_draw(0, 6, 1);
 }
 
 void UserView::SetCallback(const Callback& callback) {
@@ -326,6 +399,7 @@ void Routine::Init() {
     initBuffers();
     initTextures();
     initPipeline();
+    modelEmphasizer_.Init();
 
     binds_.index_buffer = ibo_;
     binds_.vertex_buffers[ATTR_mmd_vs_in_Pos] = posVB_;
@@ -712,7 +786,12 @@ void Routine::Draw() {
         sg_draw(subMesh.m_beginIndex, subMesh.m_vertexCount, 1);
     }
 
+    if (Context::shouldEmphasizeModel()) {
+        modelEmphasizer_.Draw();
+    }
+
     sg_end_pass();
+
     sg_commit();
 }
 

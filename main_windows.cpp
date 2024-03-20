@@ -125,6 +125,7 @@ public:
     sg_swapchain GetSokolSwapchain() const;
     glm::vec2 GetWindowSize() const;
     glm::vec2 GetDrawableSize() const;
+    int GetSampleCount() const;
     const ID3D11RenderTargetView *GetRenderTargetView() const;
     const ID3D11DepthStencilView *GetDepthStencilView() const;
 private:
@@ -133,17 +134,21 @@ private:
 
     void createWindow();
     void createDrawable();
+    int determineSampleCount() const;
     LRESULT handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
 private:
     static constexpr PCWSTR windowClassName_ = L"yoMMD AppMain";
 
     bool isRunning_;
+    int sampleCount_;
     Routine routine_;
     AppMenu menu_;
     HWND hwnd_;
     ComPtr<IDXGISwapChain1> swapChain_;
     ComPtr<ID3D11Texture2D> renderTarget_;
     ComPtr<ID3D11RenderTargetView> renderTargetView_;
+    ComPtr<ID3D11Texture2D> msaaRenderTarget_;
+    ComPtr<ID3D11RenderTargetView> msaaRenderTargetView_;
     ComPtr<ID3D11Device> d3Device_;
     ComPtr<ID3D11DeviceContext> deviceContext_;
     ComPtr<IDXGIDevice> dxgiDevice_;
@@ -185,6 +190,7 @@ AppMain appMain;
 
 AppMain::AppMain() :
     isRunning_(true),
+    sampleCount_(Constant::PreferredSampleCount),
     hwnd_(nullptr)
 {}
 
@@ -246,7 +252,7 @@ sg_environment AppMain::GetSokolEnvironment() const {
         .defaults = {
             .color_format = SG_PIXELFORMAT_BGRA8,
             .depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
-            .sample_count = Constant::SampleCount,
+            .sample_count = sampleCount_,
         },
         .d3d11 = {
             .device = reinterpret_cast<const void *>(d3Device_.Get()),
@@ -258,17 +264,21 @@ sg_environment AppMain::GetSokolEnvironment() const {
 
 sg_swapchain AppMain::GetSokolSwapchain() const {
     const auto size{Context::getWindowSize()};
+    sg_d3d11_swapchain d3d11 = {.depth_stencil_view = depthStencilView_.Get()};
+    if (sampleCount_ > 1) {
+        d3d11.render_view = msaaRenderTargetView_.Get();
+        d3d11.resolve_view = renderTargetView_.Get();
+    } else {
+        d3d11.render_view = renderTargetView_.Get();
+        d3d11.resolve_view = nullptr;
+    }
     return sg_swapchain {
         .width = static_cast<int>(size.x),
         .height = static_cast<int>(size.y),
-        .sample_count = Constant::SampleCount,
+        .sample_count = sampleCount_,
         .color_format = SG_PIXELFORMAT_BGRA8,
         .depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
-        .d3d11 = {
-            .render_view = renderTargetView_.Get(),
-            .resolve_view = renderTargetView_.Get(),
-            .depth_stencil_view = depthStencilView_.Get(),
-        },
+        .d3d11 = d3d11,
     };
 }
 
@@ -287,6 +297,10 @@ glm::vec2 AppMain::GetDrawableSize() const {
     return glm::vec2(desc.Width, desc.Height);
 }
 
+int AppMain::GetSampleCount() const {
+    return sampleCount_;
+}
+
 const ID3D11RenderTargetView *AppMain::GetRenderTargetView() const {
     return renderTargetView_.Get();
 }
@@ -301,7 +315,6 @@ void AppMain::createWindow() {
         WS_EX_NOREDIRECTIONBITMAP |
         WS_EX_NOACTIVATE |
         WS_EX_TOPMOST |
-        WS_EX_LAYERED |
         WS_EX_TRANSPARENT;
 
     const HINSTANCE hInstance = GetModuleHandleW(nullptr);
@@ -367,6 +380,7 @@ void AppMain::createDrawable() {
 
     HRESULT hr;
 
+    // Direct3D 11 setups.
     UINT createFlags = D3D11_CREATE_DEVICE_SINGLETHREADED |
         D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 #ifdef _DEBUG
@@ -415,13 +429,38 @@ void AppMain::createDrawable() {
             renderTargetView_.GetAddressOf());
     failif(hr, "Failed to get render target view.");
 
+    sampleCount_ = determineSampleCount();
+
+    D3D11_TEXTURE2D_DESC msaaTextureDesc = {
+        .Width = static_cast<UINT>(size.x),
+        .Height = static_cast<UINT>(size.y),
+        .MipLevels = 1,
+        .ArraySize = 1,
+        .Format = DXGI_FORMAT_B8G8R8A8_UNORM,
+        .SampleDesc = {
+            .Count = static_cast<UINT>(Constant::PreferredSampleCount),
+            .Quality = D3D11_STANDARD_MULTISAMPLE_PATTERN,
+        },
+        .Usage = D3D11_USAGE_DEFAULT,
+        .BindFlags = D3D11_BIND_RENDER_TARGET,
+    };
+
+    if (sampleCount_ > 1) {
+        hr = d3Device_->CreateTexture2D(
+                &msaaTextureDesc, nullptr, msaaRenderTarget_.GetAddressOf());
+        failif(hr, "Failed to create msaa render target.");
+        hr = d3Device_->CreateRenderTargetView(msaaRenderTarget_.Get(), nullptr,
+                msaaRenderTargetView_.GetAddressOf());
+        failif(hr, "Failed to get msaa render target view.");
+    }
+
     D3D11_TEXTURE2D_DESC stencilDesc = {
         .Width = static_cast<UINT>(size.x),
         .Height = static_cast<UINT>(size.y),
         .MipLevels = 1,
         .ArraySize = 1,
         .Format = DXGI_FORMAT_D24_UNORM_S8_UINT,
-        .SampleDesc = swapChainDesc.SampleDesc,
+        .SampleDesc = sampleCount_ > 1 ? msaaTextureDesc.SampleDesc : swapChainDesc.SampleDesc,
         .Usage = D3D11_USAGE_DEFAULT,
         .BindFlags = D3D11_BIND_DEPTH_STENCIL,
     };
@@ -439,6 +478,7 @@ void AppMain::createDrawable() {
             depthStencilView_.GetAddressOf());
     failif(hr, "Failed to create depth stencil view.");
 
+    // DirectComposition setups.
     hr = DCompositionCreateDevice(
        dxgiDevice_.Get(),
        __uuidof(dcompDevice_.Get()),
@@ -454,6 +494,48 @@ void AppMain::createDrawable() {
 
     dcompVisual_->SetContent(swapChain_.Get());
     dcompTarget_->SetRoot(dcompVisual_.Get());
+}
+
+// Check the state of multisampling support.
+// https://learn.microsoft.com/ja-jp/windows/uwp/gaming/multisampling--multi-sample-anti-aliasing--in-windows-store-apps
+int AppMain::determineSampleCount() const {
+    if (!d3Device_.Get()) {
+        Err::Exit("Internal error: checkMultisamplingSupported():",
+                "D3D11 device is not initialized.");
+    }
+
+    HRESULT hr;
+
+    // Check if the buffer format DXGI_FORMAT_B8G8R8A8_UNORM supports
+    // multisampling.
+    UINT formatSupport = 0;
+    hr = d3Device_->CheckFormatSupport(DXGI_FORMAT_B8G8R8A8_UNORM, &formatSupport);
+
+    if (FAILED(hr)) {
+        Err::Exit("CheckFormatSupport() failed.");
+    } else if (!((formatSupport & D3D11_FORMAT_SUPPORT_MULTISAMPLE_RESOLVE) &&
+            (formatSupport & D3D11_FORMAT_SUPPORT_MULTISAMPLE_RENDERTARGET))) {
+        // DXGI_FORMAT_B8G8R8A8_UNORM doesn't support multisampling on the
+        // curent device.
+        return 1;
+    }
+
+    // TODO: Fallback to smaller sample count when the given sample count is
+    // not supported.
+    UINT numQualityFlags = 0;
+    hr = d3Device_->CheckMultisampleQualityLevels(
+            DXGI_FORMAT_B8G8R8A8_UNORM,
+            Constant::PreferredSampleCount,
+            &numQualityFlags);
+
+    if (FAILED(hr)) {
+        Err::Exit("CheckMultisampleQualityLevels() failed.");
+    } else if (numQualityFlags <= 0) {
+        // Multisampling with the given sample count is not supported.
+        return 1;
+    }
+
+    return Constant::PreferredSampleCount;
 }
 
 LRESULT CALLBACK AppMain::windowProc(
@@ -1032,6 +1114,9 @@ glm::vec2 getMousePosition() {
 
     const auto winHeight = wr.bottom - wr.top;
     return glm::vec2(pos.x, winHeight - pos.y);  // Make origin bottom-left.
+}
+int getSampleCount() {
+    return globals::appMain.GetSampleCount();
 }
 }
 

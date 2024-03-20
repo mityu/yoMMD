@@ -330,7 +330,7 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
     [view_ setDevice: metalDevice_];
     [view_ setColorPixelFormat:MTLPixelFormatBGRA8Unorm];
     [view_ setDepthStencilPixelFormat:MTLPixelFormatDepth32Float_Stencil8];
-    [view_ setSampleCount:static_cast<NSUInteger>(Constant::SampleCount)];
+    [view_ setSampleCount:static_cast<NSUInteger>(Constant::PreferredSampleCount)];
     // Postpone setting view delegate until every initialization process is
     // done in order to prohibit MMD drawer to draw models while showing errors
     // due to failure of loading MMD models (e.g. MMD model path is given, but
@@ -387,7 +387,7 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
         .defaults = {
             .color_format = SG_PIXELFORMAT_BGRA8,
             .depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
-            .sample_count = Constant::SampleCount
+            .sample_count = Constant::PreferredSampleCount
         },
         .metal = {
             .device = (__bridge const void *)metalDevice_,
@@ -399,7 +399,7 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
     return sg_swapchain {
         .width = static_cast<int>(size.x),
         .height= static_cast<int>(size.y),
-        .sample_count = Constant::SampleCount,
+        .sample_count = Constant::PreferredSampleCount,
         .color_format = SG_PIXELFORMAT_BGRA8,
         .depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
         .metal = {
@@ -800,6 +800,10 @@ glm::vec2 Context::getMousePosition() {
     const auto pos = [NSEvent mouseLocation];
     const auto origin = [getAppMain() getWindowPosition];
     return glm::vec2(pos.x - origin.x, pos.y - origin.y);
+}
+
+int Context::getSampleCount() {
+    return Constant::PreferredSampleCount;
 }
 
 namespace Dialog {

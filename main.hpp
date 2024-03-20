@@ -14,6 +14,7 @@ sg_environment getSokolEnvironment();
 sg_swapchain getSokolSwapchain();
 glm::vec2 getWindowSize();
 glm::vec2 getDrawableSize();
+int getSampleCount();
 
 // Get mouse position of local to window.  The origin should be left-bottom of
 // window.

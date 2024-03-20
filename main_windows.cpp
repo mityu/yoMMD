@@ -315,6 +315,7 @@ void AppMain::createWindow() {
         WS_EX_NOREDIRECTIONBITMAP |
         WS_EX_NOACTIVATE |
         WS_EX_TOPMOST |
+        WS_EX_LAYERED |
         WS_EX_TRANSPARENT;
 
     const HINSTANCE hInstance = GetModuleHandleW(nullptr);

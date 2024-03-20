@@ -490,7 +490,7 @@ void Routine::initPipeline() {
         .index_type = SG_INDEXTYPE_UINT32,
         .cull_mode = SG_CULLMODE_FRONT,
         .face_winding = SG_FACEWINDING_CW,
-        .sample_count = Constant::SampleCount,
+        .sample_count = Context::getSampleCount(),
     };
     pipeline_desc.layout.attrs[ATTR_mmd_vs_in_Pos] = layout_desc.attrs[ATTR_mmd_vs_in_Pos];
     pipeline_desc.layout.attrs[ATTR_mmd_vs_in_Nor] = layout_desc.attrs[ATTR_mmd_vs_in_Nor];

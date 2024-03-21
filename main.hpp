@@ -19,6 +19,7 @@ int getSampleCount();
 // Get mouse position of local to window.  The origin should be left-bottom of
 // window.
 glm::vec2 getMousePosition();
+bool shouldEmphasizeModel();
 }
 
 #endif  // MAIN_HPP_

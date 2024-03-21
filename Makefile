@@ -80,7 +80,7 @@ $(OBJDIR)/libs.mm.o: libs.mm
 	$(CC) -o $@ $(CFLAGS) -c -x c $<
 endif
 
-$(OBJDIR)/viewer.cpp.o: auto/yommd.glsl.h
+$(OBJDIR)/viewer.cpp.o: auto/yommd.glsl.h auto/quad.glsl.h
 $(OBJDIR)/%.cpp.o: %.cpp
 	$(CXX) -o $@ $(CPPFLAGS) $(CFLAGS) -c $<
 
@@ -90,7 +90,7 @@ $(OBJDIR)/%.mm.o: %.mm
 $(OBJDIR)/resource_windows.rc.o: resource_windows.rc DpiAwareness.manifest
 	windres -o $@ $<
 
-auto/yommd.glsl.h: yommd.glsl $(SOKOL_SHDC) | auto/
+auto/%.glsl.h: %.glsl $(SOKOL_SHDC) | auto/
 	$(SOKOL_SHDC) --input $< --output $@ --slang metal_macos:hlsl5
 ifeq ($(OS),Windows_NT)
 	# CRLF -> LF

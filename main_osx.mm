@@ -74,11 +74,13 @@ private:
 -(NSPoint)getWindowPosition;
 -(NSSize)getDrawableSize;
 -(NSNumber *)getCurrentScreenNumber;
+-(bool)isMenuOpened;
 -(Routine&)getRoutine;
 -(void)startDrawingModel;
 @end
 
 @interface AppMenuDelegate : NSObject<NSMenuDelegate>
+-(bool)isMenuOpened;
 -(void)actionQuit:(NSMenuItem *)sender;
 -(void)actionToggleHandleMouse:(NSMenuItem *)sender;
 -(void)actionToggleHideWindow:(NSMenuItem *)sender;
@@ -430,6 +432,9 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
         Err::Log("Internal error? screen is offscreen");
     return [screen deviceDescription][@"NSScreenNumber"];
 }
+-(bool)isMenuOpened {
+    return [appMenuDelegate_ isMenuOpened];
+}
 -(Routine&)getRoutine {
     return routine_;
 }
@@ -442,6 +447,7 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
     NSArray<NSMenuItem *> *menuItems_;
     SelectScreenMenuDelegate *selectScreenMenuDelegate_;
     NSRunningApplication *alterApp_;
+    bool isMenuOpened_;
 }
 enum class MenuTag : NSInteger {
     None,
@@ -453,6 +459,7 @@ enum class MenuTag : NSInteger {
     self = [super init];
     if (self) {
         alterApp_ = nil;
+        isMenuOpened_ = false;
 
         NSMenuItem *enableMouse = [[NSMenuItem alloc]
                             initWithTitle:@"Enable Mouse"
@@ -571,6 +578,15 @@ enum class MenuTag : NSInteger {
     } else {
         [selectScreen setEnabled:YES];
     }
+}
+-(void)menuWillOpen:(NSMenu *)menu {
+    isMenuOpened_ = true;
+}
+-(void)menuDidClose:(NSMenu *)menu {
+    isMenuOpened_ = false;
+}
+-(bool)isMenuOpened {
+    return isMenuOpened_;
 }
 -(void)actionQuit:(id)sender {
     [NSApp terminate:sender];
@@ -804,6 +820,10 @@ glm::vec2 Context::getMousePosition() {
 
 int Context::getSampleCount() {
     return Constant::PreferredSampleCount;
+}
+
+bool Context::shouldEmphasizeModel() {
+    return [getAppMain() isMenuOpened];
 }
 
 namespace Dialog {

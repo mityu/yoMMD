@@ -40,6 +40,18 @@ private:
     std::vector<Animation> animations_;
 };
 
+// A class to emphasize the shown MMD model to indicate the application
+// instance currently featured.
+class ModelEmphasizer : private NonCopyable {
+public:
+    void Init();
+    void Draw();
+private:
+    sg_bindings binds_;
+    sg_pipeline pipeline_;
+    sg_shader shader_;
+};
+
 enum class GesturePhase {
     Unknown,
     Begin,
@@ -147,6 +159,8 @@ private:
     };
 
     Config config_;
+
+    ModelEmphasizer modelEmphasizer_;
 
     UserView userView_;
 

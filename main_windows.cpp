@@ -54,6 +54,7 @@ public:
     void Setup();
     void Terminate();
     void ShowMenu();
+    bool IsMenuOpened() const;
 public:
     static constexpr UINT YOMMD_WM_TOGGLE_ENABLE_MOUSE = WM_APP;
     static constexpr UINT YOMMD_WM_SHOW_TASKBAR_MENU = WM_APP + 1;
@@ -108,6 +109,7 @@ private:
     HANDLE hMenuThread_;
     HICON hTaskbarIcon_;
     NOTIFYICONDATAW taskbarIconDesc_;
+    bool isMenuOpened_;
 };
 
 class AppMain {
@@ -126,6 +128,7 @@ public:
     glm::vec2 GetWindowSize() const;
     glm::vec2 GetDrawableSize() const;
     int GetSampleCount() const;
+    bool IsMenuOpened() const;
     const ID3D11RenderTargetView *GetRenderTargetView() const;
     const ID3D11DepthStencilView *GetDepthStencilView() const;
 private:
@@ -299,6 +302,9 @@ glm::vec2 AppMain::GetDrawableSize() const {
 
 int AppMain::GetSampleCount() const {
     return sampleCount_;
+}
+bool AppMain::IsMenuOpened() const {
+    return menu_.IsMenuOpened();
 }
 
 const ID3D11RenderTargetView *AppMain::GetRenderTargetView() const {
@@ -675,11 +681,15 @@ void AppMenu::ShowMenu() {
     }
 
     hMenuThread_ = CreateThread(
-            NULL, 0, AppMenu::showMenu, nullptr, 0, NULL);
+            NULL, 0, AppMenu::showMenu, this, 0, NULL);
+}
+
+bool AppMenu::IsMenuOpened() const {
+    return isMenuOpened_;
 }
 
 DWORD WINAPI AppMenu::showMenu(LPVOID param) {
-    (void)param;
+    AppMenu *appMenu = reinterpret_cast<AppMenu *>(param);
     constexpr DWORD winStyle = WS_CHILD;
     const HWND& parentWin = globals::appMain.GetWindowHandle();
     UniqueHWND hMenuWindow, hSelectorWindow;
@@ -760,8 +770,10 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
     constexpr UINT menuFlags = TPM_RIGHTBUTTON | TPM_NONOTIFY | TPM_RETURNCMD;
 
     SetForegroundWindow(hMenuWindow);
+    appMenu->isMenuOpened_ = true;
     const auto op = TrackPopupMenuEx(
             hmenu, menuFlags, point.x, point.y, hMenuWindow, nullptr);
+    appMenu->isMenuOpened_ = false;
 
     switch (Cmd::GetCmd(op)) {
     case Cmd::EnableMouse:
@@ -1118,6 +1130,9 @@ glm::vec2 getMousePosition() {
 }
 int getSampleCount() {
     return globals::appMain.GetSampleCount();
+}
+bool shouldEmphasizeModel() {
+    return globals::appMain.IsMenuOpened();
 }
 }
 

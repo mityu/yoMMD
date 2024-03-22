@@ -63,7 +63,7 @@ private:
 -(void)createMainWindow;
 -(void)createStatusItem;
 -(void)setIgnoreMouse:(bool)enable;
--(bool)getIgnoreMouse;
+-(bool)getIgnoreMouse;  // Returns TRUE if this application ignores mouse events.
 -(void)changeWindowScreen:(NSUInteger)scID;
 -(NSMenu *)getAppMenu;
 -(sg_environment)getSokolEnvironment;
@@ -93,6 +93,9 @@ private:
 
 namespace{
 inline AppMain *getAppMain(void);
+
+// Get currently active application.  If it's not found, returns NULL.
+NSRunningApplication *getActiveApplication(void);
 
 // Find NSScreen from NSScreenNumber.  If screen is not found, returns nil.
 inline NSScreen *findScreenFromID(NSInteger scID);
@@ -593,13 +596,7 @@ enum class MenuTag : NSInteger {
 }
 -(void)actionToggleHandleMouse:(NSMenuItem *)sender {
     if ([[sender title] compare:@"Enable Mouse"] == NSOrderedSame) {
-        NSArray *appList = [[NSWorkspace sharedWorkspace] runningApplications];
-        for (NSRunningApplication *app in appList) {
-            if (app.active) {
-                alterApp_ = app;
-                break;
-            }
-        }
+        alterApp_ = getActiveApplication();
 
         [getAppMain() setIgnoreMouse:false];
 
@@ -617,7 +614,15 @@ enum class MenuTag : NSInteger {
     if ([[sender title] compare:@"Hide Window"] == NSOrderedSame) {
         [NSApp hide:self];
     } else {
+        NSRunningApplication *activeApp = getActiveApplication();
         [NSApp unhide:self];
+        if ([getAppMain() getIgnoreMouse]) {
+            if (NSApp.active && activeApp) {
+                [activeApp activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+            }
+        } else if (!NSApp.active) {
+            [NSApp activateIgnoringOtherApps:YES];
+        }
     }
 }
 -(void)actionResetModelPosition:(NSMenuItem *)sender {
@@ -780,6 +785,16 @@ namespace{
 AppMain *getAppMain(void) {
     static AppMain *appMain = [[AppMain alloc] init];
     return appMain;
+}
+
+NSRunningApplication *getActiveApplication(void) {
+    NSArray *appList = [[NSWorkspace sharedWorkspace] runningApplications];
+    for (NSRunningApplication *app in appList) {
+        if (app.active) {
+            return app;
+        }
+    }
+    return NULL;
 }
 
 NSScreen *findScreenFromID(NSInteger scID) {

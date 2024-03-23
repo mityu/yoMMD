@@ -361,7 +361,7 @@ Routine::Routine() :
     rand_(static_cast<int>(std::time(nullptr)))
 {
     userView_.SetCallback({
-            .OnRotationChanged = [this](){updateGravity();},
+        .OnRotationChanged = [this](){updateGravity();},
     });
 }
 
@@ -384,7 +384,7 @@ void Routine::Init() {
         }
     }
 
-    sg_desc desc = {
+    const sg_desc desc = {
         .logger = {
             .func = Slog::Logger,
         },
@@ -669,7 +669,7 @@ void Routine::Update() {
             });
 
     if (!animations.empty()) {
-        auto& vmdAnim = animations[motionID_].first;
+        const auto& vmdAnim = animations[motionID_].first;
         timeLastFrame_ = stm_now();
         if (vmdFrame > vmdAnim->GetMaxKeyTime()) {
             model->SaveBaseAnimation();
@@ -683,13 +683,10 @@ void Routine::Update() {
 void Routine::Draw() {
     const auto model = mmd_.GetModel();
 
-    auto userView = userView_.GetViewportMatrix();
-    auto world = glm::mat4(1.0f);
-    auto wv = userView * viewMatrix_ * world;
-    auto wvp = userView * projectionMatrix_ * viewMatrix_ * world;
-    auto wvit = glm::mat3(userView * viewMatrix_ * world);
-    wvit = glm::inverse(wvit);
-    wvit = glm::transpose(wvit);
+    const auto userView = userView_.GetViewportMatrix();
+    const auto world = glm::mat4(1.0f);
+    const auto wv = userView * viewMatrix_ * world;
+    const auto wvp = userView * projectionMatrix_ * viewMatrix_ * world;
 
     constexpr auto lightColor = glm::vec3(1, 1, 1);
     const auto lightDir = glm::mat3(viewMatrix_) * config_.lightDirection;
@@ -709,7 +706,7 @@ void Routine::Draw() {
         if (mmdMaterial.m_alpha == 0)
             continue;
 
-        u_mmd_vs_t u_mmd_vs = {
+        const u_mmd_vs_t u_mmd_vs = {
             .u_WV = wv,
             .u_WVP = wvp,
         };
@@ -878,7 +875,7 @@ const Config& Routine::GetConfig() const {
 }
 
 std::optional<Routine::ImageMap::const_iterator> Routine::loadImage(const std::string& path) {
-    auto itr = texImages_.find(path);
+    const auto itr = texImages_.find(path);
     if (itr == texImages_.cend()) {
         Image img;
         if (path.starts_with("<embedded-toons>")) {
@@ -923,7 +920,7 @@ std::optional<sg_image> Routine::getTexture(const std::string& path) {
 }
 
 void Routine::updateGravity() {
-    float g = -config_.gravity * 5.0f;
+    const float g = -config_.gravity * 5.0f;
     const float r = userView_.GetRotation();
     const btVector3 gravity(std::sin(r) * g, std::cos(r) * g, 0);
     mmd_.GetModel()->GetMMDPhysics()->GetDynamicsWorld()->setGravity(gravity);

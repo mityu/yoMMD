@@ -44,7 +44,7 @@ Config Config::Parse(const std::filesystem::path& configFile) {
     };
 
     Config config;
-    auto configDir = fs::path(configFile).parent_path();
+    const auto configDir = fs::path(configFile).parent_path();
 
     try {
         const auto entire = toml::parse(configFile);

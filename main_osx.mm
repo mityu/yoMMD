@@ -82,8 +82,10 @@ private:
 @interface AppMenuDelegate : NSObject<NSMenuDelegate>
 -(bool)isMenuOpened;
 -(void)actionQuit:(NSMenuItem *)sender;
--(void)actionToggleHandleMouse:(NSMenuItem *)sender;
--(void)actionToggleHideWindow:(NSMenuItem *)sender;
+-(void)actionEnableMouse:(NSMenuItem *)sender;
+-(void)actionDisableMouse:(NSMenuItem *)sender;
+-(void)actionHideWindow:(NSMenuItem *)sender;
+-(void)actionShowWindow:(NSMenuItem *)sender;
 -(void)actionResetModelPosition:(NSMenuItem *)sender;
 -(void)actionChangeScreen:(NSMenuItem *)sender;
 @end
@@ -464,9 +466,10 @@ enum class MenuTag : NSInteger {
         alterApp_ = nil;
         isMenuOpened_ = false;
 
+        // Menu title and action is is set later in menuNeedsUpdate.
         NSMenuItem *enableMouse = [[NSMenuItem alloc]
-                            initWithTitle:@"Enable Mouse"
-                                   action:@selector(actionToggleHandleMouse:)
+                            initWithTitle:@""
+                                   action:nil
                             keyEquivalent:@""];
         [enableMouse setTag:Enum::underlyCast(MenuTag::EnableMouse)];
         [enableMouse setTarget:self];
@@ -491,9 +494,10 @@ enum class MenuTag : NSInteger {
         [selectScreen.submenu setAutoenablesItems:NO];
         [selectScreen setTarget:self];
 
+        // Menu title and action is is set later in menuNeedsUpdate.
         NSMenuItem *hideWindow = [[NSMenuItem alloc]
-                        initWithTitle:@"Hide Window"
-                               action:@selector(actionToggleHideWindow:)
+                        initWithTitle:@""
+                               action:nil
                         keyEquivalent:@""];
         [hideWindow setTag:Enum::underlyCast(MenuTag::HideWindow)];
         [hideWindow setTarget:self];
@@ -554,8 +558,10 @@ enum class MenuTag : NSInteger {
 
     if ([getAppMain() getIgnoreMouse]) {
         [enableMouse setTitle:@"Enable Mouse"];
+        [enableMouse setAction:@selector(actionEnableMouse:)];
     } else {
         [enableMouse setTitle:@"Disable Mouse"];
+        [enableMouse setAction:@selector(actionDisableMouse:)];
     }
 
     NSMenuItem *hideWindow = [menu itemWithTag:Enum::underlyCast(MenuTag::HideWindow)];
@@ -566,8 +572,10 @@ enum class MenuTag : NSInteger {
 
     if (NSApp.hidden) {
         [hideWindow setTitle:@"Show Window"];
+        [hideWindow setAction:@selector(actionShowWindow:)];
     } else {
         [hideWindow setTitle:@"Hide Window"];
+        [hideWindow setAction:@selector(actionHideWindow:)];
     }
 
     NSMenuItem *selectScreen = [menu itemWithTag:Enum::underlyCast(MenuTag::SelectScreen)];
@@ -594,35 +602,33 @@ enum class MenuTag : NSInteger {
 -(void)actionQuit:(id)sender {
     [NSApp terminate:sender];
 }
--(void)actionToggleHandleMouse:(NSMenuItem *)sender {
-    if ([[sender title] compare:@"Enable Mouse"] == NSOrderedSame) {
-        alterApp_ = getActiveApplication();
+-(void)actionEnableMouse:(NSMenuItem *)sender {
+    alterApp_ = getActiveApplication();
 
-        [getAppMain() setIgnoreMouse:false];
+    [getAppMain() setIgnoreMouse:false];
 
-        // Activate this app to enable touchpad gesture.
-        [NSApp activateIgnoringOtherApps:YES];
-    } else {
-        [getAppMain() setIgnoreMouse:true];
-        if (NSApp.active && alterApp_) {
-            [alterApp_ activateWithOptions:NSApplicationActivateIgnoringOtherApps];
-        }
-        alterApp_ = NULL;
-    }
+    // Activate this app to enable touchpad gesture.
+    [NSApp activateIgnoringOtherApps:YES];
 }
--(void)actionToggleHideWindow:(NSMenuItem *)sender {
-    if ([[sender title] compare:@"Hide Window"] == NSOrderedSame) {
-        [NSApp hide:self];
-    } else {
-        NSRunningApplication *activeApp = getActiveApplication();
-        [NSApp unhide:self];
-        if ([getAppMain() getIgnoreMouse]) {
-            if (NSApp.active && activeApp) {
-                [activeApp activateWithOptions:NSApplicationActivateIgnoringOtherApps];
-            }
-        } else if (!NSApp.active) {
-            [NSApp activateIgnoringOtherApps:YES];
+-(void)actionDisableMouse:(NSMenuItem *)sender {
+    [getAppMain() setIgnoreMouse:true];
+    if (NSApp.active && alterApp_) {
+        [alterApp_ activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+    }
+    alterApp_ = NULL;
+}
+-(void)actionHideWindow:(NSMenuItem *)sender {
+    [NSApp hide:self];
+}
+-(void)actionShowWindow:(NSMenuItem *)sender {
+    NSRunningApplication *activeApp = getActiveApplication();
+    [NSApp unhide:self];
+    if ([getAppMain() getIgnoreMouse]) {
+        if (NSApp.active && activeApp) {
+            [activeApp activateWithOptions:NSApplicationActivateIgnoringOtherApps];
         }
+    } else if (!NSApp.active) {
+        [NSApp activateIgnoringOtherApps:YES];
     }
 }
 -(void)actionResetModelPosition:(NSMenuItem *)sender {

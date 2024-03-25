@@ -124,11 +124,11 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
             return;
     }
     if (event.phase == NSEventPhaseBegan) {
-        for (auto key : cancelKeys) {
+        for (const auto key : cancelKeys) {
             prevKeyState_[static_cast<std::size_t>(key)] = Keyboard::IsKeyPressed(key);
         }
     }
-    for (auto key : cancelKeys) {
+    for (const auto key : cancelKeys) {
         if (prevKeyState_[static_cast<std::size_t>(key)] != Keyboard::IsKeyPressed(key)) {
             SkipThisGesture();
             return;
@@ -141,7 +141,7 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
     NSArray *argsArray = [[NSProcessInfo processInfo] arguments];
     std::vector<std::string> argsVec;
-    for (NSString *arg in argsArray) {
+    for (const NSString *arg in argsArray) {
         argsVec.push_back([arg UTF8String]);
     }
     const auto cmdArgs = CmdArgs::Parse(argsVec);
@@ -250,7 +250,7 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
 @implementation WindowDelegate
 -(void)windowDidChangeScreen:(NSNotification *)notification {
     NSWindow *window = [notification object];
-    NSScreen *screen = [window screen];
+    const NSScreen *screen = [window screen];
     if (!NSEqualRects(window.frame, screen.visibleFrame)) {
         [window setFrame:screen.visibleFrame display:YES animate:NO];
     }
@@ -372,7 +372,7 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
     return [window_ ignoresMouseEvents];
 }
 -(void)changeWindowScreen:(NSUInteger)scID {
-    NSScreen *dst = findScreenFromID(scID);
+    const NSScreen *dst = findScreenFromID(scID);
     if (!dst) {
         // Display not found.  Maybe the connection for the target display is
         // removed.
@@ -432,7 +432,7 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
     return view_.drawableSize;
 }
 -(NSNumber *)getCurrentScreenNumber {
-    NSScreen *screen = [window_ screen];
+    const NSScreen *screen = [window_ screen];
     if (!screen)
         Err::Log("Internal error? screen is offscreen");
     return [screen deviceDescription][@"NSScreenNumber"];
@@ -762,7 +762,7 @@ static constexpr float paddingY_ = 5.0;
     [layoutManager glyphRangeForTextContainer:container];
 
     // Get text bounds
-    NSRect bounds = [layoutManager usedRectForTextContainer:container];
+    const NSRect bounds = [layoutManager usedRectForTextContainer:container];
 
     NSTextView *textView = [[NSTextView alloc] initWithFrame:bounds textContainer:container];
     [textView setEditable:NO];

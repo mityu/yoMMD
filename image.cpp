@@ -36,10 +36,10 @@ File::~File() {
 void File::Open(const std::string_view path) {
 #ifdef PLATFORM_WINDOWS
     std::wstring wpath;
-    int size = MultiByteToWideChar(
+    const int size = MultiByteToWideChar(
             CP_UTF8, MB_COMPOSITE, path.data(), -1, nullptr, 0);
     wpath.resize(size-1, '\0');
-    int status = MultiByteToWideChar(
+    const int status = MultiByteToWideChar(
             CP_UTF8, MB_COMPOSITE, path.data(), -1, wpath.data(), size);
     if (!status)
         Err::Exit("String conversion failed: from:", path);
@@ -93,7 +93,7 @@ bool Image::loadFromFile(const std::string_view path) {
     }
 
     int comp = 0;
-    int ret = stbi_info_from_file(file, &width, &height, &comp);
+    const int ret = stbi_info_from_file(file, &width, &height, &comp);
     if (ret == 0) {
         Err::Log("Failed to read info:", path, ':', stbi_failure_reason());
         return false;
@@ -104,7 +104,7 @@ bool Image::loadFromFile(const std::string_view path) {
     else
         hasAlpha = false;
 
-    uint8_t *image = stbi_load_from_file(file, &width, &height, &comp, STBI_rgb_alpha);
+    uint8_t * const image = stbi_load_from_file(file, &width, &height, &comp, STBI_rgb_alpha);
     dataSize = width * height * 4;
     pixels.resize(dataSize);
     std::copy(image, image + dataSize, pixels.data());
@@ -117,7 +117,8 @@ bool Image::loadFromMemory(const Resource::View& resource) {
     stbi_set_flip_vertically_on_load(true);
 
     int comp = 0;
-    int ret = stbi_info_from_memory(resource.data(), resource.length(), &width, &height, &comp);
+    const int ret =
+        stbi_info_from_memory(resource.data(), resource.length(), &width, &height, &comp);
     if (ret == 0) {
         Err::Log("Failed to read info:", __func__, ':', stbi_failure_reason());
         return false;
@@ -128,7 +129,8 @@ bool Image::loadFromMemory(const Resource::View& resource) {
     else
         hasAlpha = false;
 
-    uint8_t *image = stbi_load_from_memory(resource.data(), resource.length(), &width, &height, &comp, STBI_rgb_alpha);
+    uint8_t * const image =
+        stbi_load_from_memory(resource.data(), resource.length(), &width, &height, &comp, STBI_rgb_alpha);
     dataSize = width * height * 4;
     pixels.resize(dataSize);
     std::copy(image, image + dataSize, pixels.data());

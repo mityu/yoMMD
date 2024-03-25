@@ -232,7 +232,7 @@ bool AppMain::IsRunning() const {
 }
 
 void AppMain::ChangeScreen(int screenID) {
-    auto r = getMonitorWorkareaFromID(screenID);
+    const auto r = getMonitorWorkareaFromID(screenID);
     if (!r.has_value()) {
         // It seems the specified monitor is disconnected.  Do nothing.
         return;
@@ -412,7 +412,7 @@ void AppMain::createDrawable() {
             reinterpret_cast<void **>(dxFactory_.GetAddressOf()));
     failif(hr, "Failed to create DXGIFactory2");
 
-    glm::vec2 size(GetWindowSize());
+    const glm::vec2 size(GetWindowSize());
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
     swapChainDesc.Width = static_cast<UINT>(size.x);
     swapChainDesc.Height = static_cast<UINT>(size.y);
@@ -438,7 +438,7 @@ void AppMain::createDrawable() {
 
     sampleCount_ = determineSampleCount();
 
-    D3D11_TEXTURE2D_DESC msaaTextureDesc = {
+    const D3D11_TEXTURE2D_DESC msaaTextureDesc = {
         .Width = static_cast<UINT>(size.x),
         .Height = static_cast<UINT>(size.y),
         .MipLevels = 1,
@@ -461,7 +461,7 @@ void AppMain::createDrawable() {
         failif(hr, "Failed to get msaa render target view.");
     }
 
-    D3D11_TEXTURE2D_DESC stencilDesc = {
+    const D3D11_TEXTURE2D_DESC stencilDesc = {
         .Width = static_cast<UINT>(size.x),
         .Height = static_cast<UINT>(size.y),
         .MipLevels = 1,
@@ -475,7 +475,7 @@ void AppMain::createDrawable() {
             &stencilDesc, nullptr, depthStencilBuffer_.GetAddressOf());
     failif(hr, "Failed to create depth stencil buffer.");
 
-    D3D11_DEPTH_STENCIL_VIEW_DESC stencilViewDesc = {
+    const D3D11_DEPTH_STENCIL_VIEW_DESC stencilViewDesc = {
         .Format = stencilDesc.Format,
         .ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS,
     };
@@ -729,7 +729,7 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
     }
 
     UniqueHMENU hScreensMenu = CreatePopupMenu();
-    HMONITOR curMonitorHandle =
+    const HMONITOR curMonitorHandle =
         MonitorFromWindow(globals::appMain.GetWindowHandle(), MONITOR_DEFAULTTONULL);
     std::vector<HMONITOR> monitorHandles = getAllMonitorHandles();
     for (int cnt = monitorHandles.size(), i = 0; i < cnt; ++i) {
@@ -923,7 +923,7 @@ void MsgBox::Init() {
     hInstance_ = GetModuleHandleW(nullptr);
     hfont_ = static_cast<HFONT>(GetStockObject(OEM_FIXED_FONT));
 
-    WNDCLASSW wc;
+    WNDCLASSW wc = {};
     wc.style         = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc   = windowProc;
     wc.cbClsExtra    = 0;
@@ -1109,7 +1109,7 @@ glm::vec2 getMousePosition() {
     if (!GetCursorPos(&pos))
         return glm::vec2();
 
-    HMONITOR curMonitorHandle =
+    const HMONITOR curMonitorHandle =
         MonitorFromWindow(globals::appMain.GetWindowHandle(), MONITOR_DEFAULTTONULL);
     if (!curMonitorHandle)
         Err::Exit("Internal error: failed to get current monitor handle.");
@@ -1206,8 +1206,8 @@ int WINAPI wWinMain(
     (void)nCmdShow;
 
     int argc = 0;
-    LPWSTR cmdline = GetCommandLineW();
-    LPWSTR *argv = CommandLineToArgvW(cmdline, &argc);
+    const LPWSTR cmdline = GetCommandLineW();
+    const LPWSTR *argv = CommandLineToArgvW(cmdline, &argc);
 
     std::vector<std::string> args;
     for (int i = 0; i < argc; ++i) {

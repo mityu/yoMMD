@@ -12,3 +12,7 @@ updates:
         patterns:
           - "lib/sokol"
           - "lib/sokol-tools-bin"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

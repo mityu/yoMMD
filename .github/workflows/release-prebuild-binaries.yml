@@ -71,10 +71,14 @@ jobs:
         run: |
           version_string=$(./scripts/gen-version-string)
           package_name="../package/yoMMD-win-${version_string}.zip"
+          commit_hash=$(git log -1 --format '%H')
           changelog_file="../package/changelog.md"
           mkdir ../package
           zip $package_name yoMMD.exe
           echo "Version: $version_string" > $changelog_file
+          echo "Documents:" >> $changelog_file
+          echo " - [Configuration](https://github.com/mityu/yoMMD/blob/${commit_hash}/doc/configuration.rst)" >> $changelog_file
+          echo " - [Operation Guide](https://github.com/mityu/yoMMD/blob/${commit_hash}/doc/operation-guide.rst)" >> $changelog_file
           echo "package_name=$package_name" >> $GITHUB_OUTPUT
           echo "tag_name=$version_string" >> $GITHUB_OUTPUT
           echo "changelog_file=$changelog_file" >> $GITHUB_OUTPUT

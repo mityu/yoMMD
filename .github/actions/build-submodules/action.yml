@@ -14,7 +14,7 @@ runs:
         echo "bullet3=$(git rev-parse HEAD:lib/bullet3)" >> $GITHUB_OUTPUT
         echo "saba=$(git rev-parse HEAD:lib/saba)" >> $GITHUB_OUTPUT
     - name: Pull cache of lib/bullet3 build
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: cache-bullet3
       with:
         path: lib/bullet3
@@ -24,7 +24,7 @@ runs:
       shell: ${{ inputs.shell }}
       run: make build-bullet
     - name: Pull cache of lib/saba build
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: cache-saba
       with:
         path: lib/saba

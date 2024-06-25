@@ -7,7 +7,7 @@ SRC:=viewer.cpp config.cpp resources.cpp image.cpp keyboard.cpp util.cpp libs.mm
 OBJ=$(SRC:%=$(OBJDIR)/%.o) $(OBJDIR)/version.cpp.o
 DEP=$(OBJ:%.o=%.d)
 CFLAGS:=-O2 -Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb \
-		-Ilib/toml11 -Ilib/incbin -Ilib/bullet3/build/include/bullet \
+		-Ilib/toml11/include -Ilib/incbin -Ilib/bullet3/build/include/bullet \
 		-Wall -Wextra -pedantic -MMD -MP
 CPPFLAGS=-std=c++20
 OBJCFLAGS:=

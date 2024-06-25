@@ -26,7 +26,7 @@ Config::Config() :
 Config Config::Parse(const std::filesystem::path& configFile) {
     namespace fs = std::filesystem;
 
-    constexpr auto warnUnsupportedKey = [](const toml::key& k, const toml::value& v) {
+    constexpr auto warnUnsupportedKey = [](const toml::value::key_type& k, const toml::value& v) {
         // TODO: Error message should point key, not its value
         constexpr std::string_view header = "[error]";
         const std::string rawmsg = toml::format_error(

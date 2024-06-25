@@ -4,7 +4,7 @@
 -Ilib/sokol
 -Ilib/glm
 -Ilib/stb
--Ilib/toml11
+-Ilib/toml11/include
 -Ilib/incbin
 -Ilib/bullet3/build/include/bullet
 -Wall

@@ -54,7 +54,7 @@ Config Config::Parse(const std::filesystem::path& configFile) {
 
         for (const auto& [k, v] : entire.as_table()) {
             if (k == "model") {
-                const auto path = String::tou8(toml::get<std::string>(v));
+                const auto path = toml::get<std::u8string>(v);
                 config.model = ::Path::makeAbsolute(fs::path(path), configDir);
             } else if (k == "default-model-position") {
                 const auto pos = toml::get<std::array<float, 2>>(v);
@@ -84,11 +84,10 @@ Config Config::Parse(const std::filesystem::path& configFile) {
                     Motion c = {.disabled = false, .weight = 1};
                     for (const auto& [k, v] : m.as_table()) {
                         if (k == "path") {
-                            const auto raw_path = toml::get<std::vector<std::string>>(v);
+                            const auto raw_path = toml::get<std::vector<std::u8string>>(v);
                             std::vector<fs::path> path;
                             for (const auto& p : raw_path) {
-                                auto u8path = fs::path(String::tou8(p));
-                                path.push_back(::Path::makeAbsolute(u8path, configDir));
+                                path.push_back(::Path::makeAbsolute(fs::path(p), configDir));
                             }
                             c.paths = std::move(path);
                         } else if (k == "weight") {

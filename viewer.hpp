@@ -1,18 +1,18 @@
 #ifndef VIEWER_HPP_
 #define VIEWER_HPP_
 
+#include <filesystem>
+#include <functional>
+#include <map>
+#include <random>
 #include "Saba/Model/MMD/MMDMaterial.h"
 #include "Saba/Model/MMD/MMDModel.h"
 #include "Saba/Model/MMD/VMDAnimation.h"
 #include "Saba/Model/MMD/VMDCameraAnimation.h"
-#include "sokol_gfx.h"
-#include "util.hpp"
 #include "config.hpp"
 #include "image.hpp"
-#include <random>
-#include <map>
-#include <filesystem>
-#include <functional>
+#include "sokol_gfx.h"
+#include "util.hpp"
 
 class Material {
 public:
@@ -27,14 +27,14 @@ public:
 class MMD : private NonCopyable {
 public:
     using Path = std::filesystem::path;
-    using Animation = std::pair<
-        std::unique_ptr<saba::VMDAnimation>,
-        std::unique_ptr<saba::VMDCameraAnimation>>;
+    using Animation = std::
+        pair<std::unique_ptr<saba::VMDAnimation>, std::unique_ptr<saba::VMDCameraAnimation>>;
     void LoadModel(const Path& modelPath, const Path& resourcePath);
     void LoadMotion(const std::vector<Path>& paths);
     bool IsModelLoaded() const;
     const std::shared_ptr<saba::MMDModel> GetModel() const;
     const std::vector<Animation>& GetAnimations() const;
+
 private:
     std::shared_ptr<saba::MMDModel> model_;
     std::vector<Animation> animations_;
@@ -46,6 +46,7 @@ class ModelEmphasizer : private NonCopyable {
 public:
     void Init();
     void Draw();
+
 private:
     sg_bindings binds_;
     sg_pipeline pipeline_;
@@ -65,6 +66,7 @@ public:
     struct Callback {
         std::function<void()> OnRotationChanged;
     };
+
 public:
     void SetCallback(const Callback& callback);
 
@@ -84,6 +86,7 @@ public:
     void ResetPosition();
     float GetScale() const;
     float GetRotation() const;
+
 private:
     static bool isDifferentPoint(const glm::vec2& p1, const glm::vec2& p2);
 
@@ -102,6 +105,7 @@ private:
     // NOTE: Different from changeScale function, the first argument should be
     // amount of change of rotation, not a new rotateion.
     void changeRotation(float delta, glm::vec2 refpoint);
+
 private:
     enum class Action {
         None,
@@ -143,6 +147,7 @@ public:
     void ResetModelPosition();
     void ParseConfig(const CmdArgs& args);
     const Config& GetConfig() const;
+
 private:
     using ImageMap = std::map<std::string, Image>;
     void initBuffers();
@@ -152,6 +157,7 @@ private:
     std::optional<ImageMap::const_iterator> loadImage(const std::string& path);
     std::optional<sg_image> getTexture(const std::string& path);
     void updateGravity();
+
 private:
     struct Camera {
         glm::vec3 eye;
@@ -178,7 +184,7 @@ private:
     sg_pipeline pipeline_bothface_;
     sg_bindings binds_;
 
-    glm::mat4 viewMatrix_;  // For model-view transformation
+    glm::mat4 viewMatrix_;        // For model-view transformation
     glm::mat4 projectionMatrix_;  // For projection transformation
     MMD mmd_;
 
@@ -203,7 +209,5 @@ private:
     std::mt19937 rand_;
     std::uniform_int_distribution<size_t> randDist_;
 };
-
-
 
 #endif  // VIEWER_HPP_

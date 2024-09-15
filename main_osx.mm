@@ -1,24 +1,24 @@
 #define SOKOL_METAL
 #include "sokol_gfx.h"
 
-#include "main.hpp"
-#include "viewer.hpp"
 #include "constant.hpp"
-#include "util.hpp"
 #include "keyboard.hpp"
+#include "main.hpp"
+#include "util.hpp"
+#include "viewer.hpp"
 
-#import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
 #import <Cocoa/Cocoa.h>
+#import <Foundation/Foundation.h>
 #import <QuartzCore/QuartzCore.h>
 
 #import <Metal/Metal.h>
 #import <MetalKit/MetalKit.h>
 
 #include <array>
-#include <utility>
 #include <functional>
 #include <type_traits>
+#include <utility>
 
 class GestureController {
 public:
@@ -29,71 +29,73 @@ public:
     // Run "worker" unless this gesture should be skipped.
     template <typename T>
     void Emit(NSEvent *event, std::function<void()> worker, const T& cancelKeys);
+
 public:
     static constexpr std::array<Keycode, 0> WontCancel{};
+
 private:
     bool shouldSkip_;  // TRUE while gesture should be skipped
     std::array<bool, static_cast<std::size_t>(Keycode::Count)> prevKeyState_;
 };
 
-@interface AppDelegate: NSObject<NSApplicationDelegate>
+@interface AppDelegate : NSObject <NSApplicationDelegate>
 @end
 
-@interface Window: NSWindow
+@interface Window : NSWindow
 @end
 
-@interface WindowDelegate : NSObject<NSWindowDelegate>
+@interface WindowDelegate : NSObject <NSWindowDelegate>
 @end
 
-@interface View: MTKView
+@interface View : MTKView
 @end
 
-@interface ViewDelegate: NSObject<MTKViewDelegate>
+@interface ViewDelegate : NSObject <MTKViewDelegate>
 @end
 
 @interface AlertWindow : NSObject
--(void)showAlert:(NSString *)msg;
--(void)actionClose:(id)sender;
+- (void)showAlert:(NSString *)msg;
+- (void)actionClose:(id)sender;
 @end
 
-@interface AlertWindowDelegate : NSObject<NSWindowDelegate>
+@interface AlertWindowDelegate : NSObject <NSWindowDelegate>
 @end
 
-@interface AppMain: NSObject
--(void)createMainWindow;
--(void)createStatusItem;
--(void)setIgnoreMouse:(bool)enable;
--(bool)getIgnoreMouse;  // Returns TRUE if this application ignores mouse events.
--(void)changeWindowScreen:(NSUInteger)scID;
--(NSMenu *)getAppMenu;
--(sg_environment)getSokolEnvironment;
--(sg_swapchain)getSokolSwapchain;
--(id<CAMetalDrawable>)getDrawable;
--(MTLRenderPassDescriptor *)getRenderPassDescriptor;
--(NSSize)getWindowSize;
--(NSPoint)getWindowPosition;
--(NSSize)getDrawableSize;
--(NSNumber *)getCurrentScreenNumber;
--(bool)isMenuOpened;
--(Routine&)getRoutine;
--(void)startDrawingModel;
+@interface AppMain : NSObject
+- (void)createMainWindow;
+- (void)createStatusItem;
+- (void)setIgnoreMouse:(bool)enable;
+- (bool)getIgnoreMouse;  // Returns TRUE if this application ignores mouse events.
+- (void)changeWindowScreen:(NSUInteger)scID;
+- (NSMenu *)getAppMenu;
+- (sg_environment)getSokolEnvironment;
+- (sg_swapchain)getSokolSwapchain;
+- (id<CAMetalDrawable>)getDrawable;
+- (MTLRenderPassDescriptor *)getRenderPassDescriptor;
+- (NSSize)getWindowSize;
+- (NSPoint)getWindowPosition;
+- (NSSize)getDrawableSize;
+- (NSNumber *)getCurrentScreenNumber;
+- (bool)isMenuOpened;
+- (Routine&)getRoutine;
+- (void)startDrawingModel;
 @end
 
-@interface AppMenuDelegate : NSObject<NSMenuDelegate>
--(bool)isMenuOpened;
--(void)actionQuit:(NSMenuItem *)sender;
--(void)actionEnableMouse:(NSMenuItem *)sender;
--(void)actionDisableMouse:(NSMenuItem *)sender;
--(void)actionHideWindow:(NSMenuItem *)sender;
--(void)actionShowWindow:(NSMenuItem *)sender;
--(void)actionResetModelPosition:(NSMenuItem *)sender;
--(void)actionChangeScreen:(NSMenuItem *)sender;
+@interface AppMenuDelegate : NSObject <NSMenuDelegate>
+- (bool)isMenuOpened;
+- (void)actionQuit:(NSMenuItem *)sender;
+- (void)actionEnableMouse:(NSMenuItem *)sender;
+- (void)actionDisableMouse:(NSMenuItem *)sender;
+- (void)actionHideWindow:(NSMenuItem *)sender;
+- (void)actionShowWindow:(NSMenuItem *)sender;
+- (void)actionResetModelPosition:(NSMenuItem *)sender;
+- (void)actionChangeScreen:(NSMenuItem *)sender;
 @end
 
-@interface SelectScreenMenuDelegate : NSObject<NSMenuDelegate>
+@interface SelectScreenMenuDelegate : NSObject <NSMenuDelegate>
 @end
 
-namespace{
+namespace {
 inline AppMain *getAppMain(void);
 
 // Get currently active application.  If it's not found, returns NULL.
@@ -101,21 +103,22 @@ NSRunningApplication *getActiveApplication(void);
 
 // Find NSScreen from NSScreenNumber.  If screen is not found, returns nil.
 inline NSScreen *findScreenFromID(NSInteger scID);
-}
+}  // namespace
 
-GestureController::GestureController() :
-    shouldSkip_(false)
-{}
+GestureController::GestureController() : shouldSkip_(false) {}
 
 void GestureController::SkipThisGesture() {
     shouldSkip_ = true;
 }
 
 template <typename T>
-void GestureController::Emit(NSEvent *event, std::function<void()> worker, const T& cancelKeys) {
+void GestureController::Emit(
+    NSEvent *event,
+    std::function<void()> worker,
+    const T& cancelKeys) {
     static_assert(
-                std::is_same_v<typename T::value_type, Keycode>,
-                "Contained value type must be Keycode.");
+        std::is_same_v<typename T::value_type, Keycode>,
+        "Contained value type must be Keycode.");
     if (shouldSkip_) {
         if (event.phase == NSEventPhaseBegan)
             // Switched to a new gesture.  Cancel skipping gesture.
@@ -167,7 +170,7 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
 - (void)flagsChanged:(NSEvent *)event {
     using KeycodeMap = std::pair<NSEventModifierFlags, Keycode>;
     constexpr std::array<KeycodeMap, static_cast<size_t>(Keycode::Count)> keys({{
-            {NSEventModifierFlagShift, Keycode::Shift},
+        {NSEventModifierFlagShift, Keycode::Shift},
     }});
     for (const auto& [mask, keycode] : keys) {
         if (event.modifierFlags & mask)
@@ -186,9 +189,7 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
     [getAppMain() getRoutine].OnGestureEnd();
 }
 - (void)scrollWheel:(NSEvent *)event {
-    constexpr std::array<Keycode, 1> cancelKeys = {
-        Keycode::Shift
-    };
+    constexpr std::array<Keycode, 1> cancelKeys = {Keycode::Shift};
     float delta = event.deltaY * 10.0f;  // TODO: Better factor
     if (event.hasPreciseScrollingDeltas)
         delta = event.scrollingDeltaY;
@@ -196,10 +197,10 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
     if (!event.directionInvertedFromDevice)
         delta = -delta;
 
-    const auto worker = [delta](){[getAppMain() getRoutine].OnWheelScrolled(delta);};
+    const auto worker = [delta]() { [getAppMain() getRoutine].OnWheelScrolled(delta); };
     gestureController_.Emit(event, worker, cancelKeys);
 }
--(void)magnifyWithEvent:(NSEvent *)event {
+- (void)magnifyWithEvent:(NSEvent *)event {
     // NOTE: It seems touchpad gesture events aren't dispatched when
     // application isn't active.  Do try activate appliction when touchpad
     // gesture doesn't work.
@@ -220,12 +221,12 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
         phase = GesturePhase::End;
         break;
     }
-    const auto worker = [&phase, &event](){
+    const auto worker = [&phase, &event]() {
         [getAppMain() getRoutine].OnGestureZoom(phase, event.magnification);
     };
     gestureController_.Emit(event, worker, GestureController::WontCancel);
 }
--(void)smartMagnifyWithEvent:(NSEvent *)event {
+- (void)smartMagnifyWithEvent:(NSEvent *)event {
     Routine& routine = [getAppMain() getRoutine];
     const float defaultScale = routine.GetConfig().defaultScale;
     const float scale = routine.GetModelScale();
@@ -248,14 +249,14 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
 @end
 
 @implementation WindowDelegate
--(void)windowDidChangeScreen:(NSNotification *)notification {
+- (void)windowDidChangeScreen:(NSNotification *)notification {
     NSWindow *window = [notification object];
     const NSScreen *screen = [window screen];
     if (!NSEqualRects(window.frame, screen.visibleFrame)) {
         [window setFrame:screen.visibleFrame display:YES animate:NO];
     }
 }
--(void)windowWillClose:(NSNotification *)notification {
+- (void)windowWillClose:(NSNotification *)notification {
     [NSApp terminate:self];
 }
 @end
@@ -264,15 +265,15 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
 + (NSMenu *)defaultMenu {
     return [getAppMain() getAppMenu];
 }
--(BOOL)acceptsFirstMouse:(NSEvent *)event {
+- (BOOL)acceptsFirstMouse:(NSEvent *)event {
     return NO;
 }
 @end
 
 @implementation ViewDelegate
-- (void)mtkView:(nonnull MTKView*)view drawableSizeWillChange:(CGSize)size {
+- (void)mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size {
 }
-- (void)drawInMTKView:(nonnull MTKView*)view {
+- (void)drawInMTKView:(nonnull MTKView *)view {
     @autoreleasepool {
         auto& routine = [getAppMain() getRoutine];
         routine.Update();
@@ -294,7 +295,7 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
     SelectScreenMenuDelegate *selectScreenMenuDelegate_;
     Routine routine_;
 }
--(void)createMainWindow {
+- (void)createMainWindow {
     const NSUInteger style = NSWindowStyleMaskBorderless;
     // const NSUInteger style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable;
     const auto screenRect = []() {
@@ -307,10 +308,8 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
         return [NSScreen mainScreen].visibleFrame;
     }();
     const NSUInteger collectionBehavior =
-        NSWindowCollectionBehaviorCanJoinAllSpaces |
-        NSWindowCollectionBehaviorStationary |
-        NSWindowCollectionBehaviorTransient |
-        NSWindowCollectionBehaviorFullScreenAuxiliary |
+        NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorStationary |
+        NSWindowCollectionBehaviorTransient | NSWindowCollectionBehaviorFullScreenAuxiliary |
         NSWindowCollectionBehaviorFullScreenDisallowsTiling |
         NSWindowCollectionBehaviorIgnoresCycle;
 
@@ -334,7 +333,7 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
     metalDevice_ = MTLCreateSystemDefaultDevice();
     view_ = [[View alloc] init];
     [view_ setPreferredFramesPerSecond:static_cast<NSInteger>(Constant::FPS)];
-    [view_ setDevice: metalDevice_];
+    [view_ setDevice:metalDevice_];
     [view_ setColorPixelFormat:MTLPixelFormatBGRA8Unorm];
     [view_ setDepthStencilPixelFormat:MTLPixelFormatDepth32Float_Stencil8];
     [view_ setSampleCount:static_cast<NSUInteger>(Constant::PreferredSampleCount)];
@@ -347,10 +346,9 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
     [[view_ layer] setMagnificationFilter:kCAFilterNearest];
     [[view_ layer] setOpaque:NO];  // Make transparent
 }
--(void)createStatusItem {
+- (void)createStatusItem {
     const auto iconData = Resource::getStatusIconData();
-    NSData *nsIconData = [NSData dataWithBytes:iconData.data()
-                                        length:iconData.length()];
+    NSData *nsIconData = [NSData dataWithBytes:iconData.data() length:iconData.length()];
     NSImage *icon = [[NSImage alloc] initWithData:nsIconData];
     statusItem_ =
         [[NSStatusBar systemStatusBar] statusItemWithLength:NSSquareStatusItemLength];
@@ -363,15 +361,15 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
     [appMenu_ setDelegate:appMenuDelegate_];
     [statusItem_ setMenu:appMenu_];
 }
--(void)setIgnoreMouse:(bool)enable {
+- (void)setIgnoreMouse:(bool)enable {
     [window_ setIgnoresMouseEvents:enable];
     if (!enable)
         Keyboard::ResetAllState();
 }
--(bool)getIgnoreMouse {
+- (bool)getIgnoreMouse {
     return [window_ ignoresMouseEvents];
 }
--(void)changeWindowScreen:(NSUInteger)scID {
+- (void)changeWindowScreen:(NSUInteger)scID {
     const NSScreen *dst = findScreenFromID(scID);
     if (!dst) {
         // Display not found.  Maybe the connection for the target display is
@@ -381,69 +379,72 @@ void GestureController::Emit(NSEvent *event, std::function<void()> worker, const
     }
     [window_ setFrame:dst.visibleFrame display:YES animate:NO];
 }
--(NSMenu *)getAppMenu {
+- (NSMenu *)getAppMenu {
     // NOTE: Appropriating "appMenu_" here will break status menu after using
     // right click menu.  (Status menu will disappear after a use of right
     // click menu.)  As a workaround, make a new NSMenu object and use it.
-    NSMenu * menu = [[NSMenu alloc] init];
+    NSMenu *menu = [[NSMenu alloc] init];
     [menu setDelegate:appMenuDelegate_];
     return menu;
 }
--(sg_environment)getSokolEnvironment {
-    return sg_environment {
-        .defaults = {
-            .color_format = SG_PIXELFORMAT_BGRA8,
-            .depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
-            .sample_count = Constant::PreferredSampleCount
-        },
-        .metal = {
-            .device = (__bridge const void *)metalDevice_,
-        },
+- (sg_environment)getSokolEnvironment {
+    return sg_environment{
+        .defaults =
+            {
+                .color_format = SG_PIXELFORMAT_BGRA8,
+                .depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
+                .sample_count = Constant::PreferredSampleCount,
+            },
+        .metal =
+            {
+                .device = (__bridge const void *)metalDevice_,
+            },
     };
 }
--(sg_swapchain)getSokolSwapchain {
+- (sg_swapchain)getSokolSwapchain {
     const auto size{Context::getWindowSize()};
-    return sg_swapchain {
+    return sg_swapchain{
         .width = static_cast<int>(size.x),
-        .height= static_cast<int>(size.y),
+        .height = static_cast<int>(size.y),
         .sample_count = Constant::PreferredSampleCount,
         .color_format = SG_PIXELFORMAT_BGRA8,
         .depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
-        .metal = {
-            .current_drawable = (__bridge const void *)[view_ currentDrawable],
-            .depth_stencil_texture = (__bridge const void *)[view_ depthStencilTexture],
-            .msaa_color_texture = (__bridge const void *)[view_ multisampleColorTexture],
-        },
+        .metal =
+            {
+                .current_drawable = (__bridge const void *)[view_ currentDrawable],
+                .depth_stencil_texture = (__bridge const void *)[view_ depthStencilTexture],
+                .msaa_color_texture = (__bridge const void *)[view_ multisampleColorTexture],
+            },
     };
 }
--(id<CAMetalDrawable>)getDrawable {
+- (id<CAMetalDrawable>)getDrawable {
     return [view_ currentDrawable];
 }
--(MTLRenderPassDescriptor *)getRenderPassDescriptor {
+- (MTLRenderPassDescriptor *)getRenderPassDescriptor {
     return [view_ currentRenderPassDescriptor];
 }
--(NSSize)getWindowSize {
+- (NSSize)getWindowSize {
     return window_.frame.size;
 }
--(NSPoint)getWindowPosition {
+- (NSPoint)getWindowPosition {
     return window_.frame.origin;
 }
--(NSSize)getDrawableSize {
+- (NSSize)getDrawableSize {
     return view_.drawableSize;
 }
--(NSNumber *)getCurrentScreenNumber {
+- (NSNumber *)getCurrentScreenNumber {
     const NSScreen *screen = [window_ screen];
     if (!screen)
         Err::Log("Internal error? screen is offscreen");
     return [screen deviceDescription][@"NSScreenNumber"];
 }
--(bool)isMenuOpened {
+- (bool)isMenuOpened {
     return [appMenuDelegate_ isMenuOpened];
 }
--(Routine&)getRoutine {
+- (Routine&)getRoutine {
     return routine_;
 }
--(void)startDrawingModel {
+- (void)startDrawingModel {
     [view_ setDelegate:viewDelegate_];
 }
 @end
@@ -460,33 +461,30 @@ enum class MenuTag : NSInteger {
     SelectScreen,
     HideWindow,
 };
--(instancetype)init {
+- (instancetype)init {
     self = [super init];
     if (self) {
         alterApp_ = nil;
         isMenuOpened_ = false;
 
         // Menu title and action is is set later in menuNeedsUpdate.
-        NSMenuItem *enableMouse = [[NSMenuItem alloc]
-                            initWithTitle:@""
-                                   action:nil
-                            keyEquivalent:@""];
+        NSMenuItem *enableMouse = [[NSMenuItem alloc] initWithTitle:@""
+                                                             action:nil
+                                                      keyEquivalent:@""];
         [enableMouse setTag:Enum::underlyCast(MenuTag::EnableMouse)];
         [enableMouse setTarget:self];
 
-
-        NSMenuItem *resetModelPosition = [[NSMenuItem alloc]
-                            initWithTitle:@"Reset Position"
-                                   action:@selector(actionResetModelPosition:)
-                            keyEquivalent:@""];
+        NSMenuItem *resetModelPosition =
+            [[NSMenuItem alloc] initWithTitle:@"Reset Position"
+                                       action:@selector(actionResetModelPosition:)
+                                keyEquivalent:@""];
         [resetModelPosition setTag:Enum::underlyCast(MenuTag::None)];
         [resetModelPosition setTarget:self];
 
         selectScreenMenuDelegate_ = [[SelectScreenMenuDelegate alloc] init];
-        NSMenuItem *selectScreen = [[NSMenuItem alloc]
-                            initWithTitle:@"Select screen"
-                                   action:nil
-                            keyEquivalent:@""];
+        NSMenuItem *selectScreen = [[NSMenuItem alloc] initWithTitle:@"Select screen"
+                                                              action:nil
+                                                       keyEquivalent:@""];
         [selectScreen setTag:Enum::underlyCast(MenuTag::SelectScreen)];
         [selectScreen setSubmenu:[[NSMenu alloc] init]];
         [selectScreen.submenu setDelegate:selectScreenMenuDelegate_];
@@ -495,15 +493,15 @@ enum class MenuTag : NSInteger {
         [selectScreen setTarget:self];
 
         // Menu title and action is is set later in menuNeedsUpdate.
-        NSMenuItem *hideWindow = [[NSMenuItem alloc]
-                        initWithTitle:@""
-                               action:nil
-                        keyEquivalent:@""];
+        NSMenuItem *hideWindow = [[NSMenuItem alloc] initWithTitle:@""
+                                                            action:nil
+                                                     keyEquivalent:@""];
         [hideWindow setTag:Enum::underlyCast(MenuTag::HideWindow)];
         [hideWindow setTarget:self];
 
-        NSMenuItem *quit = [[NSMenuItem alloc]
-                initWithTitle:@"Quit" action:@selector(actionQuit:) keyEquivalent:@""];
+        NSMenuItem *quit = [[NSMenuItem alloc] initWithTitle:@"Quit"
+                                                      action:@selector(actionQuit:)
+                                               keyEquivalent:@""];
         [quit setTag:Enum::underlyCast(MenuTag::None)];
         [quit setTarget:self];
 
@@ -520,7 +518,7 @@ enum class MenuTag : NSInteger {
     }
     return self;
 }
--(void)menu:(NSMenu *)menu willHighlightItem:(NSMenuItem *)item {
+- (void)menu:(NSMenu *)menu willHighlightItem:(NSMenuItem *)item {
     if (!item || item.tag != Enum::underlyCast(MenuTag::SelectScreen))
         return;
 
@@ -530,12 +528,10 @@ enum class MenuTag : NSInteger {
     [subMenu removeAllItems];
     for (NSScreen *screen in [NSScreen screens]) {
         NSNumber *scID = [screen deviceDescription][@"NSScreenNumber"];
-        NSString *title = [[NSString alloc]
-                    initWithFormat:@"Screen%@", [scID stringValue]];
-        NSMenuItem *subItem = [[NSMenuItem alloc]
-                        initWithTitle:title
-                               action:@selector(actionChangeScreen:)
-                        keyEquivalent:@""];
+        NSString *title = [[NSString alloc] initWithFormat:@"Screen%@", [scID stringValue]];
+        NSMenuItem *subItem = [[NSMenuItem alloc] initWithTitle:title
+                                                         action:@selector(actionChangeScreen:)
+                                                  keyEquivalent:@""];
         [subItem setTag:[scID integerValue]];
         [subItem setTarget:self];
         if ([scID isEqualToNumber:currentScreenID]) {
@@ -544,7 +540,7 @@ enum class MenuTag : NSInteger {
         [subMenu addItem:subItem];
     }
 }
--(void)menuNeedsUpdate:(NSMenu *)menu {
+- (void)menuNeedsUpdate:(NSMenu *)menu {
     if ([menu numberOfItems] != static_cast<NSInteger>([menuItems_ count])) {
         [menu removeAllItems];  // Initialize menu
         [menu setItemArray:[[NSArray alloc] initWithArray:menuItems_ copyItems:YES]];
@@ -590,19 +586,19 @@ enum class MenuTag : NSInteger {
         [selectScreen setEnabled:YES];
     }
 }
--(void)menuWillOpen:(NSMenu *)menu {
+- (void)menuWillOpen:(NSMenu *)menu {
     isMenuOpened_ = true;
 }
--(void)menuDidClose:(NSMenu *)menu {
+- (void)menuDidClose:(NSMenu *)menu {
     isMenuOpened_ = false;
 }
--(bool)isMenuOpened {
+- (bool)isMenuOpened {
     return isMenuOpened_;
 }
--(void)actionQuit:(id)sender {
+- (void)actionQuit:(id)sender {
     [NSApp terminate:sender];
 }
--(void)actionEnableMouse:(NSMenuItem *)sender {
+- (void)actionEnableMouse:(NSMenuItem *)sender {
     alterApp_ = getActiveApplication();
 
     [getAppMain() setIgnoreMouse:false];
@@ -610,17 +606,17 @@ enum class MenuTag : NSInteger {
     // Activate this app to enable touchpad gesture.
     [NSApp activateIgnoringOtherApps:YES];
 }
--(void)actionDisableMouse:(NSMenuItem *)sender {
+- (void)actionDisableMouse:(NSMenuItem *)sender {
     [getAppMain() setIgnoreMouse:true];
     if (NSApp.active && alterApp_) {
         [alterApp_ activateWithOptions:NSApplicationActivateIgnoringOtherApps];
     }
     alterApp_ = NULL;
 }
--(void)actionHideWindow:(NSMenuItem *)sender {
+- (void)actionHideWindow:(NSMenuItem *)sender {
     [NSApp hide:self];
 }
--(void)actionShowWindow:(NSMenuItem *)sender {
+- (void)actionShowWindow:(NSMenuItem *)sender {
     NSRunningApplication *activeApp = getActiveApplication();
     [NSApp unhide:self];
     if ([getAppMain() getIgnoreMouse]) {
@@ -631,10 +627,10 @@ enum class MenuTag : NSInteger {
         [NSApp activateIgnoringOtherApps:YES];
     }
 }
--(void)actionResetModelPosition:(NSMenuItem *)sender {
+- (void)actionResetModelPosition:(NSMenuItem *)sender {
     [getAppMain() getRoutine].ResetModelPosition();
 }
--(void)actionChangeScreen:(NSMenuItem *)sender {
+- (void)actionChangeScreen:(NSMenuItem *)sender {
     [getAppMain() changeWindowScreen:sender.tag];
 }
 @end
@@ -642,13 +638,12 @@ enum class MenuTag : NSInteger {
 @implementation SelectScreenMenuDelegate {
     NSWindow *window_;
 }
--(instancetype)init {
+- (instancetype)init {
     self = [super init];
     if (self) {
         constexpr NSUInteger style = NSWindowStyleMaskBorderless;
         constexpr NSUInteger collectionBehavior =
-            NSWindowCollectionBehaviorCanJoinAllSpaces |
-            NSWindowCollectionBehaviorStationary |
+            NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorStationary |
             NSWindowCollectionBehaviorTransient |
             NSWindowCollectionBehaviorFullScreenAuxiliary |
             NSWindowCollectionBehaviorFullScreenDisallowsTiling |
@@ -666,11 +661,11 @@ enum class MenuTag : NSInteger {
     }
     return self;
 }
--(void)menuDidClose:(NSMenu *)menu {
+- (void)menuDidClose:(NSMenu *)menu {
     [window_ setIsVisible:NO];
     [window_ setFrame:NSMakeRect(0, 0, 0, 0) display:NO];
 }
--(void)menu:(NSMenu *)menu willHighlightItem:(NSMenuItem *)item {
+- (void)menu:(NSMenu *)menu willHighlightItem:(NSMenuItem *)item {
     if (!item) {
         [window_ setIsVisible:NO];
         return;
@@ -693,7 +688,7 @@ enum class MenuTag : NSInteger {
 }
 static constexpr float paddingX_ = 10.0;
 static constexpr float paddingY_ = 5.0;
--(void)showAlert:(NSString *)msg {
+- (void)showAlert:(NSString *)msg {
     NSScrollView *alertView_;
     NSButton *button_;
 
@@ -729,10 +724,10 @@ static constexpr float paddingY_ = 5.0;
     // should be ended on "windowWillClose" callback.
     [NSApp runModalForWindow:window_];
 }
--(void)actionClose:(id)sender {
+- (void)actionClose:(id)sender {
     [window_ close];
 }
--(NSButton *)createButton {
+- (NSButton *)createButton {
     NSButton *button = [NSButton buttonWithTitle:@"OK"
                                           target:self
                                           action:@selector(actionClose:)];
@@ -748,10 +743,11 @@ static constexpr float paddingY_ = 5.0;
 
     return button;
 }
--(NSScrollView *)createAlertView:(NSString *)msg frame:(NSRect)frame {
+- (NSScrollView *)createAlertView:(NSString *)msg frame:(NSRect)frame {
     NSFont *font = [NSFont monospacedSystemFontOfSize:12.0 weight:NSFontWeightRegular];
     NSTextStorage *textStorage = [[NSTextStorage alloc] initWithString:msg];
-    NSTextContainer *container = [[NSTextContainer alloc] initWithContainerSize: NSMakeSize(FLT_MAX, FLT_MAX)];
+    NSTextContainer *container =
+        [[NSTextContainer alloc] initWithContainerSize:NSMakeSize(FLT_MAX, FLT_MAX)];
     NSLayoutManager *layoutManager = [[NSLayoutManager alloc] init];
 
     [layoutManager addTextContainer:container];
@@ -780,14 +776,14 @@ static constexpr float paddingY_ = 5.0;
 @end
 
 @implementation AlertWindowDelegate
--(void)windowWillClose:(NSNotification *)notification {
+- (void)windowWillClose:(NSNotification *)notification {
     (void)notification;
     // Stop modal event loop for the alert window.
     [NSApp stopModal];
 }
 @end
 
-namespace{
+namespace {
 AppMain *getAppMain(void) {
     static AppMain *appMain = [[AppMain alloc] init];
     return appMain;
@@ -813,7 +809,7 @@ NSScreen *findScreenFromID(NSInteger scID) {
     }
     return nil;
 }
-} // namespace
+}  // namespace
 
 sg_environment Context::getSokolEnvironment() {
     return [getAppMain() getSokolEnvironment];
@@ -854,7 +850,7 @@ void messageBox(std::string_view msg) {
     window = [AlertWindow alloc];
     [window showAlert:[NSString stringWithUTF8String:msg.data()]];
 }
-}
+}  // namespace Dialog
 
 int main() {
     [NSApplication sharedApplication];

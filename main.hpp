@@ -1,9 +1,9 @@
 #ifndef MAIN_HPP_
 #define MAIN_HPP_
 
-#include "glm/vec2.hpp" // IWYU pragma: keep; silence clangd.
-#include "sokol_gfx.h"
 #include <string_view>
+#include "glm/vec2.hpp"  // IWYU pragma: keep; silence clangd.
+#include "sokol_gfx.h"
 
 namespace Dialog {
 void messageBox(std::string_view msg);
@@ -20,6 +20,6 @@ int getSampleCount();
 // window.
 glm::vec2 getMousePosition();
 bool shouldEmphasizeModel();
-}
+}  // namespace Context
 
 #endif  // MAIN_HPP_

@@ -5,8 +5,8 @@
 #define INCBIN_PREFIX _
 #include "incbin.h"
 
-#include <string_view>
 #include <filesystem>
+#include <string_view>
 
 extern "C" {
 INCBIN(Toon01, "toons/toon01.bmp");
@@ -64,4 +64,4 @@ View getToonData(std::string_view path) {
 View getStatusIconData() {
     return {_StatusIconData, _StatusIconSize};
 }
-}
+}  // namespace Resource

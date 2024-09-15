@@ -1,13 +1,13 @@
 #include "util.hpp"
-#include "constant.hpp"
-#include "platform.hpp"
-#include <string>
-#include <sstream>
-#include <string_view>
-#include <vector>
-#include <iostream>
 #include <cstdlib>
 #include <filesystem>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <string_view>
+#include <vector>
+#include "constant.hpp"
+#include "platform.hpp"
 
 // Forward declaration for functions in auto/version.cpp
 namespace Version {
@@ -27,7 +27,7 @@ options:
     -h|--help           Show this help
 )";
 }
-}
+}  // namespace
 
 CmdArgs CmdArgs::Parse(const std::vector<std::string>& args) {
     if (args.empty()) {
@@ -74,12 +74,11 @@ CmdArgs CmdArgs::Parse(const std::vector<std::string>& args) {
 
     // Make absolute if necessary.
     if (!cmdArgs.configFile.empty())
-        cmdArgs.configFile = ::Path::makeAbsolute(
-                cmdArgs.configFile, ::Path::getWorkingDirectory());
+        cmdArgs.configFile =
+            ::Path::makeAbsolute(cmdArgs.configFile, ::Path::getWorkingDirectory());
 
     if (!cmdArgs.logFile.empty())
-        cmdArgs.logFile = ::Path::makeAbsolute(
-                cmdArgs.logFile, ::Path::getWorkingDirectory());
+        cmdArgs.logFile = ::Path::makeAbsolute(cmdArgs.logFile, ::Path::getWorkingDirectory());
 
     return cmdArgs;
 }
@@ -92,7 +91,8 @@ std::filesystem::path getWorkingDirectory() {
 }
 
 std::filesystem::path makeAbsolute(
-        const std::filesystem::path& path, const std::filesystem::path& cwd) {
+    const std::filesystem::path& path,
+    const std::filesystem::path& cwd) {
     namespace fs = std::filesystem;
     static const auto homePath = getHomePath();
     if (path.is_absolute())
@@ -103,7 +103,7 @@ std::filesystem::path makeAbsolute(
         return fs::weakly_canonical(cwd / path);
 }
 
-}
+}  // namespace Path
 
 namespace {
 std::filesystem::path getHomePath() {
@@ -119,10 +119,17 @@ std::filesystem::path getHomePath() {
     return std::filesystem::path(String::tou8(std::string_view(path)));
 #endif
 }
-}
+}  // namespace
 
 namespace Slog {
-void Logger(const char *tag, uint32_t logLevel, uint32_t logItem, const char *message, uint32_t linenr, const char *filename, void *user_data) {
+void Logger(
+    const char *tag,
+    uint32_t logLevel,
+    uint32_t logItem,
+    const char *message,
+    uint32_t linenr,
+    const char *filename,
+    void *user_data) {
     (void)user_data;
 
     std::stringstream ss;
@@ -132,10 +139,18 @@ void Logger(const char *tag, uint32_t logLevel, uint32_t logItem, const char *me
     }
 
     switch (logLevel) {
-    case 0: ss << "panic:"; break;
-    case 1: ss << "error:"; break;
-    case 2: ss << "warning:"; break;
-    default: ss << "info:"; break;
+    case 0:
+        ss << "panic:";
+        break;
+    case 1:
+        ss << "error:";
+        break;
+    case 2:
+        ss << "warning:";
+        break;
+    default:
+        ss << "info:";
+        break;
     }
 
     ss << " [id:" << logItem << ']';
@@ -156,4 +171,4 @@ void Logger(const char *tag, uint32_t logLevel, uint32_t logItem, const char *me
         Err::Log(ss.str());
     }
 }
-}
+}  // namespace Slog

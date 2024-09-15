@@ -1,9 +1,9 @@
 #include "config.hpp"
-#include "util.hpp"
-#include "toml.hpp" // IWYU pragma: keep; supress warning from clangd.
 #include <filesystem>
 #include <string_view>
 #include <vector>
+#include "toml.hpp"  // IWYU pragma: keep; supress warning from clangd.
+#include "util.hpp"
 
 namespace {
 inline glm::vec2 toVec2(const std::array<float, 2> a) {
@@ -14,26 +14,27 @@ inline glm::vec3 toVec3(const std::array<float, 3> a) {
     return glm::vec3(a[0], a[1], a[2]);
 }
 
-}
+}  // namespace
 
 Config::Config() :
-    simulationFPS(60.0f), gravity(9.8f), lightDirection(-0.5f, -1.0f, -0.5f),
-    defaultModelPosition(0.0f, 0.0f), defaultScale(1.0f),
-    defaultCameraPosition(0, 10, 50), defaultGazePosition(0, 10, 0),
-    defaultScreenNumber(std::nullopt)
-{}
+    simulationFPS(60.0f),
+    gravity(9.8f),
+    lightDirection(-0.5f, -1.0f, -0.5f),
+    defaultModelPosition(0.0f, 0.0f),
+    defaultScale(1.0f),
+    defaultCameraPosition(0, 10, 50),
+    defaultGazePosition(0, 10, 0),
+    defaultScreenNumber(std::nullopt) {}
 
 Config Config::Parse(const std::filesystem::path& configFile) {
     namespace fs = std::filesystem;
 
-    constexpr auto warnUnsupportedKey = [](const toml::value::key_type& k, const toml::value& v) {
+    constexpr auto warnUnsupportedKey = [](const toml::value::key_type& k,
+                                           const toml::value& v) {
         // TODO: Error message should point key, not its value
         constexpr std::string_view header = "[error]";
         const std::string rawmsg = toml::format_error(
-                "Ignoring unsupported config key.",
-                v,
-                "Key is not supported: " + k
-                );
+            "Ignoring unsupported config key.", v, "Key is not supported: " + k);
         std::string_view errmsg = rawmsg;
         if (errmsg.starts_with(header)) {
             errmsg.remove_prefix(header.size());
@@ -94,8 +95,8 @@ Config Config::Parse(const std::filesystem::path& configFile) {
                             c.weight = v.as_integer();
                             if (c.weight <= 0) {
                                 const auto errmsg = toml::format_error(
-                                        "Invalid value for \"weight\"", v,
-                                        "Value must be bigger than or equals to 1.");
+                                    "Invalid value for \"weight\"", v,
+                                    "Value must be bigger than or equals to 1.");
                                 Err::Log(errmsg);
                             }
                         } else if (k == "disabled") {

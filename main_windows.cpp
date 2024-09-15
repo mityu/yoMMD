@@ -1,29 +1,30 @@
 #define WINVER 0x0605
-#include "sokol_gfx.h"
-#include "sokol_time.h"
-#include "glm/vec2.hpp" // IWYU pragma: keep; silence clangd.
-#include "main.hpp"
-#include "viewer.hpp"
-#include "util.hpp"
-#include "constant.hpp"
-#include "keyboard.hpp"
-#include <string>
-#include <vector>
-#include <string_view>
-#include <utility>
-#include <type_traits>
-#include <memory>
 #include <windows.h>
 #include <windowsx.h>
-#include <dwmapi.h>
 #include <commctrl.h>
 #include <d3d11.h>
 #include <d3d11_2.h>
 #include <dcomp.h>
+#include <dwmapi.h>
 #include <dxgi.h>
 #include <wrl.h>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+#include <vector>
+#include "constant.hpp"
+#include "glm/vec2.hpp"  // IWYU pragma: keep; silence clangd.
+#include "keyboard.hpp"
+#include "main.hpp"
+#include "sokol_gfx.h"
+#include "sokol_time.h"
+#include "util.hpp"
+#include "viewer.hpp"
 
-template <typename T> using ComPtr = Microsoft::WRL::ComPtr<T>;
+template <typename T>
+using ComPtr = Microsoft::WRL::ComPtr<T>;
 
 namespace {
 SIZE rectToSize(RECT rect);
@@ -36,16 +37,20 @@ class UniqueHandler {
 public:
     UniqueHandler(T handler) : handler_(handler, deleteFunc) {};
     UniqueHandler() : UniqueHandler(nullptr) {};
-    T GetRawHandler() {return handler_.get();};
-    operator T() {return GetRawHandler();};
-    UniqueHandler& operator=(T& handler) {handler_.reset(handler); return *this;};
+    T GetRawHandler() { return handler_.get(); };
+    operator T() { return GetRawHandler(); };
+    UniqueHandler& operator=(T& handler) {
+        handler_.reset(handler);
+        return *this;
+    };
+
 private:
     std::unique_ptr<std::remove_pointer_t<T>, DeleteFunc> handler_;
 };
 
 using UniqueHWND = UniqueHandler<HWND, decltype(&DestroyWindow), &DestroyWindow>;
 using UniqueHMENU = UniqueHandler<HMENU, decltype(&DestroyMenu), &DestroyMenu>;
-}
+}  // namespace
 
 class AppMenu {
 public:
@@ -55,30 +60,35 @@ public:
     void Terminate();
     void ShowMenu();
     bool IsMenuOpened() const;
+
 public:
     static constexpr UINT YOMMD_WM_TOGGLE_ENABLE_MOUSE = WM_APP;
     static constexpr UINT YOMMD_WM_SHOW_TASKBAR_MENU = WM_APP + 1;
+
 private:
     static DWORD WINAPI showMenu(LPVOID param);
-    static LRESULT CALLBACK windowProc(
-            HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    static LRESULT CALLBACK windowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
     void createTaskbar();
+
 private:
     class Cmd {
     private:
         template <typename LHS, typename RHS>
-        using SelectSmallerSizeType =
-            std::conditional<sizeof(LHS) < sizeof(RHS), LHS, RHS>;
+        using SelectSmallerSizeType = std::conditional<sizeof(LHS) < sizeof(RHS), LHS, RHS>;
 
-        template <typename HD, typename ...TL> struct MinimumSizeType {
-            using type = typename SelectSmallerSizeType<
-                HD, typename MinimumSizeType<TL...>::type>::type;
+        template <typename HD, typename... TL>
+        struct MinimumSizeType {
+            using type =
+                typename SelectSmallerSizeType<HD, typename MinimumSizeType<TL...>::type>::
+                    type;
         };
 
-        template <typename T> struct MinimumSizeType<T> {
+        template <typename T>
+        struct MinimumSizeType<T> {
             using type = T;
         };
+
     public:
         using UnderlyingType = MinimumSizeType<UINT_PTR, UINT, WORD>::type;
         enum class Kind : UnderlyingType {
@@ -95,12 +105,13 @@ private:
         static constexpr Kind GetCmd(UnderlyingType cmd);
         static constexpr UnderlyingType GetUserData(UnderlyingType cmd);
         static constexpr UnderlyingType Combine(Kind cmd, UnderlyingType userData);
+
     private:
         static constexpr size_t fieldLength_ = sizeof(UnderlyingType) * 8 / 2;
 
         static_assert(
-                Enum::underlyCast(Kind::MenuCount) < (UnderlyingType(1) << fieldLength_),
-                "Too many menu commands declared");
+            Enum::underlyCast(Kind::MenuCount) < (UnderlyingType(1) << fieldLength_),
+            "Too many menu commands declared");
     };
 
     static constexpr PCWSTR wcMenuName = L"yoMMD-menu-window";
@@ -131,14 +142,15 @@ public:
     bool IsMenuOpened() const;
     const ID3D11RenderTargetView *GetRenderTargetView() const;
     const ID3D11DepthStencilView *GetDepthStencilView() const;
+
 private:
-    static LRESULT CALLBACK windowProc(
-            HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    static LRESULT CALLBACK windowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
     void createWindow();
     void createDrawable();
     int determineSampleCount() const;
     LRESULT handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
+
 private:
     static constexpr PCWSTR windowClassName_ = L"yoMMD AppMain";
 
@@ -168,15 +180,15 @@ public:
     static void Init();
     static void Terminate();
     static void Show(std::string_view);
+
 private:
-    static LRESULT CALLBACK windowProc(
-        HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    static LRESULT CALLBACK windowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     static void drawContents(HWND hwnd);
+
 private:
     constexpr static PCWSTR className_ = L"yoMMD-messagebox";
     constexpr static int okMenuID_ = 100;
-    constexpr static UINT winStyle_ =
-        WS_CAPTION | WS_SYSMENU | WS_TABSTOP | WS_DLGFRAME;
+    constexpr static UINT winStyle_ = WS_CAPTION | WS_SYSMENU | WS_TABSTOP | WS_DLGFRAME;
     static bool initialized_;
     static bool showingWindow_;
     static HINSTANCE hInstance_;
@@ -189,13 +201,10 @@ namespace {
 namespace globals {
 AppMain appMain;
 }
-}
+}  // namespace
 
 AppMain::AppMain() :
-    isRunning_(true),
-    sampleCount_(Constant::PreferredSampleCount),
-    hwnd_(nullptr)
-{}
+    isRunning_(true), sampleCount_(Constant::PreferredSampleCount), hwnd_(nullptr) {}
 
 AppMain::~AppMain() {
     Terminate();
@@ -251,17 +260,18 @@ const HWND& AppMain::GetWindowHandle() const {
 }
 
 sg_environment AppMain::GetSokolEnvironment() const {
-    return sg_environment {
-        .defaults = {
-            .color_format = SG_PIXELFORMAT_BGRA8,
-            .depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
-            .sample_count = sampleCount_,
-        },
-        .d3d11 = {
-            .device = reinterpret_cast<const void *>(d3Device_.Get()),
-            .device_context = reinterpret_cast<const void *>(
-                    deviceContext_.Get()),
-        },
+    return sg_environment{
+        .defaults =
+            {
+                .color_format = SG_PIXELFORMAT_BGRA8,
+                .depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
+                .sample_count = sampleCount_,
+            },
+        .d3d11 =
+            {
+                .device = reinterpret_cast<const void *>(d3Device_.Get()),
+                .device_context = reinterpret_cast<const void *>(deviceContext_.Get()),
+            },
     };
 }
 
@@ -275,7 +285,7 @@ sg_swapchain AppMain::GetSokolSwapchain() const {
         d3d11.render_view = renderTargetView_.Get();
         d3d11.resolve_view = nullptr;
     }
-    return sg_swapchain {
+    return sg_swapchain{
         .width = static_cast<int>(size.x),
         .height = static_cast<int>(size.y),
         .sample_count = sampleCount_,
@@ -317,12 +327,8 @@ const ID3D11DepthStencilView *AppMain::GetDepthStencilView() const {
 
 void AppMain::createWindow() {
     constexpr DWORD winStyle = WS_POPUP;
-    constexpr DWORD winExStyle =
-        WS_EX_NOREDIRECTIONBITMAP |
-        WS_EX_NOACTIVATE |
-        WS_EX_TOPMOST |
-        WS_EX_LAYERED |
-        WS_EX_TRANSPARENT;
+    constexpr DWORD winExStyle = WS_EX_NOREDIRECTIONBITMAP | WS_EX_NOACTIVATE | WS_EX_TOPMOST |
+                                 WS_EX_LAYERED | WS_EX_TRANSPARENT;
 
     const HINSTANCE hInstance = GetModuleHandleW(nullptr);
     const HICON appIcon = LoadIconW(hInstance, L"YOMMD_APPICON_ID");
@@ -351,23 +357,19 @@ void AppMain::createWindow() {
 
     WNDCLASSEXW wc = {};
 
-    wc.cbSize        = sizeof(wc);
-    wc.style         = 0;
-    wc.lpfnWndProc   = windowProc,
-    wc.hInstance     = hInstance;
+    wc.cbSize = sizeof(wc);
+    wc.style = 0;
+    wc.lpfnWndProc = windowProc, wc.hInstance = hInstance;
     wc.lpszClassName = windowClassName_;
-    wc.hIcon         = appIcon;
-    wc.hIconSm       = appIcon;
-    wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
+    wc.hIcon = appIcon;
+    wc.hIconSm = appIcon;
+    wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
 
     RegisterClassExW(&wc);
 
     hwnd_ = CreateWindowExW(
-        winExStyle, windowClassName_, L"yoMMD", winStyle,
-        rect.left, rect.top,
-        rect.right - rect.left, rect.bottom - rect.top,
-        nullptr, nullptr,
-        hInstance, this);
+        winExStyle, windowClassName_, L"yoMMD", winStyle, rect.left, rect.top,
+        rect.right - rect.left, rect.bottom - rect.top, nullptr, nullptr, hInstance, this);
 
     if (!hwnd_)
         Err::Exit("Failed to create window.");
@@ -380,7 +382,7 @@ void AppMain::createDrawable() {
     if (!hwnd_) {
         Err::Exit("Internal error: createDrawable() must be called after createWindow()");
     }
-    constexpr auto failif = [](HRESULT hr, auto&& ...errMsg) {
+    constexpr auto failif = [](HRESULT hr, auto&&...errMsg) {
         if (FAILED(hr))
             Err::Exit(std::forward<decltype(errMsg)>(errMsg)...);
     };
@@ -388,28 +390,21 @@ void AppMain::createDrawable() {
     HRESULT hr;
 
     // Direct3D 11 setups.
-    UINT createFlags = D3D11_CREATE_DEVICE_SINGLETHREADED |
-        D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+    UINT createFlags = D3D11_CREATE_DEVICE_SINGLETHREADED | D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 #ifdef _DEBUG
     createFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
     hr = D3D11CreateDevice(
-            nullptr,
-            D3D_DRIVER_TYPE_HARDWARE,
-            nullptr,
-            createFlags,
-            nullptr, 0, // Use highest available feature level
-            D3D11_SDK_VERSION,
-            d3Device_.GetAddressOf(),
-            nullptr,
-            deviceContext_.GetAddressOf());
+        nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createFlags, nullptr,
+        0,  // Use highest available feature level
+        D3D11_SDK_VERSION, d3Device_.GetAddressOf(), nullptr, deviceContext_.GetAddressOf());
     failif(hr, "Failed to create d3d11 device");
 
     hr = d3Device_.As(&dxgiDevice_);
     failif(hr, "device_.As() failed:", __FILE__, __LINE__);
 
-    hr = CreateDXGIFactory2(0, __uuidof(dxFactory_.Get()),
-            reinterpret_cast<void **>(dxFactory_.GetAddressOf()));
+    hr = CreateDXGIFactory2(
+        0, __uuidof(dxFactory_.Get()), reinterpret_cast<void **>(dxFactory_.GetAddressOf()));
     failif(hr, "Failed to create DXGIFactory2");
 
     const glm::vec2 size(GetWindowSize());
@@ -424,16 +419,16 @@ void AppMain::createDrawable() {
     swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
 
     hr = dxFactory_->CreateSwapChainForComposition(
-            dxgiDevice_.Get(), &swapChainDesc,
-            nullptr, swapChain_.GetAddressOf());
+        dxgiDevice_.Get(), &swapChainDesc, nullptr, swapChain_.GetAddressOf());
     failif(hr, "Failed to create swap chain.");
 
-    hr = swapChain_->GetBuffer(0, __uuidof(renderTarget_.Get()),
-            reinterpret_cast<void **>(renderTarget_.GetAddressOf()));
+    hr = swapChain_->GetBuffer(
+        0, __uuidof(renderTarget_.Get()),
+        reinterpret_cast<void **>(renderTarget_.GetAddressOf()));
     failif(hr, "Failed to get buffer from swap chain.");
 
-    hr = d3Device_->CreateRenderTargetView(renderTarget_.Get(), nullptr,
-            renderTargetView_.GetAddressOf());
+    hr = d3Device_->CreateRenderTargetView(
+        renderTarget_.Get(), nullptr, renderTargetView_.GetAddressOf());
     failif(hr, "Failed to get render target view.");
 
     sampleCount_ = determineSampleCount();
@@ -444,20 +439,21 @@ void AppMain::createDrawable() {
         .MipLevels = 1,
         .ArraySize = 1,
         .Format = DXGI_FORMAT_B8G8R8A8_UNORM,
-        .SampleDesc = {
-            .Count = static_cast<UINT>(Constant::PreferredSampleCount),
-            .Quality = D3D11_STANDARD_MULTISAMPLE_PATTERN,
-        },
+        .SampleDesc =
+            {
+                .Count = static_cast<UINT>(Constant::PreferredSampleCount),
+                .Quality = D3D11_STANDARD_MULTISAMPLE_PATTERN,
+            },
         .Usage = D3D11_USAGE_DEFAULT,
         .BindFlags = D3D11_BIND_RENDER_TARGET,
     };
 
     if (sampleCount_ > 1) {
         hr = d3Device_->CreateTexture2D(
-                &msaaTextureDesc, nullptr, msaaRenderTarget_.GetAddressOf());
+            &msaaTextureDesc, nullptr, msaaRenderTarget_.GetAddressOf());
         failif(hr, "Failed to create msaa render target.");
-        hr = d3Device_->CreateRenderTargetView(msaaRenderTarget_.Get(), nullptr,
-                msaaRenderTargetView_.GetAddressOf());
+        hr = d3Device_->CreateRenderTargetView(
+            msaaRenderTarget_.Get(), nullptr, msaaRenderTargetView_.GetAddressOf());
         failif(hr, "Failed to get msaa render target view.");
     }
 
@@ -471,8 +467,7 @@ void AppMain::createDrawable() {
         .Usage = D3D11_USAGE_DEFAULT,
         .BindFlags = D3D11_BIND_DEPTH_STENCIL,
     };
-    hr = d3Device_->CreateTexture2D(
-            &stencilDesc, nullptr, depthStencilBuffer_.GetAddressOf());
+    hr = d3Device_->CreateTexture2D(&stencilDesc, nullptr, depthStencilBuffer_.GetAddressOf());
     failif(hr, "Failed to create depth stencil buffer.");
 
     const D3D11_DEPTH_STENCIL_VIEW_DESC stencilViewDesc = {
@@ -480,20 +475,17 @@ void AppMain::createDrawable() {
         .ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS,
     };
     hr = d3Device_->CreateDepthStencilView(
-            reinterpret_cast<ID3D11Resource*>(depthStencilBuffer_.Get()),
-            &stencilViewDesc,
-            depthStencilView_.GetAddressOf());
+        reinterpret_cast<ID3D11Resource *>(depthStencilBuffer_.Get()), &stencilViewDesc,
+        depthStencilView_.GetAddressOf());
     failif(hr, "Failed to create depth stencil view.");
 
     // DirectComposition setups.
     hr = DCompositionCreateDevice(
-       dxgiDevice_.Get(),
-       __uuidof(dcompDevice_.Get()),
-       reinterpret_cast<void **>(dcompDevice_.GetAddressOf()));
+        dxgiDevice_.Get(), __uuidof(dcompDevice_.Get()),
+        reinterpret_cast<void **>(dcompDevice_.GetAddressOf()));
     failif(hr, "Failed to create DirectComposition device.");
 
-    hr = dcompDevice_->CreateTargetForHwnd(
-            hwnd_, true, dcompTarget_.GetAddressOf());
+    hr = dcompDevice_->CreateTargetForHwnd(hwnd_, true, dcompTarget_.GetAddressOf());
     failif(hr, "Failed to DirectComposition render target.");
 
     hr = dcompDevice_->CreateVisual(dcompVisual_.GetAddressOf());
@@ -507,8 +499,9 @@ void AppMain::createDrawable() {
 // https://learn.microsoft.com/ja-jp/windows/uwp/gaming/multisampling--multi-sample-anti-aliasing--in-windows-store-apps
 int AppMain::determineSampleCount() const {
     if (!d3Device_.Get()) {
-        Err::Exit("Internal error: checkMultisamplingSupported():",
-                "D3D11 device is not initialized.");
+        Err::Exit(
+            "Internal error: checkMultisamplingSupported():",
+            "D3D11 device is not initialized.");
     }
 
     HRESULT hr;
@@ -521,7 +514,7 @@ int AppMain::determineSampleCount() const {
     if (FAILED(hr)) {
         Err::Exit("CheckFormatSupport() failed.");
     } else if (!((formatSupport & D3D11_FORMAT_SUPPORT_MULTISAMPLE_RESOLVE) &&
-            (formatSupport & D3D11_FORMAT_SUPPORT_MULTISAMPLE_RENDERTARGET))) {
+                 (formatSupport & D3D11_FORMAT_SUPPORT_MULTISAMPLE_RENDERTARGET))) {
         // DXGI_FORMAT_B8G8R8A8_UNORM doesn't support multisampling on the
         // curent device.
         return 1;
@@ -531,9 +524,7 @@ int AppMain::determineSampleCount() const {
     // not supported.
     UINT numQualityFlags = 0;
     hr = d3Device_->CheckMultisampleQualityLevels(
-            DXGI_FORMAT_B8G8R8A8_UNORM,
-            Constant::PreferredSampleCount,
-            &numQualityFlags);
+        DXGI_FORMAT_B8G8R8A8_UNORM, Constant::PreferredSampleCount, &numQualityFlags);
 
     if (FAILED(hr)) {
         Err::Exit("CheckMultisampleQualityLevels() failed.");
@@ -545,21 +536,18 @@ int AppMain::determineSampleCount() const {
     return Constant::PreferredSampleCount;
 }
 
-LRESULT CALLBACK AppMain::windowProc(
-        HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK AppMain::windowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     using This_T = AppMain;
     This_T *pThis = nullptr;
 
     if (uMsg == WM_NCCREATE) {
-        CREATESTRUCT* pCreate =
-            reinterpret_cast<CREATESTRUCT *>(lParam);
+        CREATESTRUCT *pCreate = reinterpret_cast<CREATESTRUCT *>(lParam);
         pThis = static_cast<This_T *>(pCreate->lpCreateParams);
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR)pThis);
 
         pThis->hwnd_ = hwnd;
     } else {
-        pThis = reinterpret_cast<This_T *>(GetWindowLongPtrW(
-                    hwnd, GWLP_USERDATA));
+        pThis = reinterpret_cast<This_T *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
     }
 
     if (pThis) {
@@ -576,23 +564,22 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
         isRunning_ = false;
         return 0;
     case WM_KEYDOWN:  // fallthrough
-    case WM_KEYUP:
-        {
-            std::optional<Keycode> key;
-            switch (wParam) {
-            case VK_SHIFT:
-                key = Keycode::Shift;
-                break;
-            }
-            if (!key.has_value())
-                break;
-
-            if (uMsg == WM_KEYDOWN)
-                Keyboard::OnKeyDown(*key);
-            else
-                Keyboard::OnKeyUp(*key);
-            return 0;
+    case WM_KEYUP: {
+        std::optional<Keycode> key;
+        switch (wParam) {
+        case VK_SHIFT:
+            key = Keycode::Shift;
+            break;
         }
+        if (!key.has_value())
+            break;
+
+        if (uMsg == WM_KEYDOWN)
+            Keyboard::OnKeyDown(*key);
+        else
+            Keyboard::OnKeyUp(*key);
+        return 0;
+    }
     case WM_LBUTTONDOWN:
         routine_.OnGestureBegin();
         return 0;
@@ -604,18 +591,14 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
             routine_.OnMouseDragged();
         }
         return 0;
-    case WM_MOUSEWHEEL:
-        {
-            const int deltaDeg =
-                GET_WHEEL_DELTA_WPARAM(wParam) * WHEEL_DELTA;
-            const float delta =
-                static_cast<float>(deltaDeg) / 360.0f;
-            routine_.OnWheelScrolled(delta);
-            return 0;
-        }
+    case WM_MOUSEWHEEL: {
+        const int deltaDeg = GET_WHEEL_DELTA_WPARAM(wParam) * WHEEL_DELTA;
+        const float delta = static_cast<float>(deltaDeg) / 360.0f;
+        routine_.OnWheelScrolled(delta);
+        return 0;
+    }
     case AppMenu::YOMMD_WM_SHOW_TASKBAR_MENU:
-        if (const auto msg = LOWORD(lParam);
-                !(msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN))
+        if (const auto msg = LOWORD(lParam); !(msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN))
             return 0;
         // Fallthrough
     case WM_RBUTTONDOWN:
@@ -626,9 +609,7 @@ LRESULT AppMain::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
     return DefWindowProcW(hwnd_, uMsg, wParam, lParam);
 }
 
-AppMenu::AppMenu() :
-    hMenuThread_(nullptr), hTaskbarIcon_(nullptr)
-{}
+AppMenu::AppMenu() : hMenuThread_(nullptr), hTaskbarIcon_(nullptr) {}
 
 AppMenu::~AppMenu() {
     Terminate();
@@ -637,15 +618,14 @@ AppMenu::~AppMenu() {
 void AppMenu::Setup() {
     WNDCLASSW wc = {};
 
-    wc.style         = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-    wc.lpfnWndProc   = AppMenu::windowProc,
-    wc.hInstance     = GetModuleHandleW(nullptr);
+    wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+    wc.lpfnWndProc = AppMenu::windowProc, wc.hInstance = GetModuleHandleW(nullptr);
     wc.lpszClassName = wcMenuName;
-    wc.hIcon         = LoadIcon(nullptr, IDI_WINLOGO);
-    wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
+    wc.hIcon = LoadIcon(nullptr, IDI_WINLOGO);
+    wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
     RegisterClassW(&wc);
 
-    wc.lpfnWndProc   = DefWindowProcW;
+    wc.lpfnWndProc = DefWindowProcW;
     wc.lpszClassName = wcSelectorName;
     wc.hbrBackground = reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
     RegisterClassW(&wc);
@@ -663,8 +643,7 @@ void AppMenu::Terminate() {
     UnregisterClassW(wcMenuName, GetModuleHandleW(nullptr));
 
     DWORD exitCode;
-    if (GetExitCodeThread(hMenuThread_, &exitCode) &&
-            exitCode == STILL_ACTIVE) {
+    if (GetExitCodeThread(hMenuThread_, &exitCode) && exitCode == STILL_ACTIVE) {
         Info::Log("Thread is still running. Wait finishing.");
         // Right click menu/toolbar menu must not appear so long.
         // We should be able to wait for it is closed.
@@ -675,13 +654,11 @@ void AppMenu::Terminate() {
 
 void AppMenu::ShowMenu() {
     DWORD exitCode;
-    if (GetExitCodeThread(hMenuThread_, &exitCode) &&
-            exitCode == STILL_ACTIVE) {
+    if (GetExitCodeThread(hMenuThread_, &exitCode) && exitCode == STILL_ACTIVE) {
         Info::Log("Thread is running");
     }
 
-    hMenuThread_ = CreateThread(
-            NULL, 0, AppMenu::showMenu, this, 0, NULL);
+    hMenuThread_ = CreateThread(NULL, 0, AppMenu::showMenu, this, 0, NULL);
 }
 
 bool AppMenu::IsMenuOpened() const {
@@ -700,23 +677,20 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
     }
 
     hSelectorWindow = CreateWindowExW(
-            WS_EX_LAYERED | WS_EX_NOACTIVATE, wcSelectorName, L"",
-            WS_DISABLED | WS_POPUP,
-            0, 0, 0, 0, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr
-            );
+        WS_EX_LAYERED | WS_EX_NOACTIVATE, wcSelectorName, L"", WS_DISABLED | WS_POPUP, 0, 0, 0,
+        0, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
     if (!hSelectorWindow.GetRawHandler()) {
         Err::Log("Failed to create screen selector window.");
         return 1;
     }
     SetLayeredWindowAttributes(hSelectorWindow, RGB(0, 0, 0), 127, LWA_ALPHA);
     BOOL fDisable = TRUE;
-    DwmSetWindowAttribute(hSelectorWindow,
-            DWMWA_TRANSITIONS_FORCEDISABLED, &fDisable, sizeof(fDisable));
+    DwmSetWindowAttribute(
+        hSelectorWindow, DWMWA_TRANSITIONS_FORCEDISABLED, &fDisable, sizeof(fDisable));
 
     hMenuWindow = CreateWindowExW(
-            0, wcMenuName, L"", winStyle, 0, 0, 0, 0, parentWin, nullptr,
-            GetModuleHandleW(nullptr), hSelectorWindow
-            );
+        0, wcMenuName, L"", winStyle, 0, 0, 0, 0, parentWin, nullptr,
+        GetModuleHandleW(nullptr), hSelectorWindow);
     if (!hMenuWindow.GetRawHandler()) {
         Err::Log("Failed to create dummy window for menu.");
         return 1;
@@ -743,15 +717,15 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
 
     UniqueHMENU hmenu = CreatePopupMenu();
     if (parentWinExStyle & WS_EX_TRANSPARENT) {
-        AppendMenuW(hmenu, MF_STRING,
-                Enum::underlyCast(Cmd::EnableMouse), L"&Enable Mouse");
+        AppendMenuW(hmenu, MF_STRING, Enum::underlyCast(Cmd::EnableMouse), L"&Enable Mouse");
     } else {
-        AppendMenuW(hmenu, MF_STRING,
-                Enum::underlyCast(Cmd::EnableMouse), L"&Disable Mouse");
+        AppendMenuW(hmenu, MF_STRING, Enum::underlyCast(Cmd::EnableMouse), L"&Disable Mouse");
     }
     AppendMenuW(hmenu, MF_STRING, Enum::underlyCast(Cmd::ResetPosition), L"&Reset Position");
     AppendMenuW(hmenu, MF_SEPARATOR, Enum::underlyCast(Cmd::None), L"");
-    AppendMenuW(hmenu, MF_POPUP, reinterpret_cast<UINT_PTR>(hScreensMenu.GetRawHandler()), L"&Select screen");
+    AppendMenuW(
+        hmenu, MF_POPUP, reinterpret_cast<UINT_PTR>(hScreensMenu.GetRawHandler()),
+        L"&Select screen");
     AppendMenuW(hmenu, MF_SEPARATOR, Enum::underlyCast(Cmd::None), L"");
     if (GetWindowLongPtrW(parentWin, GWL_STYLE) & WS_VISIBLE)
         AppendMenuW(hmenu, MF_STRING, Enum::underlyCast(Cmd::HideWindow), L"&Hide Window");
@@ -765,21 +739,20 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
     }
 
     if (monitorHandles.size() <= 1)
-        EnableMenuItem(hmenu, reinterpret_cast<UINT_PTR>(hScreensMenu.GetRawHandler()), MF_DISABLED);
+        EnableMenuItem(
+            hmenu, reinterpret_cast<UINT_PTR>(hScreensMenu.GetRawHandler()), MF_DISABLED);
 
     constexpr UINT menuFlags = TPM_RIGHTBUTTON | TPM_NONOTIFY | TPM_RETURNCMD;
 
     SetForegroundWindow(hMenuWindow);
     appMenu->isMenuOpened_ = true;
-    const auto op = TrackPopupMenuEx(
-            hmenu, menuFlags, point.x, point.y, hMenuWindow, nullptr);
+    const auto op = TrackPopupMenuEx(hmenu, menuFlags, point.x, point.y, hMenuWindow, nullptr);
     appMenu->isMenuOpened_ = false;
 
     switch (Cmd::GetCmd(op)) {
     case Cmd::EnableMouse:
         if (parentWinExStyle != 0) {
-            SetWindowLongW(parentWin, GWL_EXSTYLE,
-                    parentWinExStyle ^ WS_EX_TRANSPARENT);
+            SetWindowLongW(parentWin, GWL_EXSTYLE, parentWinExStyle ^ WS_EX_TRANSPARENT);
         }
         break;
     case Cmd::ResetPosition:
@@ -813,8 +786,7 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
     return 0;
 }
 
-LRESULT CALLBACK AppMenu::windowProc(
-        HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK AppMenu::windowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
     case WM_MENUSELECT:
         if (HIWORD(wParam) & MF_MOUSESELECT && !(HIWORD(wParam) & MF_POPUP)) {
@@ -843,17 +815,13 @@ LRESULT CALLBACK AppMenu::windowProc(
             const auto cx = r->right - r->left;
             const auto cy = r->bottom - r->top;
             constexpr UINT uFlags = SWP_SHOWWINDOW | SWP_NOACTIVATE;
-            SetWindowPos(
-                    hSelectorWindow, HWND_TOPMOST, r->left, r->top, cx, cy, uFlags);
+            SetWindowPos(hSelectorWindow, HWND_TOPMOST, r->left, r->top, cx, cy, uFlags);
         }
         break;
-    case WM_CREATE:
-        {
-            const CREATESTRUCT& cs = *reinterpret_cast<CREATESTRUCT *>(lParam);
-            SetWindowLongPtrW(hwnd, GWLP_USERDATA,
-                    reinterpret_cast<LONG_PTR>(cs.lpCreateParams));
-        }
-        break;
+    case WM_CREATE: {
+        const CREATESTRUCT& cs = *reinterpret_cast<CREATESTRUCT *>(lParam);
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(cs.lpCreateParams));
+    } break;
     }
     return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 }
@@ -862,18 +830,13 @@ void AppMenu::createTaskbar() {
     const HWND& parentWin = globals::appMain.GetWindowHandle();
     if (!parentWin) {
         Err::Exit(
-                "Internal error:",
-                "Taskbar must be created after the main window is created:",
-                __FILE__, __LINE__
-                );
+            "Internal error:", "Taskbar must be created after the main window is created:",
+            __FILE__, __LINE__);
     }
 
     auto iconData = Resource::getStatusIconData();
     hTaskbarIcon_ = CreateIconFromResource(
-            const_cast<PBYTE>(iconData.data()),
-            iconData.length(),
-            TRUE,
-            0x00030000);
+        const_cast<PBYTE>(iconData.data()), iconData.length(), TRUE, 0x00030000);
     if (!hTaskbarIcon_) {
         Err::Log("Failed to load icon. Fallback to Windows' default application icon.");
         hTaskbarIcon_ = LoadIconA(nullptr, IDI_APPLICATION);
@@ -888,10 +851,8 @@ void AppMenu::createTaskbar() {
     taskbarIconDesc_.hIcon = hTaskbarIcon_;
     taskbarIconDesc_.uVersion = NOTIFYICON_VERSION_4;
     taskbarIconDesc_.uCallbackMessage = YOMMD_WM_SHOW_TASKBAR_MENU;
-    wcscpy_s(taskbarIconDesc_.szTip,
-            sizeof(taskbarIconDesc_.szTip), L"yoMMD");
-    taskbarIconDesc_.uFlags =
-        NIF_ICON | NIF_TIP | NIF_SHOWTIP | NIF_MESSAGE;
+    wcscpy_s(taskbarIconDesc_.szTip, sizeof(taskbarIconDesc_.szTip), L"yoMMD");
+    taskbarIconDesc_.uFlags = NIF_ICON | NIF_TIP | NIF_SHOWTIP | NIF_MESSAGE;
 
     Shell_NotifyIconW(NIM_ADD, &taskbarIconDesc_);
 }
@@ -901,13 +862,15 @@ constexpr AppMenu::Cmd::Kind AppMenu::Cmd::GetCmd(AppMenu::Cmd::UnderlyingType c
     return Kind(cmd & mask);
 }
 
-constexpr AppMenu::Cmd::UnderlyingType AppMenu::Cmd::GetUserData(AppMenu::Cmd::UnderlyingType cmd) {
+constexpr AppMenu::Cmd::UnderlyingType AppMenu::Cmd::GetUserData(
+    AppMenu::Cmd::UnderlyingType cmd) {
     constexpr UnderlyingType mask = (UnderlyingType(1) << fieldLength_) - 1;
     return ((cmd >> fieldLength_) & mask);
 }
 
 constexpr AppMenu::Cmd::UnderlyingType AppMenu::Cmd::Combine(
-        AppMenu::Cmd::Kind kind, AppMenu::Cmd::UnderlyingType userData) {
+    AppMenu::Cmd::Kind kind,
+    AppMenu::Cmd::UnderlyingType userData) {
     userData <<= fieldLength_;
     return Enum::underlyCast(kind) | userData;
 }
@@ -924,15 +887,15 @@ void MsgBox::Init() {
     hfont_ = static_cast<HFONT>(GetStockObject(OEM_FIXED_FONT));
 
     WNDCLASSW wc = {};
-    wc.style         = CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc   = windowProc;
-    wc.cbClsExtra    = 0;
-    wc.cbWndExtra    = 0;
-    wc.hInstance     = hInstance_;
-    wc.hIcon         = LoadIcon(nullptr, IDI_WARNING);
-    wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc = windowProc;
+    wc.cbClsExtra = 0;
+    wc.cbWndExtra = 0;
+    wc.hInstance = hInstance_;
+    wc.hIcon = LoadIcon(nullptr, IDI_WARNING);
+    wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
     wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
-    wc.lpszMenuName  = nullptr;
+    wc.lpszMenuName = nullptr;
     wc.lpszClassName = className_;
 
     RegisterClassW(&wc);
@@ -951,19 +914,13 @@ void MsgBox::Show(std::string_view msg) {
     if (!initialized_ || showingWindow_)
         return;
 
-    const int size = MultiByteToWideChar(
-            CP_UTF8, MB_COMPOSITE, msg.data(), -1, nullptr, 0);
-    wmsg_.resize(size-1, '\0');
-    MultiByteToWideChar(
-            CP_UTF8, MB_COMPOSITE, msg.data(), -1, wmsg_.data(), size);
+    const int size = MultiByteToWideChar(CP_UTF8, MB_COMPOSITE, msg.data(), -1, nullptr, 0);
+    wmsg_.resize(size - 1, '\0');
+    MultiByteToWideChar(CP_UTF8, MB_COMPOSITE, msg.data(), -1, wmsg_.data(), size);
 
     const HWND hwnd = CreateWindowW(
-            className_, L"yoMMD Error",
-            winStyle_,
-            CW_USEDEFAULT, CW_USEDEFAULT,
-            CW_USEDEFAULT, CW_USEDEFAULT,
-            nullptr, nullptr,
-            hInstance_, nullptr);
+        className_, L"yoMMD Error", winStyle_, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+        CW_USEDEFAULT, nullptr, nullptr, hInstance_, nullptr);
 
     if (!hwnd)
         return;
@@ -982,25 +939,20 @@ void MsgBox::Show(std::string_view msg) {
     }
 }
 
-LRESULT CALLBACK MsgBox::windowProc(
-    HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK MsgBox::windowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
-    case WM_CREATE:
-        {
-            constexpr UINT winStyle =
-                WS_CHILD | WS_VISIBLE |
-                BS_CENTER | BS_VCENTER | BS_DEFPUSHBUTTON;
+    case WM_CREATE: {
+        constexpr UINT winStyle =
+            WS_CHILD | WS_VISIBLE | BS_CENTER | BS_VCENTER | BS_DEFPUSHBUTTON;
 
-            buttonHWND_ = CreateWindowW(L"BUTTON", L"OK",
-                    winStyle,
-                    0, 0, 60, 25,
-                    hwnd, reinterpret_cast<HMENU>(okMenuID_),
-                    hInstance_, nullptr);
-            // FIXME: Button is not selected in default when showing two
-            // error dialog continuously.
-            SetForegroundWindow(buttonHWND_);
-            return 0;
-        }
+        buttonHWND_ = CreateWindowW(
+            L"BUTTON", L"OK", winStyle, 0, 0, 60, 25, hwnd, reinterpret_cast<HMENU>(okMenuID_),
+            hInstance_, nullptr);
+        // FIXME: Button is not selected in default when showing two
+        // error dialog continuously.
+        SetForegroundWindow(buttonHWND_);
+        return 0;
+    }
     case WM_PAINT:
         drawContents(hwnd);
         return 0;
@@ -1043,8 +995,7 @@ void MsgBox::drawContents(HWND hwnd) {
     hdc = BeginPaint(hwnd, &ps);
 
     // Change font.
-    hPrevFont =
-        static_cast<HFONT>(SelectObject(hdc, hfont_));
+    hPrevFont = static_cast<HFONT>(SelectObject(hdc, hfont_));
 
     DrawTextW(hdc, wmsg_.data(), -1, &bounds, DT_CALCRECT);
 
@@ -1063,19 +1014,13 @@ void MsgBox::drawContents(HWND hwnd) {
     SIZE winSize(rectToSize(winRect));
     winRect.left = (screenSize.cx - winSize.cx) / 2;
     winRect.top = (screenSize.cy - winSize.cy) / 2;
-    MoveWindow(hwnd,
-            winRect.left, winRect.top,
-            winSize.cx, winSize.cy,
-            FALSE);
+    MoveWindow(hwnd, winRect.left, winRect.top, winSize.cx, winSize.cy, FALSE);
 
     // Adjust button position.
     buttonPos = rectToSize(contentRect);
     buttonPos.cx -= textMerginX + buttonSize.cx;
     buttonPos.cy -= buttonMerginY + buttonSize.cy;
-    MoveWindow(buttonHWND_,
-            buttonPos.cx, buttonPos.cy,
-            buttonSize.cx, buttonSize.cy,
-            FALSE);
+    MoveWindow(buttonHWND_, buttonPos.cx, buttonPos.cy, buttonSize.cx, buttonSize.cy, FALSE);
 
     // Adjust text position.
     bounds.right = bounds.right - bounds.left + textMerginX * 2;
@@ -1134,27 +1079,23 @@ int getSampleCount() {
 bool shouldEmphasizeModel() {
     return globals::appMain.IsMenuOpened();
 }
-}
+}  // namespace Context
 
 namespace Dialog {
 void messageBox(std::string_view msg) {
     MsgBox::Show(msg);
 }
-}
+}  // namespace Dialog
 
 namespace {
 SIZE rectToSize(RECT rect) {
     return {rect.right - rect.left, rect.bottom - rect.top};
 }
 std::vector<HMONITOR> getAllMonitorHandles() {
-    static const MONITORENUMPROC proc = [](
-            HMONITOR hMonitor,
-            HDC hdc,
-            LPRECT rect,
-            LPARAM param) -> BOOL {
+    static const MONITORENUMPROC proc = [](HMONITOR hMonitor, HDC hdc, LPRECT rect,
+                                           LPARAM param) -> BOOL {
         (void)hdc, (void)rect;
-        std::vector<HMONITOR>& handles =
-            *reinterpret_cast<std::vector<HMONITOR>*>(param);
+        std::vector<HMONITOR>& handles = *reinterpret_cast<std::vector<HMONITOR> *>(param);
         handles.push_back(hMonitor);
         return TRUE;
     };
@@ -1168,11 +1109,8 @@ std::optional<HMONITOR> getMonitorHandleFromID(int monitorID) {
         int curMonitorID;
         std::optional<HMONITOR> handle;
     };
-    static const MONITORENUMPROC proc = [](
-            HMONITOR hMonitor,
-            HDC hdc,
-            LPRECT rect,
-            LPARAM param) -> BOOL {
+    static const MONITORENUMPROC proc = [](HMONITOR hMonitor, HDC hdc, LPRECT rect,
+                                           LPARAM param) -> BOOL {
         (void)hdc, (void)rect;
         Data *data = reinterpret_cast<Data *>(param);
         if (data->curMonitorID == data->monitorID) {
@@ -1199,8 +1137,7 @@ std::optional<RECT> getMonitorWorkareaFromID(int monitorID) {
 
 }  // namespace
 
-int WINAPI wWinMain(
-        HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow) {
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow) {
     (void)hInstance;
     (void)pCmdLine;
     (void)nCmdShow;
@@ -1238,8 +1175,7 @@ int WINAPI wWinMain(
         const auto shouldSleepFor = millSecPerFrame - elapsedMillSec;
         timeLastFrame = stm_now();
 
-        if (shouldSleepFor > 0 &&
-                static_cast<DWORD>(shouldSleepFor) > 0) {
+        if (shouldSleepFor > 0 && static_cast<DWORD>(shouldSleepFor) > 0) {
             Sleep(static_cast<DWORD>(shouldSleepFor));
         }
     }

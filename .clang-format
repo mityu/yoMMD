@@ -1,0 +1,32 @@
+BasedOnStyle: Chromium
+IndentWidth: 4
+TabWidth: 4
+ColumnLimit: 95
+UseTab: Never
+IndentAccessModifiers: false
+IndentCaseLabels: false
+AccessModifierOffset: -4
+BreakStringLiterals: false
+PointerAlignment: Right
+ReferenceAlignment: Left
+BreakBeforeBraces: Attach
+AlwaysBreakAfterReturnType: None
+AlwaysBreakAfterDefinitionReturnType: None
+# BreakAfterReturnType: Automatic
+BreakConstructorInitializers: AfterColon
+AlignAfterOpenBracket: AlwaysBreak
+Cpp11BracedListStyle: true
+
+IncludeCategories:
+  - Regex: '^<windowsx?.h>'
+    Priority: 1
+  - Regex: '^<ext/.*\.h>'
+    Priority: 3
+  - Regex: '^"auto/.*\.h"'
+    Priority: 5
+  - Regex: '^<.*\.h>'
+    Priority: 2
+  - Regex: '^<.*'
+    Priority: 3
+  - Regex: '.*'
+    Priority: 4

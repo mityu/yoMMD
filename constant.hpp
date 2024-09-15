@@ -8,6 +8,6 @@ constexpr int PreferredSampleCount = 4;
 constexpr float FPS = 60.0f;
 constexpr float VmdFPS = 30.0f;
 constexpr std::string_view DefaultLogFilePath = "";
-}
+}  // namespace Constant
 
 #endif  // CONSTANT_HPP_

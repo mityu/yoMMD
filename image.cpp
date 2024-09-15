@@ -1,11 +1,11 @@
-#include "stb_image.h"
 #include "image.hpp"
-#include "platform.hpp"
 #include <cstdio>
 #include <string_view>
+#include "platform.hpp"
+#include "stb_image.h"
 
 #ifdef PLATFORM_WINDOWS
-#  include <windows.h>
+#include <windows.h>
 #endif
 
 class File : private NonCopyable {
@@ -17,13 +17,12 @@ public:
     void Close();
     operator FILE *();
     operator bool() const;
+
 private:
     FILE *fp;
 };
 
-File::File() :
-    fp(nullptr)
-{}
+File::File() : fp(nullptr) {}
 
 File::File(const std::string_view path) {
     Open(path);
@@ -36,11 +35,10 @@ File::~File() {
 void File::Open(const std::string_view path) {
 #ifdef PLATFORM_WINDOWS
     std::wstring wpath;
-    const int size = MultiByteToWideChar(
-            CP_UTF8, MB_COMPOSITE, path.data(), -1, nullptr, 0);
-    wpath.resize(size-1, '\0');
-    const int status = MultiByteToWideChar(
-            CP_UTF8, MB_COMPOSITE, path.data(), -1, wpath.data(), size);
+    const int size = MultiByteToWideChar(CP_UTF8, MB_COMPOSITE, path.data(), -1, nullptr, 0);
+    wpath.resize(size - 1, '\0');
+    const int status =
+        MultiByteToWideChar(CP_UTF8, MB_COMPOSITE, path.data(), -1, wpath.data(), size);
     if (!status)
         Err::Exit("String conversion failed: from:", path);
     fp = _wfopen(wpath.c_str(), L"rb");
@@ -64,15 +62,13 @@ File::operator bool() const {
     return fp != nullptr;
 }
 
-Image::Image() :
-    width(0), height(0), dataSize(0), hasAlpha(false)
-{}
+Image::Image() : width(0), height(0), dataSize(0), hasAlpha(false) {}
 
 Image::Image(Image&& image) {
     *this = std::move(image);
 }
 
-Image& Image::operator=(Image &&rhs) {
+Image& Image::operator=(Image&& rhs) {
     width = rhs.width;
     height = rhs.height;
     dataSize = rhs.dataSize;
@@ -104,7 +100,7 @@ bool Image::loadFromFile(const std::string_view path) {
     else
         hasAlpha = false;
 
-    uint8_t * const image = stbi_load_from_file(file, &width, &height, &comp, STBI_rgb_alpha);
+    uint8_t *const image = stbi_load_from_file(file, &width, &height, &comp, STBI_rgb_alpha);
     dataSize = width * height * 4;
     pixels.resize(dataSize);
     std::copy(image, image + dataSize, pixels.data());
@@ -129,8 +125,8 @@ bool Image::loadFromMemory(const Resource::View& resource) {
     else
         hasAlpha = false;
 
-    uint8_t * const image =
-        stbi_load_from_memory(resource.data(), resource.length(), &width, &height, &comp, STBI_rgb_alpha);
+    uint8_t *const image = stbi_load_from_memory(
+        resource.data(), resource.length(), &width, &height, &comp, STBI_rgb_alpha);
     dataSize = width * height * 4;
     pixels.resize(dataSize);
     std::copy(image, image + dataSize, pixels.data());

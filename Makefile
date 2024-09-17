@@ -51,18 +51,22 @@ $(TARGET): $(OBJDIR) $(OBJ)
 	$(CXX) -o $@ $(OBJ) $(LDFLAGS)
 
 ifeq ($(OS),Windows_NT)
+.PHONY: release
 release:
 	@[ ! -f "$(TARGET)" ] || rm $(TARGET)
 	@$(MAKE) LDFLAGS="$(LDFLAGS) -mwindows"
 
+.PHONY: may-create-release-build
 may-create-release-build:
 	@(read -p "Make release build? [Y/n] " yn && [ $${yn:-N} = y ]) \
 		|| exit 0 && $(MAKE) release
 else
+.PHONY: may-create-release-build
 may-create-release-build:
 	@ # Nothing to do.
 endif
 
+.PHONY: debug
 debug: CFLAGS+=-g -O0
 debug: OBJDIR:=$(OBJDIR)/debug
 debug: TARGET:=$(TARGET_DEBUG)
@@ -101,39 +105,48 @@ endif
 auto/version.cpp: FORCE-EXECUTE
 	./scripts/gen-version-cpp
 
+.PHONY: run
 run: $(TARGET)
 	./$(TARGET)
 
+.PHONY: clean
 clean:
 	$(RM) $(TARGET_DEBUG) $(OBJDIR)/debug/*.o $(OBJDIR)/debug/*.d
 	$(RM) $(OBJDIR)/*.o $(OBJDIR)/*.d $(TARGET)
 	$(RM) auto/*
 
+.PHONY: all
 all: clean $(TARGET);
 
 $(OBJDIR) auto/ tool/:
 	mkdir -p $@
 
+.PHONY: fmt
 fmt: FMT_OPTS := -i
 fmt: clang-format
 
+.PHONY: fmt-check
 fmt-check: FMT_OPTS := --dry-run --Werror
 fmt-check: clang-format
 
+.PHONY: clang-format
 clang-format:
 	clang-format $(FMT_OPTS) $(wildcard *.cpp) $(wildcard *.mm) $(wildcard *.hpp)
 
 # Make distribution package
 PKGNAME:=yoMMD-$(PKGNAME_PLATFORM)-$(shell date '+%Y%m%d%H%M').zip
+.PHONY: package
 package: may-create-release-build
 	@[ -d "package" ] || mkdir package
 	zip package/$(PKGNAME) $(TARGET)
 
+.PHONY: package-huge
 package-huge: package
 	@[ -d "default-attachments" ] && cd default-attachments && \
 		zip -ur ../package/$(PKGNAME) \
 		$(notdir $(wildcard default-attachments/*)) -x "*/.*"
 
+.PHONY: app
 app: $(TARGET)
 	@[ -d "package" ] || mkdir package
 	@[ ! -d "package/yoMMD.app" ] || rm -r package/yoMMD.app
@@ -145,6 +158,7 @@ app: $(TARGET)
 
 
 # Build bullet physics library
+.PHONY: build-bullet
 build-bullet: lib/bullet3/build/$(CMAKE_BUILDFILE)
 	@cd lib/bullet3/build && cmake --build . -j && cmake --build . -t install
 
@@ -177,6 +191,7 @@ lib/bullet3/build/$(CMAKE_BUILDFILE):
 		..
 
 # Build saba library
+.PHONY: build-saba
 build-saba: lib/saba/build/$(CMAKE_BUILDFILE)
 	cd lib/saba/build && cmake --build . -t Saba -j
 
@@ -188,10 +203,12 @@ lib/saba/build/$(CMAKE_BUILDFILE):
 		-DSABA_ENABLE_TEST=OFF                  \
 		$(CMAKE_GENERATOR) ..
 
+.PHONY: build-submodule
 build-submodule:
 	$(MAKE) build-bullet
 	$(MAKE) build-saba
 
+.PHONY: help
 help:
 	@echo "Available targets:"
 	@echo "$(TARGET)               Build executable binary (The default target)"
@@ -209,7 +226,3 @@ help:
 	@echo "build-saba          Build saba library"
 	@echo "bulid-submodule     Build submodule libraries"
 	@echo "help                Show this help"
-
-.PHONY: release debug help run clean package package-huge app fmt fmt-check clang-format
-.PHONY: may-create-release-build
-.PHONY: build-bullet build-saba update-sokol-shdc build-submodule

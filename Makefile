@@ -114,6 +114,15 @@ all: clean $(TARGET);
 $(OBJDIR) auto/ tool/:
 	mkdir -p $@
 
+fmt: FMT_OPTS := -i
+fmt: clang-format
+
+fmt-check: FMT_OPTS := --dry-run --Werror
+fmt-check: clang-format
+
+clang-format:
+	clang-format $(FMT_OPTS) $(wildcard *.cpp) $(wildcard *.mm) $(wildcard *.hpp)
+
 # Make distribution package
 PKGNAME:=yoMMD-$(PKGNAME_PLATFORM)-$(shell date '+%Y%m%d%H%M').zip
 package: may-create-release-build
@@ -190,6 +199,8 @@ help:
 	@echo "debug               Debug build"
 	@echo "run                 Build and run binary"
 	@echo "clean               Clean build related files"
+	@echo "fmt                 Format source code by clang-format"
+	@echo "fmt-check           Check if source code is formatted"
 	@echo "app                 Make application bundle (Only available on macOS)"
 	@echo "package             Make distribution package without any MMD models/motions"
 	@echo "package-huge        Make distribution package with default config,"
@@ -199,6 +210,6 @@ help:
 	@echo "bulid-submodule     Build submodule libraries"
 	@echo "help                Show this help"
 
-.PHONY: release debug help run clean package package-huge app
+.PHONY: release debug help run clean package package-huge app fmt fmt-check clang-format
 .PHONY: may-create-release-build
 .PHONY: build-bullet build-saba update-sokol-shdc build-submodule

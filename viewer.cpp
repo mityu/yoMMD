@@ -1,6 +1,14 @@
-#include "sokol_gfx.h"
-#include "sokol_time.h"
-#include "btBulletDynamicsCommon.h"  // IWYU pragma: keep; supress warning from clangd.
+#include "viewer.hpp"
+#include <ctime>
+#include <filesystem>
+#include <functional>
+#include <memory>
+#include <numbers>
+#include <numeric>
+#include <optional>
+#include <random>
+#include <string>
+#include <string_view>
 #include "Saba/Model/MMD/MMDCamera.h"
 #include "Saba/Model/MMD/MMDMaterial.h"
 #include "Saba/Model/MMD/MMDModel.h"
@@ -10,25 +18,17 @@
 #include "Saba/Model/MMD/VMDAnimation.h"
 #include "Saba/Model/MMD/VMDCameraAnimation.h"
 #include "Saba/Model/MMD/VMDFile.h"
-#include "viewer.hpp"
-#include "main.hpp"
-#include "util.hpp"
+#include "btBulletDynamicsCommon.h"  // IWYU pragma: keep; supress warning from clangd.
 #include "constant.hpp"
 #include "keyboard.hpp"
-#include "auto/yommd.glsl.h"
+#include "main.hpp"
+#include "sokol_gfx.h"
+#include "sokol_time.h"
+#include "util.hpp"
 #include "auto/quad.glsl.h"
-#include <ctime>
-#include <filesystem>
-#include <functional>
-#include <numeric>
-#include <optional>
-#include <memory>
-#include <string>
-#include <string_view>
-#include <random>
-#include <numbers>
+#include "auto/yommd.glsl.h"
 
-namespace{
+namespace {
 const std::filesystem::path getXdgConfigHomePath() {
 #ifdef PLATFORM_WINDOWS
     const wchar_t *wpath = _wgetenv(L"XDG_CONFIG_HOME");
@@ -50,16 +50,13 @@ inline glm::vec3 toVec3(glm::vec2 xy, decltype(xy)::value_type z) {
     return glm::vec3(xy.x, xy.y, z);
 }
 
-}
+}  // namespace
 
-Material::Material(const saba::MMDMaterial& mat) :
-    material(mat),
-    textureHasAlpha(false)
-{}
+Material::Material(const saba::MMDMaterial& mat) : material(mat), textureHasAlpha(false) {}
 
 void MMD::LoadModel(
-        const std::filesystem::path& modelPath,
-        const std::filesystem::path& resourcePath) {
+    const std::filesystem::path& modelPath,
+    const std::filesystem::path& resourcePath) {
     const auto ext = std::filesystem::path(modelPath).extension();
     if (ext == ".pmx") {
         auto pmx = std::make_unique<saba::PMXModel>();
@@ -126,6 +123,8 @@ void ModelEmphasizer::Init() {
     // FIXME: On Windows, using any color other than black makes window have
     // color.  In order to make only MMD models be highlighted, use black color
     // as blend color.
+
+    // clang-format off
     constexpr float vertices[] = {
         // positions    colors
         -1.0f,  1.0f,   0.0f, 0.0f, 0.0f, 0.5f,
@@ -133,7 +132,9 @@ void ModelEmphasizer::Init() {
          1.0f, -1.0f,   0.0f, 0.0f, 0.0f, 0.5f,
         -1.0f, -1.0f,   0.0f, 0.0f, 0.0f, 0.5f,
     };
+    // clang-format on
 #else
+    // clang-format off
     constexpr float vertices[] = {
         // positions    colors
         -1.0f,  1.0f,   1.0f, 1.0f, 1.0f, 0.3f,
@@ -141,13 +142,14 @@ void ModelEmphasizer::Init() {
          1.0f, -1.0f,   1.0f, 1.0f, 1.0f, 0.3f,
         -1.0f, -1.0f,   1.0f, 1.0f, 1.0f, 0.3f,
     };
+    // clang-format on
 #endif
     binds_.vertex_buffers[0] = sg_make_buffer(sg_buffer_desc{
         .type = SG_BUFFERTYPE_VERTEXBUFFER,
         .data = SG_RANGE(vertices),
     });
 
-    constexpr uint16_t indices[] = {0, 1, 2,  0, 2, 3};
+    constexpr uint16_t indices[] = {0, 1, 2, 0, 2, 3};
     binds_.index_buffer = sg_make_buffer(sg_buffer_desc{
         .type = SG_BUFFERTYPE_INDEXBUFFER,
         .data = SG_RANGE(indices),
@@ -156,28 +158,31 @@ void ModelEmphasizer::Init() {
     shader_ = sg_make_shader(quad_shader_desc(sg_query_backend()));
 
     constexpr sg_color_target_state colorState = {
-        .blend = {
-            .enabled = true,
-            .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
-            .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-            .src_factor_alpha = SG_BLENDFACTOR_ZERO,
-            .dst_factor_alpha = SG_BLENDFACTOR_ONE,
-        }
+        .blend =
+            {
+                .enabled = true,
+                .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
+                .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                .src_factor_alpha = SG_BLENDFACTOR_ZERO,
+                .dst_factor_alpha = SG_BLENDFACTOR_ONE,
+            },
     };
     const sg_pipeline_desc pipelineDesc = {
         .shader = shader_,
-        .layout = {
-            .attrs = {
-                {
-                    .offset = 0,
-                    .format = SG_VERTEXFORMAT_FLOAT2,
-                },
-                {
-                    .offset = sizeof(float) * 2,
-                    .format = SG_VERTEXFORMAT_FLOAT4,
-                },
-            }
-        },
+        .layout =
+            {
+                .attrs =
+                    {
+                        {
+                            .offset = 0,
+                            .format = SG_VERTEXFORMAT_FLOAT2,
+                        },
+                        {
+                            .offset = sizeof(float) * 2,
+                            .format = SG_VERTEXFORMAT_FLOAT4,
+                        },
+                    },
+            },
         .colors = {{colorState}},
         .index_type = SG_INDEXTYPE_UINT16,
     };
@@ -220,9 +225,10 @@ void UserView::OnMouseDragged() {
         actionHelper_ = {
             .action = Action::Drag,
             .refPoint = Context::getMousePosition(),
-            .firstTransform = {
-                .translation = transform_.translation,
-            },
+            .firstTransform =
+                {
+                    .translation = transform_.translation,
+                },
         };
     }
 
@@ -238,8 +244,7 @@ void UserView::OnMouseDragged() {
     //
     // Note that "toWorldCoord" shouldn't be used here.
     delta = 2.0f * delta / Context::getWindowSize();
-    transform_.translation =
-        actionHelper_.firstTransform.translation + toVec3(delta, 0.0f);
+    transform_.translation = actionHelper_.firstTransform.translation + toVec3(delta, 0.0f);
 }
 
 void UserView::OnWheelScrolled(float delta) {
@@ -249,8 +254,8 @@ void UserView::OnWheelScrolled(float delta) {
             callback_.OnRotationChanged();
     } else {
         changeScale(
-                transform_.scale - delta / Context::getWindowSize().y,
-                Context::getMousePosition());
+            transform_.scale - delta / Context::getWindowSize().y,
+            Context::getMousePosition());
     }
 }
 
@@ -291,7 +296,7 @@ float UserView::GetRotation() const {
 
 void UserView::changeScale(float newScale, glm::vec2 refpoint) {
     if (actionHelper_.action != Action::Zoom ||
-            isDifferentPoint(actionHelper_.refPoint, refpoint)) {
+        isDifferentPoint(actionHelper_.refPoint, refpoint)) {
         actionHelper_ = {
             .action = Action::Zoom,
             .refPoint = refpoint,
@@ -309,14 +314,14 @@ void UserView::changeScale(float newScale, glm::vec2 refpoint) {
     refpoint = toWorldCoord(actionHelper_.refPoint, toVec2(firstTranslation));
 
     const glm::vec2 delta(
-            refpoint - (refpoint * transform_.scale / actionHelper_.firstTransform.scale));
+        refpoint - (refpoint * transform_.scale / actionHelper_.firstTransform.scale));
     transform_.translation = firstTranslation + toVec3(delta, 0.0f);
 }
 
 void UserView::changeRotation(float delta, glm::vec2 refpoint) {
     constexpr float PI2 = 2.0f * std::numbers::pi;
     if (actionHelper_.action != Action::Rotate ||
-            isDifferentPoint(actionHelper_.refPoint, refpoint)) {
+        isDifferentPoint(actionHelper_.refPoint, refpoint)) {
         actionHelper_ = {
             .action = Action::Rotate,
             .refPoint = refpoint,
@@ -333,8 +338,8 @@ void UserView::changeRotation(float delta, glm::vec2 refpoint) {
     // Adjust translation.
     delta = transform_.rotation - actionHelper_.firstTransform.rotation;
     const float c = std::cos(delta), s = std::sin(delta);
-    const glm::vec2 origin = toWindowCoord(
-            glm::vec2(0, 0), actionHelper_.firstTransform.translation);
+    const glm::vec2 origin =
+        toWindowCoord(glm::vec2(0, 0), actionHelper_.firstTransform.translation);
     const glm::vec2 src = actionHelper_.refPoint - origin;
     const glm::vec2 dst(src.x * c - src.y * s, src.x * s + src.y * c);
     const glm::vec2 adjustment = 2.0f * (src - dst) / Context::getWindowSize();
@@ -355,13 +360,16 @@ glm::vec2 UserView::toWindowCoord(const glm::vec2& src, const glm::vec2& transla
 }
 
 Routine::Routine() :
-    passAction_({.colors = {{.load_action = SG_LOADACTION_CLEAR, .clear_value = {0, 0, 0, 0}}}}),
+    passAction_(
+        {.colors = {{.load_action = SG_LOADACTION_CLEAR, .clear_value = {0, 0, 0, 0}}}}),
     binds_({}),
-    timeBeginAnimation_(0), timeLastFrame_(0), motionID_(0), needBridgeMotions_(false),
-    rand_(static_cast<int>(std::time(nullptr)))
-{
+    timeBeginAnimation_(0),
+    timeLastFrame_(0),
+    motionID_(0),
+    needBridgeMotions_(false),
+    rand_(static_cast<int>(std::time(nullptr))) {
     userView_.SetCallback({
-        .OnRotationChanged = [this](){updateGravity();},
+        .OnRotationChanged = [this]() { updateGravity(); },
     });
 }
 
@@ -385,9 +393,10 @@ void Routine::Init() {
     }
 
     const sg_desc desc = {
-        .logger = {
-            .func = Slog::Logger,
-        },
+        .logger =
+            {
+                .func = Slog::Logger,
+            },
         .environment = Context::getSokolEnvironment(),
     };
     sg_setup(&desc);
@@ -431,21 +440,20 @@ void Routine::initBuffers() {
     const size_t indexSize = model->GetIndexElementSize();
 
     posVB_ = sg_make_buffer(sg_buffer_desc{
-                .size = vertCount * sizeof(glm::vec3),
-                .type = SG_BUFFERTYPE_VERTEXBUFFER,
-                .usage = SG_USAGE_DYNAMIC,
-            });
+        .size = vertCount * sizeof(glm::vec3),
+        .type = SG_BUFFERTYPE_VERTEXBUFFER,
+        .usage = SG_USAGE_DYNAMIC,
+    });
     normVB_ = sg_make_buffer(sg_buffer_desc{
-                .size = vertCount * sizeof(glm::vec3),
-                .type = SG_BUFFERTYPE_VERTEXBUFFER,
-                .usage = SG_USAGE_DYNAMIC,
-            });
+        .size = vertCount * sizeof(glm::vec3),
+        .type = SG_BUFFERTYPE_VERTEXBUFFER,
+        .usage = SG_USAGE_DYNAMIC,
+    });
     uvVB_ = sg_make_buffer(sg_buffer_desc{
-                .size = vertCount * sizeof(glm::vec2),
-                .type = SG_BUFFERTYPE_VERTEXBUFFER,
-                .usage = SG_USAGE_DYNAMIC,
-            });
-
+        .size = vertCount * sizeof(glm::vec2),
+        .type = SG_BUFFERTYPE_VERTEXBUFFER,
+        .usage = SG_USAGE_DYNAMIC,
+    });
 
     // Prepare Index buffer object.
     const auto copyInduces = [&model, this](const auto *mmdInduces) {
@@ -454,7 +462,7 @@ void Routine::initBuffers() {
             const auto& subMesth = model->GetSubMeshes()[i];
             for (int j = 0; j < subMesth.m_vertexCount; ++j)
                 induces_.push_back(
-                        static_cast<uint32_t>(mmdInduces[subMesth.m_beginIndex + j]));
+                    static_cast<uint32_t>(mmdInduces[subMesth.m_beginIndex + j]));
         }
     };
     switch (indexSize) {
@@ -472,13 +480,14 @@ void Routine::initBuffers() {
     }
 
     ibo_ = sg_make_buffer(sg_buffer_desc{
-                .type = SG_BUFFERTYPE_INDEXBUFFER,
-                .usage = SG_USAGE_IMMUTABLE,
-                .data = {
-                    .ptr = induces_.data(),
-                    .size = induces_.size() * sizeof(uint32_t),
-                },
-            });
+        .type = SG_BUFFERTYPE_INDEXBUFFER,
+        .usage = SG_USAGE_IMMUTABLE,
+        .data =
+            {
+                .ptr = induces_.data(),
+                .size = induces_.size() * sizeof(uint32_t),
+            },
+    });
 }
 
 void Routine::initTextures() {
@@ -487,9 +496,10 @@ void Routine::initTextures() {
     dummyTex_ = sg_make_image(sg_image_desc{
         .width = 1,
         .height = 1,
-        .data = {
-            .subimage = {{{.ptr = dummyPixel, .size = 4}}},
-        },
+        .data =
+            {
+                .subimage = {{{.ptr = dummyPixel, .size = 4}}},
+            },
     });
 
     const auto& model = mmd_.GetModel();
@@ -544,21 +554,23 @@ void Routine::initPipeline() {
     };
 
     sg_color_target_state color_state = {
-        .blend = {
-            .enabled = true,
-            .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
-            .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-            .src_factor_alpha = SG_BLENDFACTOR_ONE,
-            .dst_factor_alpha = SG_BLENDFACTOR_ONE,
-        },
+        .blend =
+            {
+                .enabled = true,
+                .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
+                .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                .src_factor_alpha = SG_BLENDFACTOR_ONE,
+                .dst_factor_alpha = SG_BLENDFACTOR_ONE,
+            },
     };
 
     sg_pipeline_desc pipeline_desc = {
         .shader = shaderMMD_,
-        .depth = {
-            .compare = SG_COMPAREFUNC_LESS_EQUAL,  // FIXME: SG_COMPAREFUNC_LESS?
-            .write_enabled = true,
-        },
+        .depth =
+            {
+                .compare = SG_COMPAREFUNC_LESS_EQUAL,  // FIXME: SG_COMPAREFUNC_LESS?
+                .write_enabled = true,
+            },
         .colors = {{color_state}},
         .primitive_type = SG_PRIMITIVETYPE_TRIANGLES,
         .index_type = SG_INDEXTYPE_UINT32,
@@ -612,27 +624,17 @@ void Routine::Update() {
             cameraAnim->Evaluate(vmdFrame);
             const auto& mmdCamera = cameraAnim->GetCamera();
             saba::MMDLookAtCamera lookAtCamera(mmdCamera);
-            viewMatrix_ = glm::lookAt(
-                    lookAtCamera.m_eye,
-                    lookAtCamera.m_center,
-                    lookAtCamera.m_up);
+            viewMatrix_ =
+                glm::lookAt(lookAtCamera.m_eye, lookAtCamera.m_center, lookAtCamera.m_up);
             projectionMatrix_ = glm::perspectiveFovRH(
-                    mmdCamera.m_fov,
-                    static_cast<float>(size.x),
-                    static_cast<float>(size.y),
-                    1.0f,
-                    10000.0f);
+                mmdCamera.m_fov, static_cast<float>(size.x), static_cast<float>(size.y), 1.0f,
+                10000.0f);
         } else {
-            viewMatrix_ = glm::lookAt(
-                    defaultCamera_.eye,
-                    defaultCamera_.center,
-                    glm::vec3(0, 1, 0));
+            viewMatrix_ =
+                glm::lookAt(defaultCamera_.eye, defaultCamera_.center, glm::vec3(0, 1, 0));
             projectionMatrix_ = glm::perspectiveFovRH(
-                    glm::radians(30.0f),
-                    static_cast<float>(size.x),
-                    static_cast<float>(size.y),
-                    1.0f,
-                    10000.0f);
+                glm::radians(30.0f), static_cast<float>(size.x), static_cast<float>(size.y),
+                1.0f, 10000.0f);
         }
 
         viewMatrix_ = userView_.GetWorldViewMatrix() * viewMatrix_;
@@ -655,18 +657,21 @@ void Routine::Update() {
     }
     model->Update();
 
-    sg_update_buffer(posVB_, sg_range{
-                .ptr = model->GetUpdatePositions(),
-                .size = vertCount * sizeof(glm::vec3),
-            });
-    sg_update_buffer(normVB_, sg_range{
-                .ptr = model->GetUpdateNormals(),
-                .size = vertCount * sizeof(glm::vec3),
-            });
-    sg_update_buffer(uvVB_, sg_range{
-                .ptr = model->GetUpdateUVs(),
-                .size = vertCount * sizeof(glm::vec2),
-            });
+    sg_update_buffer(
+        posVB_, sg_range{
+                    .ptr = model->GetUpdatePositions(),
+                    .size = vertCount * sizeof(glm::vec3),
+                });
+    sg_update_buffer(
+        normVB_, sg_range{
+                     .ptr = model->GetUpdateNormals(),
+                     .size = vertCount * sizeof(glm::vec3),
+                 });
+    sg_update_buffer(
+        uvVB_, sg_range{
+                   .ptr = model->GetUpdateUVs(),
+                   .size = vertCount * sizeof(glm::vec2),
+               });
 
     if (!animations.empty()) {
         const auto& vmdAnim = animations[motionID_].first;
@@ -700,7 +705,7 @@ void Routine::Draw() {
     const size_t subMeshCount = model->GetSubMeshCount();
     for (size_t i = 0; i < subMeshCount; ++i) {
         const auto& subMesh = model->GetSubMeshes()[i];
-        const auto & material = materials_[subMesh.m_materialID];
+        const auto& material = materials_[subMesh.m_materialID];
         const auto& mmdMaterial = material.material;
 
         if (mmdMaterial.m_alpha == 0)
@@ -910,7 +915,7 @@ std::optional<sg_image> Routine::getTexture(const std::string& path) {
         .usage = SG_USAGE_IMMUTABLE,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
     };
-    image_desc.data.subimage[0][0] =  {
+    image_desc.data.subimage[0][0] = {
         .ptr = image.pixels.data(),
         .size = image.pixels.size(),
     };

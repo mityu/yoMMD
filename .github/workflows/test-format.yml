@@ -1,0 +1,19 @@
+name: Code format check
+on: [push, pull_request]
+
+jobs:
+  clang-format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+      - name: Prepare newer clang-format
+        run: |
+          brew install clang-format
+          brew link clang-format --force
+      - name: Show clang-format version
+        run: clang-format --version
+      - name: Check code format
+        run: make fmt-check

@@ -1,6 +1,6 @@
 #include "keyboard.hpp"
-#include <cstddef>
 #include <array>
+#include <cstddef>
 
 namespace {
 std::array<bool, static_cast<std::size_t>(Keycode::Count)> state({});

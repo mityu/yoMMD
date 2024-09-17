@@ -1,13 +1,13 @@
 #ifndef UTIL_HPP_
 #define UTIL_HPP_
 
-#include "main.hpp"
-#include "platform.hpp"
-#include <vector>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <sstream>
+#include <vector>
+#include "main.hpp"
+#include "platform.hpp"
 
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>
@@ -15,8 +15,8 @@
 
 struct NonCopyable {
     NonCopyable() = default;
-    NonCopyable(const NonCopyable &) = delete;
-    NonCopyable &operator=(const NonCopyable &) = delete;
+    NonCopyable(const NonCopyable&) = delete;
+    NonCopyable& operator=(const NonCopyable&) = delete;
 };
 
 struct CmdArgs {
@@ -28,31 +28,36 @@ struct CmdArgs {
 };
 
 namespace _internal {
-template <typename T> void _log(std::ostream& os, T&& car) {
+template <typename T>
+void _log(std::ostream& os, T&& car) {
     os << car << std::endl;
 }
-template <typename T, typename... Args> void _log(std::ostream& os, T&& car, Args&&... cdr) {
+template <typename T, typename... Args>
+void _log(std::ostream& os, T&& car, Args&&...cdr) {
     os << car << ' ';
     _log(os, std::forward<Args>(cdr)...);
 }
-}
+}  // namespace _internal
 
 namespace Info {
-template <typename... Args> void Log(Args&&... args) {
+template <typename... Args>
+void Log(Args&&...args) {
     ::_internal::_log(std::cout, std::forward<Args>(args)...);
 }
-}
+}  // namespace Info
 namespace Err {
-template <typename... Args> void Log(Args&&... args) {
+template <typename... Args>
+void Log(Args&&...args) {
     std::stringstream ss;
     ::_internal::_log(ss, std::forward<Args>(args)...);
     Dialog::messageBox(ss.str());
 }
-template <typename... Args> [[noreturn]] void Exit(Args&&... args) {
+template <typename... Args>
+[[noreturn]] void Exit(Args&&...args) {
     Log(std::forward<Args>(args)...);
     std::exit(1);
 }
-}
+}  // namespace Err
 
 namespace String {
 template <typename T>
@@ -70,32 +75,39 @@ template <typename T>
 inline std::basic_string<T> wideToMulti(const std::wstring_view wstr) {
     static_assert(sizeof(T) == sizeof(char), "Invalid conversion.");
     std::basic_string<T> str;
-    int size = WideCharToMultiByte(
-            CP_ACP, 0, wstr.data(), -1, nullptr, 0, nullptr, nullptr);
-    str.resize(size-1, '\0');  // "size" includes padding for '\0'
-    WideCharToMultiByte(CP_ACP, 0, wstr.data(), -1,
-            reinterpret_cast<char *>(str.data()), size, nullptr, nullptr);
+    int size = WideCharToMultiByte(CP_ACP, 0, wstr.data(), -1, nullptr, 0, nullptr, nullptr);
+    str.resize(size - 1, '\0');  // "size" includes padding for '\0'
+    WideCharToMultiByte(
+        CP_ACP, 0, wstr.data(), -1, reinterpret_cast<char *>(str.data()), size, nullptr,
+        nullptr);
     return str;
 }
 #endif
-}
+}  // namespace String
 
 namespace Enum {
 template <typename T>
 inline constexpr std::underlying_type_t<T> underlyCast(T v) {
     return static_cast<decltype(underlyCast(v))>(v);
 }
-}
+}  // namespace Enum
 
 namespace Path {
 std::filesystem::path getWorkingDirectory();
 std::filesystem::path makeAbsolute(
-        const std::filesystem::path& path, const std::filesystem::path& cwd);
-}
+    const std::filesystem::path& path,
+    const std::filesystem::path& cwd);
+}  // namespace Path
 
 namespace Slog {
-void Logger(const char *tag, uint32_t logLevel, uint32_t logItem,
-        const char *message, uint32_t linenr, const char *filename, void *user_data);
+void Logger(
+    const char *tag,
+    uint32_t logLevel,
+    uint32_t logItem,
+    const char *message,
+    uint32_t linenr,
+    const char *filename,
+    void *user_data);
 }
 
 #endif  // UTIL_HPP_

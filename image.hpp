@@ -1,9 +1,9 @@
 #ifndef IMAGE_HPP_
 #define IMAGE_HPP_
 
-#include "util.hpp"
-#include "resources.hpp"
 #include <vector>
+#include "resources.hpp"
+#include "util.hpp"
 
 class Image : private NonCopyable {
 public:
@@ -15,9 +15,10 @@ public:
 
     Image();
     Image(Image&& image);
-    Image &operator=(Image &&rhs);
+    Image& operator=(Image&& rhs);
     bool loadFromFile(const std::string_view path);
     bool loadFromMemory(const Resource::View& resource);
+
 private:
 };
 

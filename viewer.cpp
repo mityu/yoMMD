@@ -411,9 +411,9 @@ void Routine::Init() {
     modelEmphasizer_.Init();
 
     binds_.index_buffer = ibo_;
-    binds_.vertex_buffers[ATTR_mmd_vs_in_Pos] = posVB_;
-    binds_.vertex_buffers[ATTR_mmd_vs_in_Nor] = normVB_;
-    binds_.vertex_buffers[ATTR_mmd_vs_in_UV] = uvVB_;
+    binds_.vertex_buffers[ATTR_mmd_in_Pos] = posVB_;
+    binds_.vertex_buffers[ATTR_mmd_in_Nor] = normVB_;
+    binds_.vertex_buffers[ATTR_mmd_in_UV] = uvVB_;
 
     const auto distSup = std::reduce(motionWeights_.cbegin(), motionWeights_.cend(), 0u);
     if (!motionWeights_.empty() && distSup == 0)
@@ -540,16 +540,16 @@ void Routine::initTextures() {
 
 void Routine::initPipeline() {
     sg_vertex_layout_state layout_desc;
-    layout_desc.attrs[ATTR_mmd_vs_in_Pos] = {
-        .buffer_index = ATTR_mmd_vs_in_Pos,
+    layout_desc.attrs[ATTR_mmd_in_Pos] = {
+        .buffer_index = ATTR_mmd_in_Pos,
         .format = SG_VERTEXFORMAT_FLOAT3,
     };
-    layout_desc.attrs[ATTR_mmd_vs_in_Nor] = {
-        .buffer_index = ATTR_mmd_vs_in_Nor,
+    layout_desc.attrs[ATTR_mmd_in_Nor] = {
+        .buffer_index = ATTR_mmd_in_Nor,
         .format = SG_VERTEXFORMAT_FLOAT3,
     };
-    layout_desc.attrs[ATTR_mmd_vs_in_UV] = {
-        .buffer_index = ATTR_mmd_vs_in_UV,
+    layout_desc.attrs[ATTR_mmd_in_UV] = {
+        .buffer_index = ATTR_mmd_in_UV,
         .format = SG_VERTEXFORMAT_FLOAT2,
     };
 
@@ -578,9 +578,9 @@ void Routine::initPipeline() {
         .face_winding = SG_FACEWINDING_CW,
         .sample_count = Context::getSampleCount(),
     };
-    pipeline_desc.layout.attrs[ATTR_mmd_vs_in_Pos] = layout_desc.attrs[ATTR_mmd_vs_in_Pos];
-    pipeline_desc.layout.attrs[ATTR_mmd_vs_in_Nor] = layout_desc.attrs[ATTR_mmd_vs_in_Nor];
-    pipeline_desc.layout.attrs[ATTR_mmd_vs_in_UV] = layout_desc.attrs[ATTR_mmd_vs_in_UV];
+    pipeline_desc.layout.attrs[ATTR_mmd_in_Pos] = layout_desc.attrs[ATTR_mmd_in_Pos];
+    pipeline_desc.layout.attrs[ATTR_mmd_in_Nor] = layout_desc.attrs[ATTR_mmd_in_Nor];
+    pipeline_desc.layout.attrs[ATTR_mmd_in_UV] = layout_desc.attrs[ATTR_mmd_in_UV];
 
     pipeline_frontface_ = sg_make_pipeline(&pipeline_desc);
 
@@ -730,8 +730,8 @@ void Routine::Draw() {
         };
 
         if (material.texture) {
-            binds_.fs.images[SLOT_u_Tex] = *material.texture;
-            binds_.fs.samplers[SLOT_u_Tex_smp] = sampler_texture_;
+            binds_.images[IMG_u_Tex] = *material.texture;
+            binds_.samplers[SMP_u_Tex_smp] = sampler_texture_;
             if (material.textureHasAlpha) {
                 // Use Material Alpha * Texture Alpha
                 u_mmd_fs.u_TexMode = 2;
@@ -742,13 +742,13 @@ void Routine::Draw() {
             u_mmd_fs.u_TexMulFactor = mmdMaterial.m_textureMulFactor;
             u_mmd_fs.u_TexAddFactor = mmdMaterial.m_textureAddFactor;
         } else {
-            binds_.fs.images[SLOT_u_Tex] = dummyTex_;
-            binds_.fs.samplers[SLOT_u_Tex_smp] = sampler_texture_;
+            binds_.images[IMG_u_Tex] = dummyTex_;
+            binds_.samplers[SMP_u_Tex_smp] = sampler_texture_;
         }
 
         if (material.spTexture) {
-            binds_.fs.images[SLOT_u_SphereTex] = *material.spTexture;
-            binds_.fs.samplers[SLOT_u_SphereTex_smp] = sampler_sphere_texture_;
+            binds_.images[IMG_u_SphereTex] = *material.spTexture;
+            binds_.samplers[SMP_u_SphereTex_smp] = sampler_sphere_texture_;
             switch (mmdMaterial.m_spTextureMode) {
             case saba::MMDMaterial::SphereTextureMode::Mul:
                 u_mmd_fs.u_SphereTexMode = 1;
@@ -762,19 +762,19 @@ void Routine::Draw() {
             u_mmd_fs.u_SphereTexMulFactor = mmdMaterial.m_spTextureMulFactor;
             u_mmd_fs.u_SphereTexAddFactor = mmdMaterial.m_spTextureAddFactor;
         } else {
-            binds_.fs.images[SLOT_u_SphereTex] = dummyTex_;
-            binds_.fs.samplers[SLOT_u_SphereTex_smp] = sampler_sphere_texture_;
+            binds_.images[IMG_u_SphereTex] = dummyTex_;
+            binds_.samplers[SMP_u_SphereTex_smp] = sampler_sphere_texture_;
         }
 
         if (material.toonTexture) {
-            binds_.fs.images[SLOT_u_ToonTex] = *material.toonTexture;
-            binds_.fs.samplers[SLOT_u_ToonTex_smp] = sampler_toon_texture_;
+            binds_.images[IMG_u_ToonTex] = *material.toonTexture;
+            binds_.samplers[SMP_u_ToonTex_smp] = sampler_toon_texture_;
             u_mmd_fs.u_ToonTexMulFactor = mmdMaterial.m_toonTextureMulFactor;
             u_mmd_fs.u_ToonTexAddFactor = mmdMaterial.m_toonTextureAddFactor;
             u_mmd_fs.u_ToonTexMode = 1;
         } else {
-            binds_.fs.images[SLOT_u_ToonTex] = dummyTex_;
-            binds_.fs.samplers[SLOT_u_ToonTex_smp] = sampler_toon_texture_;
+            binds_.images[IMG_u_ToonTex] = dummyTex_;
+            binds_.samplers[SMP_u_ToonTex_smp] = sampler_toon_texture_;
         }
 
         if (mmdMaterial.m_bothFace)
@@ -782,8 +782,8 @@ void Routine::Draw() {
         else
             sg_apply_pipeline(pipeline_frontface_);
         sg_apply_bindings(binds_);
-        sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_u_mmd_vs, SG_RANGE(u_mmd_vs));
-        sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_u_mmd_fs, SG_RANGE(u_mmd_fs));
+        sg_apply_uniforms(UB_u_mmd_vs, SG_RANGE(u_mmd_vs));
+        sg_apply_uniforms(UB_u_mmd_fs, SG_RANGE(u_mmd_fs));
 
         sg_draw(subMesh.m_beginIndex, subMesh.m_vertexCount, 1);
     }

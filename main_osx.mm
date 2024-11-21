@@ -609,7 +609,11 @@ enum class MenuTag : NSInteger {
 - (void)actionDisableMouse:(NSMenuItem *)sender {
     [getAppMain() setIgnoreMouse:true];
     if (NSApp.active && alterApp_) {
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
+        [alterApp_ activateWithOptions:0];
+#else
         [alterApp_ activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+#endif
     }
     alterApp_ = NULL;
 }
@@ -621,7 +625,11 @@ enum class MenuTag : NSInteger {
     [NSApp unhide:self];
     if ([getAppMain() getIgnoreMouse]) {
         if (NSApp.active && activeApp) {
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
+            [activeApp activateWithOptions:0];
+#else
             [activeApp activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+#endif
         }
     } else if (!NSApp.active) {
         [NSApp activateIgnoringOtherApps:YES];

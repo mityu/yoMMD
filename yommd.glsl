@@ -19,7 +19,7 @@ out vec3 vs_Pos;
 out vec3 vs_Nor;
 out vec2 vs_UV;
 
-uniform u_mmd_vs {
+layout(binding=0) uniform u_mmd_vs {
     mat4 u_WV;
     mat4 u_WVP;
 };
@@ -42,7 +42,7 @@ in vec2 vs_UV;
 
 out vec4 out_Color;
 
-uniform u_mmd_fs {
+layout(binding=1) uniform u_mmd_fs {
     float u_Alpha;
     vec3 u_Diffuse;
     vec3 u_Ambient;
@@ -64,12 +64,12 @@ uniform u_mmd_fs {
     vec4 u_SphereTexAddFactor;
 };
 
-uniform texture2D u_Tex;
-uniform texture2D u_ToonTex;
-uniform texture2D u_SphereTex;
-uniform sampler u_Tex_smp;
-uniform sampler u_ToonTex_smp;
-uniform sampler u_SphereTex_smp;
+layout(binding=0) uniform texture2D u_Tex;
+layout(binding=1) uniform texture2D u_ToonTex;
+layout(binding=2) uniform texture2D u_SphereTex;
+layout(binding=0) uniform sampler u_Tex_smp;
+layout(binding=1) uniform sampler u_ToonTex_smp;
+layout(binding=2) uniform sampler u_SphereTex_smp;
 
 vec3 ComputeTexMulFactor(vec3 texColor, vec4 factor)
 {

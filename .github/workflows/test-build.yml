@@ -1,5 +1,10 @@
 name: Build test
-on: [push, pull_request]
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
 
 jobs:
   windows:

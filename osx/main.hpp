@@ -17,8 +17,6 @@
 - (NSMenu *)getAppMenu;
 - (sg_environment)getSokolEnvironment;
 - (sg_swapchain)getSokolSwapchain;
-- (id<CAMetalDrawable>)getDrawable;
-- (MTLRenderPassDescriptor *)getRenderPassDescriptor;
 - (NSSize)getWindowSize;
 - (NSPoint)getWindowPosition;
 - (NSSize)getDrawableSize;

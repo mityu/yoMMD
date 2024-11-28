@@ -168,12 +168,6 @@
             },
     };
 }
-- (id<CAMetalDrawable>)getDrawable {
-    return [view_ currentDrawable];
-}
-- (MTLRenderPassDescriptor *)getRenderPassDescriptor {
-    return [view_ currentRenderPassDescriptor];
-}
 - (NSSize)getWindowSize {
     return window_.frame.size;
 }

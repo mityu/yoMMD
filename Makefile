@@ -1,11 +1,12 @@
 CXX:=g++
 CC:=gcc
 TARGET:=yoMMD
-OBJDIR=obj
+OBJDIR:=obj
 SRCS:=viewer.cpp config.cpp resources.cpp image.cpp keyboard.cpp util.cpp libs.mm
 CFLAGS:=-Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb \
 		-Ilib/toml11/include -Ilib/incbin -Ilib/bullet3/build/include/bullet \
-		-Wall -Wextra -pedantic -MMD -MP
+		-Wall -Wextra -pedantic -MMD -MP \
+		-Wno-missing-field-initializers
 CPPFLAGS:=-std=c++20
 OBJCFLAGS:=
 LDFLAGS:=-Llib/saba/build/src -lSaba -Llib/bullet3/build/lib \
@@ -17,7 +18,6 @@ CMAKE_BUILDFILE:=Makefile
 ifeq ($(OS),Windows_NT)
 TARGET:=$(TARGET).exe
 SRCS+=main_windows.cpp resource_windows.rc
-CFLAGS+=-Wno-missing-field-initializers
 LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi -ldcomp -lgdi32 -ldwmapi -municode
 SOKOL_SHDC:=lib/sokol-tools-bin/bin/win32/sokol-shdc.exe
 PKGNAME_PLATFORM:=win-x86_64

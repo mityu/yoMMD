@@ -164,6 +164,9 @@ app: release/$(TARGET)
 build-bullet: lib/bullet3/build/$(CMAKE_BUILDFILE)
 	@cd lib/bullet3/build && cmake --build . -j && cmake --build . -t install
 
+clean-bullet:
+	$(RM) -r lib/bullet3/build
+
 lib/bullet3/build/$(CMAKE_BUILDFILE):
 	$(call MKDIR,lib/bullet3/build)
 	cd lib/bullet3/build && cmake \
@@ -197,6 +200,9 @@ lib/bullet3/build/$(CMAKE_BUILDFILE):
 build-saba: lib/saba/build/$(CMAKE_BUILDFILE)
 	cd lib/saba/build && cmake --build . -t Saba -j
 
+clean-saba:
+	$(RM) -r lib/saba/build
+
 lib/saba/build/$(CMAKE_BUILDFILE):
 	$(call MKDIR,lib/saba/build)
 	cd lib/saba/build && cmake                  \
@@ -209,6 +215,14 @@ lib/saba/build/$(CMAKE_BUILDFILE):
 build-submodule:
 	$(MAKE) build-bullet
 	$(MAKE) build-saba
+
+.PHONY: init-submodule
+init-submodule:
+	git submodule update --init --recursive
+
+.PHONY: update-submodule
+update-submodule:
+	git submodule update
 
 .PHONY: help
 help:

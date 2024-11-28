@@ -1,12 +1,12 @@
 CXX:=g++
 CC:=gcc
 TARGET:=yoMMD
-OBJDIR:=obj
-SRCS:=viewer.cpp config.cpp resources.cpp image.cpp keyboard.cpp util.cpp libs.mm
+SRCS:=viewer.cpp config.cpp resources.cpp image.cpp keyboard.cpp util.cpp libs.mm auto/version.cpp
 CFLAGS:=-Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb \
 		-Ilib/toml11/include -Ilib/incbin -Ilib/bullet3/build/include/bullet \
-		-Wall -Wextra -pedantic -MMD -MP \
-		-Wno-missing-field-initializers
+		-Wall -Wextra -pedantic -Wno-missing-field-initializers
+CFLAGS_debug:=-g -O0
+CFLAGS_release:=-O2
 CPPFLAGS:=-std=c++20
 OBJCFLAGS:=
 LDFLAGS:=-Llib/saba/build/src -lSaba -Llib/bullet3/build/lib \
@@ -19,6 +19,7 @@ ifeq ($(OS),Windows_NT)
 TARGET:=$(TARGET).exe
 SRCS+=main_windows.cpp resource_windows.rc
 LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi -ldcomp -lgdi32 -ldwmapi -municode
+LDFLAGS_release:=-mwindows
 SOKOL_SHDC:=lib/sokol-tools-bin/bin/win32/sokol-shdc.exe
 PKGNAME_PLATFORM:=win-x86_64
 CMAKE_GENERATOR:=-G "MSYS Makefiles"
@@ -49,58 +50,54 @@ debug: ./$(TARGET)
 .PHONY: release
 release: release/$(TARGET)
 
-GENOBJS=$(SRCS:%=$1/%.o) $1/version.cpp.o
-GENDEPS=$(patsubst %.o,%.d,$(call GENOBJS,$1))
-
 define MKDIR
-	@test -d "$1" || mkdir "$1"
+	@test -d "$1" || mkdir $2 "$1"
 endef
 
+# GEN_BUILD_RULES
+# @param:
+# - build-type = "debug" | "release"
+# - target = "/path/to/output/binary"
+GEN_OBJDIR=build/$1/obj
+GEN_DEPDIR=build/$1/dep
+GEN_OBJS=$(SRCS:%=$(call GEN_OBJDIR,$1)/%.o)
+GEN_DEPS=$(SRCS:%=$(call GEN_DEPDIR,$1)/%.d)
+GEN_BUILDDIRS=$(addsuffix .,$(sort auto/ $(dir $(call GEN_OBJS,$1) $(call GEN_DEPS,$1))))
+GEN_CFLAGS=$(CFLAGS) $(CFLAGS_$1) -MMD -MP -MF \
+		   $$(patsubst $(call GEN_OBJDIR,$1)/%.o,$(call GEN_DEPDIR,$1)/%.d,$$@)
 define GEN_BUILD_RULES
--include $(call GENDEPS,$(BUILDDIR)/$(OBJDIR))
+-include $(call GEN_DEPS,$1)
 
-$(BUILDDIR)/$(TARGET): $(BUILDDIR)/$(OBJDIR) $$(call GENOBJS,$(BUILDDIR)/$(OBJDIR))
-	$$(CXX) -o $$@ $$(call GENOBJS,$(BUILDDIR)/$(OBJDIR)) $$(LDFLAGS) $(LDFLAGS_$1)
+$2: $(call GEN_BUILDDIRS,$1) $$(call GEN_OBJS,$1)
+	$(call MKDIR,$(dir $2),-p)
+	$(CXX) -o $$@ $$(call GEN_OBJS,$1) $(LDFLAGS) $(LDFLAGS_$1)
 
 ifneq ($(shell uname),Darwin)
 # When not on macOS, compile libs.mm as C program.
-$(BUILDDIR)/$(OBJDIR)/libs.mm.o: libs.mm
-	$$(CC) -o $$@ $$(CFLAGS) -c -x c $$<
+$(call GEN_OBJDIR,$1)/libs.mm.o: libs.mm
+	$(CC) -o $$@ $(call GEN_CFLAGS,$1) -c -x c $$<
 endif
 
-$(BUILDDIR)/$(OBJDIR)/version.cpp.o: auto/version.cpp
-	$$(CXX) -o $$@ $$(CPPFLAGS) $$(CFLAGS) $(CFLAGS_$1) -c $$<
+$(call GEN_OBJDIR,$1)/viewer.cpp.o: auto/yommd.glsl.h auto/quad.glsl.h
+$(call GEN_OBJDIR,$1)/%.cpp.o: %.cpp
+	$(CXX) -o $$@ $(CPPFLAGS) $(call GEN_CFLAGS,$1) -c $$<
 
-$(BUILDDIR)/$(OBJDIR)/viewer.cpp.o: auto/yommd.glsl.h auto/quad.glsl.h
-$(BUILDDIR)/$(OBJDIR)/%.cpp.o: %.cpp
-	$$(CXX) -o $$@ $$(CPPFLAGS) $$(CFLAGS) $(CFLAGS_$1) -c $$<
+$(call GEN_OBJDIR,$1)/%.mm.o: %.mm
+	$(CXX) -o $$@ $(CPPFLAGS) $(OBJCFLAGS) $(call GEN_CFLAGS,$1) -c $$<
 
-$(BUILDDIR)/$(OBJDIR)/%.mm.o: %.mm
-	$$(CXX) -o $$@ $$(CPPFLAGS) $$(OBJCFLAGS) $$(CFLAGS) $(CFLAGS_$1) -c $$<
-
-$(BUILDDIR)/$(OBJDIR)/resource_windows.rc.o: resource_windows.rc DpiAwareness.manifest
+$(call GEN_OBJDIR,$1)/resource_windows.rc.o: resource_windows.rc DpiAwareness.manifest
 	windres -o $$@ $$<
-
-$(BUILDDIR)/$(OBJDIR):
-	mkdir -p $$@
 
 .PHONY: clean-$1
 clean-$1:
-	$$(RM) $(BUILDDIR)/$(OBJDIR)/*.{o,d} $(BUILDDIR)/$(TARGET)
+	$(RM) -r build/$1
+	$(RM) $2
 endef
 
-BUILDDIR:=.
-CFLAGS_debug:=-g -O0
-$(eval $(call GEN_BUILD_RULES,debug))
+$(eval $(call GEN_BUILD_RULES,debug,./$(TARGET)))
+$(eval $(call GEN_BUILD_RULES,release,release/$(TARGET)))
 
-BUILDDIR:=release
-CFLAGS_release:=-O2
-ifeq ($(OS),Windows_NT)
-LDFLAGS_release:=-mwindows
-endif
-$(eval $(call GEN_BUILD_RULES,release))
-
-auto/%.glsl.h: %.glsl $(SOKOL_SHDC) | auto/
+auto/%.glsl.h: %.glsl $(SOKOL_SHDC)
 	$(SOKOL_SHDC) --input $< --output $@ --slang metal_macos:hlsl5
 ifeq ($(OS),Windows_NT)
 	# CRLF -> LF
@@ -110,6 +107,9 @@ endif
 .PHONY: FORCE-EXECUTE
 auto/version.cpp: FORCE-EXECUTE
 	./scripts/gen-version-cpp
+
+%/.:
+	$(call MKDIR,$(@D),-p)
 
 .PHONY: run
 run: $(TARGET)
@@ -121,9 +121,6 @@ clean: clean-debug clean-release
 
 .PHONY: all
 all: clean $(TARGET);
-
-auto/:
-	mkdir -p $@
 
 # Generate clang-format related subcommand.
 define GEN_CLANG_FMT
@@ -237,6 +234,8 @@ help:
 	@echo "package             Make distribution package without any MMD models/motions"
 	@echo "package-huge        Make distribution package with default config,"
 	@echo "                        MMD model and motions included"
+	@echo "init-submodule      Initialize submodules.  Should be used after clone."
+	@echo "update-submodule	   Update submodule"
 	@echo "build-bullet        Build bullet physics library"
 	@echo "build-saba          Build saba library"
 	@echo "bulid-submodule     Build submodule libraries"

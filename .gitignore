@@ -2,10 +2,8 @@
 config.toml
 yommd
 yommd.exe
-yommd-debug*
-obj/
+build/
 package/
 default-attachments/
 misc/
-tool/sokol-shdc*
 auto/

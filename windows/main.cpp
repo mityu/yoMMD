@@ -198,9 +198,7 @@ private:
 };
 
 namespace {
-namespace globals {
-AppMain appMain;
-}
+inline AppMain& getAppMain();
 }  // namespace
 
 AppMain::AppMain() :
@@ -668,7 +666,7 @@ bool AppMenu::IsMenuOpened() const {
 DWORD WINAPI AppMenu::showMenu(LPVOID param) {
     AppMenu *appMenu = reinterpret_cast<AppMenu *>(param);
     constexpr DWORD winStyle = WS_CHILD;
-    const HWND& parentWin = globals::appMain.GetWindowHandle();
+    const HWND& parentWin = getAppMain().GetWindowHandle();
     UniqueHWND hMenuWindow, hSelectorWindow;
 
     const LONG parentWinExStyle = GetWindowLongW(parentWin, GWL_EXSTYLE);
@@ -704,7 +702,7 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
 
     UniqueHMENU hScreensMenu = CreatePopupMenu();
     const HMONITOR curMonitorHandle =
-        MonitorFromWindow(globals::appMain.GetWindowHandle(), MONITOR_DEFAULTTONULL);
+        MonitorFromWindow(getAppMain().GetWindowHandle(), MONITOR_DEFAULTTONULL);
     std::vector<HMONITOR> monitorHandles = getAllMonitorHandles();
     for (int cnt = monitorHandles.size(), i = 0; i < cnt; ++i) {
         const std::wstring title(L"&Screen" + std::to_wstring(i));
@@ -756,10 +754,10 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
         }
         break;
     case Cmd::ResetPosition:
-        globals::appMain.GetRoutine().ResetModelPosition();
+        getAppMain().GetRoutine().ResetModelPosition();
         break;
     case Cmd::SelectScreen:
-        globals::appMain.ChangeScreen(Cmd::GetUserData(op));
+        getAppMain().ChangeScreen(Cmd::GetUserData(op));
         break;
     case Cmd::HideWindow:
         if (GetWindowLongPtrW(parentWin, GWL_STYLE) & WS_VISIBLE)
@@ -776,7 +774,7 @@ DWORD WINAPI AppMenu::showMenu(LPVOID param) {
         // WM_MOUSEMOVE message and it leads wrong and fake mouse drag event.
         // As a workaround, in order to avoid this call OnGestureEnd to update
         // the action context.
-        globals::appMain.GetRoutine().OnGestureEnd();
+        getAppMain().GetRoutine().OnGestureEnd();
         break;
     case Cmd::MenuCount:
         Err::Log("Internal error: Command::MenuCount is used");
@@ -827,7 +825,7 @@ LRESULT CALLBACK AppMenu::windowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
 }
 
 void AppMenu::createTaskbar() {
-    const HWND& parentWin = globals::appMain.GetWindowHandle();
+    const HWND& parentWin = getAppMain().GetWindowHandle();
     if (!parentWin) {
         Err::Exit(
             "Internal error:", "Taskbar must be created after the main window is created:",
@@ -1036,16 +1034,16 @@ void MsgBox::drawContents(HWND hwnd) {
 
 namespace Context {
 sg_environment getSokolEnvironment() {
-    return globals::appMain.GetSokolEnvironment();
+    return getAppMain().GetSokolEnvironment();
 }
 sg_swapchain getSokolSwapchain() {
-    return globals::appMain.GetSokolSwapchain();
+    return getAppMain().GetSokolSwapchain();
 }
 glm::vec2 getWindowSize() {
-    return globals::appMain.GetWindowSize();
+    return getAppMain().GetWindowSize();
 }
 glm::vec2 getDrawableSize() {
-    return globals::appMain.GetDrawableSize();
+    return getAppMain().GetDrawableSize();
 }
 glm::vec2 getMousePosition() {
     // The origin of device positions given by WinAPI is top-left of
@@ -1055,7 +1053,7 @@ glm::vec2 getMousePosition() {
         return glm::vec2();
 
     const HMONITOR curMonitorHandle =
-        MonitorFromWindow(globals::appMain.GetWindowHandle(), MONITOR_DEFAULTTONULL);
+        MonitorFromWindow(getAppMain().GetWindowHandle(), MONITOR_DEFAULTTONULL);
     if (!curMonitorHandle)
         Err::Exit("Internal error: failed to get current monitor handle.");
 
@@ -1063,7 +1061,7 @@ glm::vec2 getMousePosition() {
     GetMonitorInfoW(curMonitorHandle, &monitorInfo);
 
     RECT wr = {};
-    GetClientRect(globals::appMain.GetWindowHandle(), &wr);
+    GetClientRect(getAppMain().GetWindowHandle(), &wr);
 
     // Get the mouse position that relative to the main window.  Note that
     // origin is top-left of window.
@@ -1074,10 +1072,10 @@ glm::vec2 getMousePosition() {
     return glm::vec2(pos.x, winHeight - pos.y);  // Make origin bottom-left.
 }
 int getSampleCount() {
-    return globals::appMain.GetSampleCount();
+    return getAppMain().GetSampleCount();
 }
 bool shouldEmphasizeModel() {
-    return globals::appMain.IsMenuOpened();
+    return getAppMain().IsMenuOpened();
 }
 }  // namespace Context
 
@@ -1135,6 +1133,11 @@ std::optional<RECT> getMonitorWorkareaFromID(int monitorID) {
     return info.rcWork;
 }
 
+AppMain& getAppMain() {
+    static AppMain appMain{};
+    return appMain;
+}
+
 }  // namespace
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow) {
@@ -1156,7 +1159,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
     args.clear();
 
     MsgBox::Init();
-    globals::appMain.Setup(cmdArgs);
+    getAppMain().Setup(cmdArgs);
 
     MSG msg = {};
     constexpr double millSecPerFrame = 1000.0 / Constant::FPS;
@@ -1166,10 +1169,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
             TranslateMessage(&msg);
             DispatchMessageW(&msg);
         }
-        if (!globals::appMain.IsRunning())
+        if (!getAppMain().IsRunning())
             break;
 
-        globals::appMain.UpdateDisplay();
+        getAppMain().UpdateDisplay();
 
         const double elapsedMillSec = stm_ms(stm_since(timeLastFrame));
         const auto shouldSleepFor = millSecPerFrame - elapsedMillSec;
@@ -1179,7 +1182,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
             Sleep(static_cast<DWORD>(shouldSleepFor));
         }
     }
-    globals::appMain.Terminate();
+    getAppMain().Terminate();
     MsgBox::Terminate();
 
     return 0;

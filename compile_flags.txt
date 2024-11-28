@@ -11,3 +11,4 @@
 -Wdeprecated
 -Wextra
 -pedantic
+-Wno-missing-field-initializers

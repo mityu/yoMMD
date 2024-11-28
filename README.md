@@ -37,10 +37,14 @@ $ brew install ninja  # optional
 
 #### With MinGW64 on msys2:
 
+Only MinGW64 on MSYS2 is officially supported now.  Please prepare it before
+building yoMMD.
+
 Note that you have to use `mingw-w64-x86_64-cmake` package, not `cmake` package.
 yoMMD build will fail with the msys cmake package.
 
 ```
+$ pacman -S make
 $ pacman -S mingw-w64-x86_64-cmake
 $ pacman -S mingw-w64-x86_64-ninja  # optional
 ```
@@ -51,16 +55,15 @@ $ pacman -S mingw-w64-x86_64-ninja  # optional
 yoMMD manages its all dependencies as submodule.  You don't need to additionaly
 install any libraries.
 
-## On macOS
-
 ```
 $ git clone https://github.com/mityu/yoMMD
 $ cd yoMMD
-$ git submodule update --init --recursive  # Initialize submodule. This takes a bit long time...
+$ make init-submodule # Initialize submodule. This takes a bit long time...
 $ make build-submodule
 $ make release -j4  # Build ./release/yoMMD executable
 ```
 
+### On macOS
 If you want to create application bundle (`yoMMD.app`), additionaly do:
 
 ```
@@ -69,18 +72,6 @@ $ make app
 
 `yoMMD.app` will available under `package/` directory.
 
-## On Windows
-
-Only MinGW64 on MSYS2 is officially supported now.  Please prepare it before
-building yoMMD.
-
-```
-$ git clone https://github.com/mityu/yoMMD
-$ cd yoMMD
-$ git submodule update --init --recursive  # Initialize submodule. This takes a bit long time...
-$ make build-submodule
-$ make release -j4  # Build ./release/yoMMD.exe executable.
-```
 
 ## Debug build
 

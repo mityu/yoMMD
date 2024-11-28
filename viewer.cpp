@@ -21,7 +21,8 @@
 #include "btBulletDynamicsCommon.h"  // IWYU pragma: keep; supress warning from clangd.
 #include "constant.hpp"
 #include "keyboard.hpp"
-#include "main.hpp"
+#include "platform.hpp"
+#include "platform_api.hpp"
 #include "sokol_gfx.h"
 #include "sokol_time.h"
 #include "util.hpp"

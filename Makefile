@@ -26,7 +26,7 @@ CMAKE_GENERATOR:=-G "MSYS Makefiles"
 else ifeq ($(shell uname),Darwin)
 CXX:=clang++
 CC:=clang
-SRCS+=osx/main.mm
+SRCS+=osx/main.mm osx/alert_window.mm osx/menu.mm osx/window.mm
 LDFLAGS+=-F$(shell xcrun --show-sdk-path)/System/Library/Frameworks  # Homebrew clang needs this.
 LDFLAGS+=-framework Foundation -framework Cocoa -framework Metal -framework MetalKit -framework QuartzCore
 OBJCFLAGS:=-fobjc-arc

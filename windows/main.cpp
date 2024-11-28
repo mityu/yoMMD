@@ -1,5 +1,4 @@
 #define WINVER 0x0605
-#include "../main.hpp"
 #include <windows.h>
 #include <windowsx.h>
 #include <commctrl.h>
@@ -17,6 +16,7 @@
 #include <vector>
 #include "../constant.hpp"
 #include "../keyboard.hpp"
+#include "../platform_api.hpp"
 #include "../util.hpp"
 #include "../viewer.hpp"
 #include "glm/vec2.hpp"  // IWYU pragma: keep; silence clangd.

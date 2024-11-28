@@ -6,8 +6,8 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
-#include "main.hpp"
 #include "platform.hpp"
+#include "platform_api.hpp"
 
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>

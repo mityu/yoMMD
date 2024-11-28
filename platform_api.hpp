@@ -1,5 +1,5 @@
-#ifndef MAIN_HPP_
-#define MAIN_HPP_
+#ifndef PLATFORM_API_HPP_
+#define PLATFORM_API_HPP_
 
 #include <string_view>
 #include "glm/vec2.hpp"  // IWYU pragma: keep; silence clangd.
@@ -22,4 +22,4 @@ glm::vec2 getMousePosition();
 bool shouldEmphasizeModel();
 }  // namespace Context
 
-#endif  // MAIN_HPP_
+#endif  // PLATFORM_API_HPP_

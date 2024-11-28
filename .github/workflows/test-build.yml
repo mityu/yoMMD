@@ -36,7 +36,8 @@ jobs:
           shell: msys2 {0}
       - name: Try build on Windows
         run: |
-          make -j
+          make -j release
+          make -j debug
   macos:
     runs-on: macos-latest
     timeout-minutes: 30
@@ -56,5 +57,5 @@ jobs:
           shell: bash
       - name: Try build on macOS
         run: |
-          make -j
-          make app
+          make -j app
+          make -j debug

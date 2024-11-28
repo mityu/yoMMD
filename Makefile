@@ -17,7 +17,7 @@ CMAKE_BUILDFILE:=Makefile
 
 ifeq ($(OS),Windows_NT)
 TARGET:=$(TARGET).exe
-SRCS+=main_windows.cpp resource_windows.rc
+SRCS+=windows/main.cpp windows/resource.rc
 LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi -ldcomp -lgdi32 -ldwmapi -municode
 LDFLAGS_release:=-mwindows
 SOKOL_SHDC:=lib/sokol-tools-bin/bin/win32/sokol-shdc.exe
@@ -26,7 +26,7 @@ CMAKE_GENERATOR:=-G "MSYS Makefiles"
 else ifeq ($(shell uname),Darwin)
 CXX:=clang++
 CC:=clang
-SRCS+=main_osx.mm
+SRCS+=osx/main.mm
 LDFLAGS+=-F$(shell xcrun --show-sdk-path)/System/Library/Frameworks  # Homebrew clang needs this.
 LDFLAGS+=-framework Foundation -framework Cocoa -framework Metal -framework MetalKit -framework QuartzCore
 OBJCFLAGS:=-fobjc-arc
@@ -85,7 +85,7 @@ $(call GEN_OBJDIR,$1)/%.cpp.o: %.cpp
 $(call GEN_OBJDIR,$1)/%.mm.o: %.mm
 	$(CXX) -o $$@ $(CPPFLAGS) $(OBJCFLAGS) $(call GEN_CFLAGS,$1) -c $$<
 
-$(call GEN_OBJDIR,$1)/resource_windows.rc.o: resource_windows.rc DpiAwareness.manifest
+$(call GEN_OBJDIR,$1)/windows/resource.rc.o: windows/resource.rc windows/DpiAwareness.manifest
 	windres -o $$@ $$<
 
 .PHONY: clean-$1
@@ -151,7 +151,7 @@ app: release/$(TARGET)
 	@[ ! -d "package/yoMMD.app" ] || rm -r package/yoMMD.app
 	@ mkdir -p package/yoMMD.app/Contents/MacOS
 	@ mkdir package/yoMMD.app/Contents/Resources
-	cp Info.plist package/yoMMD.app/Contents
+	cp osx/Info.plist package/yoMMD.app/Contents
 	cp icons/yoMMD.icns package/yoMMD.app/Contents/Resources
 	cp release/$(TARGET) package/yoMMD.app/Contents/MacOS
 

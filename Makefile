@@ -109,7 +109,7 @@ auto/version.cpp: FORCE-EXECUTE
 	./scripts/gen-version-cpp
 
 %/.:
-	$(call MKDIR,$(@D),-p)
+	mkdir -p $(@D)
 
 .PHONY: run
 run: $(TARGET)
@@ -232,11 +232,13 @@ help:
 	@echo "fmt-check           Check if source code is formatted"
 	@echo "app                 Make application bundle (Only available on macOS)"
 	@echo "package             Make distribution package without any MMD models/motions"
-	@echo "package-huge        Make distribution package with default config,"
-	@echo "                        MMD model and motions included"
+	@echo "package-huge        Make distribution package with default config, MMD model"
+	@echo "                    and motions included"
 	@echo "init-submodule      Initialize submodules.  Should be used after clone."
-	@echo "update-submodule	   Update submodule"
+	@echo "update-submodule    Synchronize submodule to required revision"
 	@echo "build-bullet        Build bullet physics library"
 	@echo "build-saba          Build saba library"
 	@echo "bulid-submodule     Build submodule libraries"
+	@echo "clean-bullet        Clean build files of bullet physics library"
+	@echo "clean-saba          Clean build files of saba library"
 	@echo "help                Show this help"

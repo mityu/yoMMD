@@ -58,7 +58,7 @@ $ git clone https://github.com/mityu/yoMMD
 $ cd yoMMD
 $ git submodule update --init --recursive  # Initialize submodule. This takes a bit long time...
 $ make build-submodule
-$ make -j4  # Build ./yoMMD executable
+$ make release -j4  # Build ./release/yoMMD executable
 ```
 
 If you want to create application bundle (`yoMMD.app`), additionaly do:
@@ -79,15 +79,24 @@ $ git clone https://github.com/mityu/yoMMD
 $ cd yoMMD
 $ git submodule update --init --recursive  # Initialize submodule. This takes a bit long time...
 $ make build-submodule
-$ make release -j4  # Build ./yoMMD.exe executable.
+$ make release -j4  # Build ./release/yoMMD.exe executable.
 ```
 
-If you want to build binary with DOS window enabled for some purpose (e.g.
-debugging), just do:
+## Debug build
+
+If you want to build debug info included binary (and with DOS window enabled on Windows), just do:
 
 ```
 $ make
 ```
+
+or explicitly pass target name:
+
+```
+$ make debug
+```
+
+This will build yoMMD binary with debug information at `./yoMMD` (or `./yoMMD.exe` on Windows).
 
 See `$ make help` result for other available subcommands.
 

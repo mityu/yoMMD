@@ -1,15 +1,12 @@
 CXX:=g++
 CC:=gcc
 TARGET:=yoMMD
-TARGET_DEBUG:=yoMMD-debug
-OBJDIR:=./obj
-SRC:=viewer.cpp config.cpp resources.cpp image.cpp keyboard.cpp util.cpp libs.mm
-OBJ=$(SRC:%=$(OBJDIR)/%.o) $(OBJDIR)/version.cpp.o
-DEP=$(OBJ:%.o=%.d)
-CFLAGS:=-O2 -Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb \
+OBJDIR=obj
+SRCS:=viewer.cpp config.cpp resources.cpp image.cpp keyboard.cpp util.cpp libs.mm
+CFLAGS:=-Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb \
 		-Ilib/toml11/include -Ilib/incbin -Ilib/bullet3/build/include/bullet \
 		-Wall -Wextra -pedantic -MMD -MP
-CPPFLAGS=-std=c++20
+CPPFLAGS:=-std=c++20
 OBJCFLAGS:=
 LDFLAGS:=-Llib/saba/build/src -lSaba -Llib/bullet3/build/lib \
 		 -lBulletDynamics -lBulletCollision -lBulletSoftBody -lLinearMath
@@ -19,8 +16,7 @@ CMAKE_BUILDFILE:=Makefile
 
 ifeq ($(OS),Windows_NT)
 TARGET:=$(TARGET).exe
-TARGET_DEBUG:=$(TARGET_DEBUG).exe
-SRC+=main_windows.cpp resource_windows.rc
+SRCS+=main_windows.cpp resource_windows.rc
 CFLAGS+=-Wno-missing-field-initializers
 LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi -ldcomp -lgdi32 -ldwmapi -municode
 SOKOL_SHDC:=lib/sokol-tools-bin/bin/win32/sokol-shdc.exe
@@ -29,7 +25,7 @@ CMAKE_GENERATOR:=-G "MSYS Makefiles"
 else ifeq ($(shell uname),Darwin)
 CXX:=clang++
 CC:=clang
-SRC+=main_osx.mm
+SRCS+=main_osx.mm
 LDFLAGS+=-F$(shell xcrun --show-sdk-path)/System/Library/Frameworks  # Homebrew clang needs this.
 LDFLAGS+=-framework Foundation -framework Cocoa -framework Metal -framework MetalKit -framework QuartzCore
 OBJCFLAGS:=-fobjc-arc
@@ -47,52 +43,62 @@ CMAKE_GENERATOR:=-G Ninja
 CMAKE_BUILDFILE:=build.ninja
 endif
 
-$(TARGET): $(OBJDIR) $(OBJ)
-	$(CXX) -o $@ $(OBJ) $(LDFLAGS)
-
-ifeq ($(OS),Windows_NT)
-.PHONY: release
-release:
-	@[ ! -f "$(TARGET)" ] || rm $(TARGET)
-	@$(MAKE) LDFLAGS="$(LDFLAGS) -mwindows"
-
-.PHONY: may-create-release-build
-may-create-release-build:
-	@(read -p "Make release build? [Y/n] " yn && [ $${yn:-N} = y ]) \
-		|| exit 0 && $(MAKE) release
-else
-.PHONY: may-create-release-build
-may-create-release-build:
-	@ # Nothing to do.
-endif
-
 .PHONY: debug
-debug: CFLAGS+=-g -O0
-debug: OBJDIR:=$(OBJDIR)/debug
-debug: TARGET:=$(TARGET_DEBUG)
-debug:
-	@$(MAKE) CFLAGS="$(CFLAGS)" OBJDIR="$(OBJDIR)" TARGET="$(TARGET)"
+debug: ./$(TARGET)
 
--include $(DEP)
+.PHONY: release
+release: release/$(TARGET)
 
-$(OBJDIR)/version.cpp.o: auto/version.cpp
-	$(CXX) -o $@ $(CPPFLAGS) $(CFLAGS) -c $<
+GENOBJS=$(SRCS:%=$1/%.o) $1/version.cpp.o
+GENDEPS=$(patsubst %.o,%.d,$(call GENOBJS,$1))
+
+define MKDIR
+	@test -d "$1" || mkdir "$1"
+endef
+
+define GEN_BUILD_RULES
+-include $(call GENDEPS,$(BUILDDIR)/$(OBJDIR))
+
+$(BUILDDIR)/$(TARGET): $(BUILDDIR)/$(OBJDIR) $$(call GENOBJS,$(BUILDDIR)/$(OBJDIR))
+	$$(CXX) -o $$@ $$(call GENOBJS,$(BUILDDIR)/$(OBJDIR)) $$(LDFLAGS) $(LDFLAGS_$1)
 
 ifneq ($(shell uname),Darwin)
 # When not on macOS, compile libs.mm as C program.
-$(OBJDIR)/libs.mm.o: libs.mm
-	$(CC) -o $@ $(CFLAGS) -c -x c $<
+$(BUILDDIR)/$(OBJDIR)/libs.mm.o: libs.mm
+	$$(CC) -o $$@ $$(CFLAGS) -c -x c $$<
 endif
 
-$(OBJDIR)/viewer.cpp.o: auto/yommd.glsl.h auto/quad.glsl.h
-$(OBJDIR)/%.cpp.o: %.cpp
-	$(CXX) -o $@ $(CPPFLAGS) $(CFLAGS) -c $<
+$(BUILDDIR)/$(OBJDIR)/version.cpp.o: auto/version.cpp
+	$$(CXX) -o $$@ $$(CPPFLAGS) $$(CFLAGS) $(CFLAGS_$1) -c $$<
 
-$(OBJDIR)/%.mm.o: %.mm
-	$(CXX) -o $@ $(CPPFLAGS) $(OBJCFLAGS) $(CFLAGS) -c $<
+$(BUILDDIR)/$(OBJDIR)/viewer.cpp.o: auto/yommd.glsl.h auto/quad.glsl.h
+$(BUILDDIR)/$(OBJDIR)/%.cpp.o: %.cpp
+	$$(CXX) -o $$@ $$(CPPFLAGS) $$(CFLAGS) $(CFLAGS_$1) -c $$<
 
-$(OBJDIR)/resource_windows.rc.o: resource_windows.rc DpiAwareness.manifest
-	windres -o $@ $<
+$(BUILDDIR)/$(OBJDIR)/%.mm.o: %.mm
+	$$(CXX) -o $$@ $$(CPPFLAGS) $$(OBJCFLAGS) $$(CFLAGS) $(CFLAGS_$1) -c $$<
+
+$(BUILDDIR)/$(OBJDIR)/resource_windows.rc.o: resource_windows.rc DpiAwareness.manifest
+	windres -o $$@ $$<
+
+$(BUILDDIR)/$(OBJDIR):
+	mkdir -p $$@
+
+.PHONY: clean-$1
+clean-$1:
+	$$(RM) $(BUILDDIR)/$(OBJDIR)/*.{o,d} $(BUILDDIR)/$(TARGET)
+endef
+
+BUILDDIR:=.
+CFLAGS_debug:=-g -O0
+$(eval $(call GEN_BUILD_RULES,debug))
+
+BUILDDIR:=release
+CFLAGS_release:=-O2
+ifeq ($(OS),Windows_NT)
+LDFLAGS_release:=-mwindows
+endif
+$(eval $(call GEN_BUILD_RULES,release))
 
 auto/%.glsl.h: %.glsl $(SOKOL_SHDC) | auto/
 	$(SOKOL_SHDC) --input $< --output $@ --slang metal_macos:hlsl5
@@ -110,35 +116,31 @@ run: $(TARGET)
 	./$(TARGET)
 
 .PHONY: clean
-clean:
-	$(RM) $(TARGET_DEBUG) $(OBJDIR)/debug/*.o $(OBJDIR)/debug/*.d
-	$(RM) $(OBJDIR)/*.o $(OBJDIR)/*.d $(TARGET)
+clean: clean-debug clean-release
 	$(RM) auto/*
 
 .PHONY: all
 all: clean $(TARGET);
 
-$(OBJDIR) auto/ tool/:
+auto/:
 	mkdir -p $@
 
-.PHONY: fmt
-fmt: FMT_OPTS := -i
-fmt: clang-format
+# Generate clang-format related subcommand.
+define GEN_CLANG_FMT
+.PHONY: $1
+$1:
+	clang-format $2 $(wildcard *.cpp *.hpp *.mm)
+endef
 
-.PHONY: fmt-check
-fmt-check: FMT_OPTS := --dry-run --Werror
-fmt-check: clang-format
-
-.PHONY: clang-format
-clang-format:
-	clang-format $(FMT_OPTS) $(wildcard *.cpp) $(wildcard *.mm) $(wildcard *.hpp)
+$(eval $(call GEN_CLANG_FMT,fmt,-i))
+$(eval $(call GEN_CLANG_FMT,fmt-check,--dry-run --Werror))
 
 # Make distribution package
 PKGNAME:=yoMMD-$(PKGNAME_PLATFORM)-$(shell date '+%Y%m%d%H%M').zip
 .PHONY: package
-package: may-create-release-build
-	@[ -d "package" ] || mkdir package
-	zip package/$(PKGNAME) $(TARGET)
+package: release/$(TARGET)
+	$(call MKDIR,package)
+	zip package/$(PKGNAME) release/$(TARGET)
 
 .PHONY: package-huge
 package-huge: package
@@ -147,14 +149,14 @@ package-huge: package
 		$(notdir $(wildcard default-attachments/*)) -x "*/.*"
 
 .PHONY: app
-app: $(TARGET)
-	@[ -d "package" ] || mkdir package
+app: release/$(TARGET)
+	$(call MKDIR,package)
 	@[ ! -d "package/yoMMD.app" ] || rm -r package/yoMMD.app
 	@ mkdir -p package/yoMMD.app/Contents/MacOS
 	@ mkdir package/yoMMD.app/Contents/Resources
 	cp Info.plist package/yoMMD.app/Contents
 	cp icons/yoMMD.icns package/yoMMD.app/Contents/Resources
-	cp $(TARGET) package/yoMMD.app/Contents/MacOS
+	cp release/$(TARGET) package/yoMMD.app/Contents/MacOS
 
 
 # Build bullet physics library
@@ -163,7 +165,7 @@ build-bullet: lib/bullet3/build/$(CMAKE_BUILDFILE)
 	@cd lib/bullet3/build && cmake --build . -j && cmake --build . -t install
 
 lib/bullet3/build/$(CMAKE_BUILDFILE):
-	@[ -d "lib/bullet3/build" ] || mkdir lib/bullet3/build
+	$(call MKDIR,lib/bullet3/build)
 	cd lib/bullet3/build && cmake \
 		-DLIBRARY_OUTPUT_PATH=./           \
 		-DBUILD_BULLET2_DEMOS=OFF          \
@@ -196,7 +198,7 @@ build-saba: lib/saba/build/$(CMAKE_BUILDFILE)
 	cd lib/saba/build && cmake --build . -t Saba -j
 
 lib/saba/build/$(CMAKE_BUILDFILE):
-	@[ -d "lib/saba/build" ] || mkdir lib/saba/build
+	$(call MKDIR,lib/saba/build)
 	cd lib/saba/build && cmake                  \
 		-DCMAKE_BUILD_TYPE=RELEASE              \
 		-DSABA_BULLET_ROOT=../../bullet3/build  \
@@ -211,10 +213,9 @@ build-submodule:
 .PHONY: help
 help:
 	@echo "Available targets:"
-	@echo "$(TARGET)               Build executable binary (The default target)"
-	@echo "release             Release build (Only available on Windows)"
-	@echo "debug               Debug build"
-	@echo "run                 Build and run binary"
+	@echo "debug               Debug build (The default target)"
+	@echo "release             Release build"
+	@echo "run                 Build debug binary and run it"
 	@echo "clean               Clean build related files"
 	@echo "fmt                 Format source code by clang-format"
 	@echo "fmt-check           Check if source code is formatted"

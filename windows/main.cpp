@@ -1,4 +1,5 @@
 #define WINVER 0x0605
+#include "../main.hpp"
 #include <windows.h>
 #include <windowsx.h>
 #include <commctrl.h>
@@ -14,14 +15,13 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include "constant.hpp"
+#include "../constant.hpp"
+#include "../keyboard.hpp"
+#include "../util.hpp"
+#include "../viewer.hpp"
 #include "glm/vec2.hpp"  // IWYU pragma: keep; silence clangd.
-#include "keyboard.hpp"
-#include "main.hpp"
 #include "sokol_gfx.h"
 #include "sokol_time.h"
-#include "util.hpp"
-#include "viewer.hpp"
 
 template <typename T>
 using ComPtr = Microsoft::WRL::ComPtr<T>;

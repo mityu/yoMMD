@@ -1,11 +1,11 @@
 #define SOKOL_METAL
 #include "sokol_gfx.h"
 
-#include "constant.hpp"
-#include "keyboard.hpp"
-#include "main.hpp"
-#include "util.hpp"
-#include "viewer.hpp"
+#include "../constant.hpp"
+#include "../keyboard.hpp"
+#include "../main.hpp"
+#include "../util.hpp"
+#include "../viewer.hpp"
 
 #import <AppKit/AppKit.h>
 #import <Cocoa/Cocoa.h>

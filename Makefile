@@ -126,7 +126,7 @@ all: clean $(TARGET);
 define GEN_CLANG_FMT
 .PHONY: $1
 $1:
-	clang-format $2 $(wildcard *.cpp *.hpp *.mm)
+	clang-format $2 $(foreach d,. osx windows,$(wildcard $d/*.cpp $d/*.hpp $d/*.mm))
 endef
 
 $(eval $(call GEN_CLANG_FMT,fmt,-i))

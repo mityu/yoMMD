@@ -140,8 +140,6 @@ public:
     glm::vec2 GetDrawableSize() const;
     int GetSampleCount() const;
     bool IsMenuOpened() const;
-    const ID3D11RenderTargetView *GetRenderTargetView() const;
-    const ID3D11DepthStencilView *GetDepthStencilView() const;
 
 private:
     static LRESULT CALLBACK windowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -313,14 +311,6 @@ int AppMain::GetSampleCount() const {
 }
 bool AppMain::IsMenuOpened() const {
     return menu_.IsMenuOpened();
-}
-
-const ID3D11RenderTargetView *AppMain::GetRenderTargetView() const {
-    return renderTargetView_.Get();
-}
-
-const ID3D11DepthStencilView *AppMain::GetDepthStencilView() const {
-    return depthStencilView_.Get();
 }
 
 void AppMain::createWindow() {

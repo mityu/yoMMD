@@ -1,3 +1,4 @@
+-xobjective-c++
 -std=c++20
 -fobjc-arc
 -Ilib/saba/src

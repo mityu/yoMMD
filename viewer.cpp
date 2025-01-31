@@ -613,12 +613,13 @@ void Routine::Update() {
     const auto size{Context::getWindowSize()};
     const auto model = mmd_.GetModel();
     const size_t vertCount = model->GetVertexCount();
-    const double vmdFrame = stm_sec(stm_since(timeBeginAnimation_)) * Constant::VmdFPS;
-    const double elapsedTime = stm_sec(stm_since(timeLastFrame_));
 
     auto& animations = mmd_.GetAnimations();
 
     if (!animations.empty()) {
+        const double elapsedTime = stm_sec(stm_since(timeLastFrame_));
+        const double vmdFrame = stm_sec(stm_since(timeBeginAnimation_)) * Constant::VmdFPS;
+
         // Update camera animation.
         auto& [vmdAnim, cameraAnim] = animations[motionID_];
         if (cameraAnim) {
@@ -655,27 +656,25 @@ void Routine::Update() {
             model->UpdateAllAnimation(vmdAnim.get(), vmdFrame, elapsedTime);
         }
         model->EndAnimation();
-    }
-    model->Update();
 
-    sg_update_buffer(
-        posVB_, sg_range{
-                    .ptr = model->GetUpdatePositions(),
-                    .size = vertCount * sizeof(glm::vec3),
-                });
-    sg_update_buffer(
-        normVB_, sg_range{
-                     .ptr = model->GetUpdateNormals(),
-                     .size = vertCount * sizeof(glm::vec3),
-                 });
-    sg_update_buffer(
-        uvVB_, sg_range{
-                   .ptr = model->GetUpdateUVs(),
-                   .size = vertCount * sizeof(glm::vec2),
-               });
+        model->Update();
 
-    if (!animations.empty()) {
-        const auto& vmdAnim = animations[motionID_].first;
+        sg_update_buffer(
+            posVB_, sg_range{
+                        .ptr = model->GetUpdatePositions(),
+                        .size = vertCount * sizeof(glm::vec3),
+                    });
+        sg_update_buffer(
+            normVB_, sg_range{
+                         .ptr = model->GetUpdateNormals(),
+                         .size = vertCount * sizeof(glm::vec3),
+                     });
+        sg_update_buffer(
+            uvVB_, sg_range{
+                       .ptr = model->GetUpdateUVs(),
+                       .size = vertCount * sizeof(glm::vec2),
+                   });
+
         timeLastFrame_ = stm_now();
         if (vmdFrame > vmdAnim->GetMaxKeyTime()) {
             model->SaveBaseAnimation();
@@ -683,6 +682,28 @@ void Routine::Update() {
             selectNextMotion();
             needBridgeMotions_ = true;
         }
+    } else {
+        viewMatrix_ =
+            userView_.GetWorldViewMatrix() *
+            glm::lookAt(defaultCamera_.eye, defaultCamera_.center, glm::vec3(0, 1, 0));
+        projectionMatrix_ = glm::perspectiveFovRH(
+            glm::radians(30.0f), static_cast<float>(size.x), static_cast<float>(size.y), 1.0f,
+            10000.0f);
+        sg_update_buffer(
+            posVB_, sg_range{
+                        .ptr = model->GetPositions(),
+                        .size = vertCount * sizeof(glm::vec3),
+                    });
+        sg_update_buffer(
+            normVB_, sg_range{
+                         .ptr = model->GetNormals(),
+                         .size = vertCount * sizeof(glm::vec3),
+                     });
+        sg_update_buffer(
+            uvVB_, sg_range{
+                       .ptr = model->GetUVs(),
+                       .size = vertCount * sizeof(glm::vec2),
+                   });
     }
 }
 

@@ -74,6 +74,7 @@ jobs:
           commit_hash=$(git log -1 --format='%H')
           changelog_file="../package/changelog.md"
           mkdir ../package
+          mv release/yoMMD.exe yoMMD.exe
           zip $package_name yoMMD.exe
           echo "Version: $version_string" > $changelog_file
           echo "Documents:" >> $changelog_file

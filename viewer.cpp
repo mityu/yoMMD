@@ -145,16 +145,18 @@ void ModelEmphasizer::Init() {
     };
     // clang-format on
 #endif
-    binds_.vertex_buffers[0] = sg_make_buffer(sg_buffer_desc{
-        .type = SG_BUFFERTYPE_VERTEXBUFFER,
-        .data = SG_RANGE(vertices),
-    });
+    binds_.vertex_buffers[0] = sg_make_buffer(
+        sg_buffer_desc{
+            .type = SG_BUFFERTYPE_VERTEXBUFFER,
+            .data = SG_RANGE(vertices),
+        });
 
     constexpr uint16_t indices[] = {0, 1, 2, 0, 2, 3};
-    binds_.index_buffer = sg_make_buffer(sg_buffer_desc{
-        .type = SG_BUFFERTYPE_INDEXBUFFER,
-        .data = SG_RANGE(indices),
-    });
+    binds_.index_buffer = sg_make_buffer(
+        sg_buffer_desc{
+            .type = SG_BUFFERTYPE_INDEXBUFFER,
+            .data = SG_RANGE(indices),
+        });
 
     shader_ = sg_make_shader(quad_shader_desc(sg_query_backend()));
 
@@ -440,21 +442,24 @@ void Routine::initBuffers() {
     const size_t vertCount = model->GetVertexCount();
     const size_t indexSize = model->GetIndexElementSize();
 
-    posVB_ = sg_make_buffer(sg_buffer_desc{
-        .size = vertCount * sizeof(glm::vec3),
-        .type = SG_BUFFERTYPE_VERTEXBUFFER,
-        .usage = SG_USAGE_DYNAMIC,
-    });
-    normVB_ = sg_make_buffer(sg_buffer_desc{
-        .size = vertCount * sizeof(glm::vec3),
-        .type = SG_BUFFERTYPE_VERTEXBUFFER,
-        .usage = SG_USAGE_DYNAMIC,
-    });
-    uvVB_ = sg_make_buffer(sg_buffer_desc{
-        .size = vertCount * sizeof(glm::vec2),
-        .type = SG_BUFFERTYPE_VERTEXBUFFER,
-        .usage = SG_USAGE_DYNAMIC,
-    });
+    posVB_ = sg_make_buffer(
+        sg_buffer_desc{
+            .size = vertCount * sizeof(glm::vec3),
+            .type = SG_BUFFERTYPE_VERTEXBUFFER,
+            .usage = SG_USAGE_DYNAMIC,
+        });
+    normVB_ = sg_make_buffer(
+        sg_buffer_desc{
+            .size = vertCount * sizeof(glm::vec3),
+            .type = SG_BUFFERTYPE_VERTEXBUFFER,
+            .usage = SG_USAGE_DYNAMIC,
+        });
+    uvVB_ = sg_make_buffer(
+        sg_buffer_desc{
+            .size = vertCount * sizeof(glm::vec2),
+            .type = SG_BUFFERTYPE_VERTEXBUFFER,
+            .usage = SG_USAGE_DYNAMIC,
+        });
 
     // Prepare Index buffer object.
     const auto copyInduces = [&model, this](const auto *mmdInduces) {
@@ -480,28 +485,30 @@ void Routine::initBuffers() {
         Err::Exit("Maybe MMD data is broken: indexSize:", indexSize);
     }
 
-    ibo_ = sg_make_buffer(sg_buffer_desc{
-        .type = SG_BUFFERTYPE_INDEXBUFFER,
-        .usage = SG_USAGE_IMMUTABLE,
-        .data =
-            {
-                .ptr = induces_.data(),
-                .size = induces_.size() * sizeof(uint32_t),
-            },
-    });
+    ibo_ = sg_make_buffer(
+        sg_buffer_desc{
+            .type = SG_BUFFERTYPE_INDEXBUFFER,
+            .usage = SG_USAGE_IMMUTABLE,
+            .data =
+                {
+                    .ptr = induces_.data(),
+                    .size = induces_.size() * sizeof(uint32_t),
+                },
+        });
 }
 
 void Routine::initTextures() {
     static constexpr uint8_t dummyPixel[4] = {0, 0, 0, 0};
 
-    dummyTex_ = sg_make_image(sg_image_desc{
-        .width = 1,
-        .height = 1,
-        .data =
-            {
-                .subimage = {{{.ptr = dummyPixel, .size = 4}}},
-            },
-    });
+    dummyTex_ = sg_make_image(
+        sg_image_desc{
+            .width = 1,
+            .height = 1,
+            .data =
+                {
+                    .subimage = {{{.ptr = dummyPixel, .size = 4}}},
+                },
+        });
 
     const auto& model = mmd_.GetModel();
     const size_t subMeshCount = model->GetSubMeshCount();
@@ -523,20 +530,23 @@ void Routine::initTextures() {
         materials_.push_back(std::move(material));
     }
 
-    sampler_texture_ = sg_make_sampler(sg_sampler_desc{
-        .min_filter = SG_FILTER_LINEAR,
-        .mag_filter = SG_FILTER_LINEAR,
-    });
-    sampler_sphere_texture_ = sg_make_sampler(sg_sampler_desc{
-        .min_filter = SG_FILTER_LINEAR,
-        .mag_filter = SG_FILTER_LINEAR,
-    });
-    sampler_toon_texture_ = sg_make_sampler(sg_sampler_desc{
-        .min_filter = SG_FILTER_LINEAR,
-        .mag_filter = SG_FILTER_LINEAR,
-        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-        .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
-    });
+    sampler_texture_ = sg_make_sampler(
+        sg_sampler_desc{
+            .min_filter = SG_FILTER_LINEAR,
+            .mag_filter = SG_FILTER_LINEAR,
+        });
+    sampler_sphere_texture_ = sg_make_sampler(
+        sg_sampler_desc{
+            .min_filter = SG_FILTER_LINEAR,
+            .mag_filter = SG_FILTER_LINEAR,
+        });
+    sampler_toon_texture_ = sg_make_sampler(
+        sg_sampler_desc{
+            .min_filter = SG_FILTER_LINEAR,
+            .mag_filter = SG_FILTER_LINEAR,
+            .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
+            .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
+        });
 }
 
 void Routine::initPipeline() {

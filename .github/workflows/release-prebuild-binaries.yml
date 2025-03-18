@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Download the latest release
-        uses: robinraju/release-downloader@v1.11
+        uses: robinraju/release-downloader@v1.12
         id: pull_latest_release
         continue-on-error: true
         with:

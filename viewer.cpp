@@ -147,14 +147,20 @@ void ModelEmphasizer::Init() {
 #endif
     binds_.vertex_buffers[0] = sg_make_buffer(
         sg_buffer_desc{
-            .type = SG_BUFFERTYPE_VERTEXBUFFER,
+            .usage =
+                {
+                    .vertex_buffer = true,
+                },
             .data = SG_RANGE(vertices),
         });
 
     constexpr uint16_t indices[] = {0, 1, 2, 0, 2, 3};
     binds_.index_buffer = sg_make_buffer(
         sg_buffer_desc{
-            .type = SG_BUFFERTYPE_INDEXBUFFER,
+            .usage =
+                {
+                    .index_buffer = true,
+                },
             .data = SG_RANGE(indices),
         });
 
@@ -445,20 +451,32 @@ void Routine::initBuffers() {
     posVB_ = sg_make_buffer(
         sg_buffer_desc{
             .size = vertCount * sizeof(glm::vec3),
-            .type = SG_BUFFERTYPE_VERTEXBUFFER,
-            .usage = SG_USAGE_DYNAMIC,
+            .usage =
+                {
+                    .vertex_buffer = true,
+                    .immutable = false,
+                    .dynamic_update = true,
+                },
         });
     normVB_ = sg_make_buffer(
         sg_buffer_desc{
             .size = vertCount * sizeof(glm::vec3),
-            .type = SG_BUFFERTYPE_VERTEXBUFFER,
-            .usage = SG_USAGE_DYNAMIC,
+            .usage =
+                {
+                    .vertex_buffer = true,
+                    .immutable = false,
+                    .dynamic_update = true,
+                },
         });
     uvVB_ = sg_make_buffer(
         sg_buffer_desc{
             .size = vertCount * sizeof(glm::vec2),
-            .type = SG_BUFFERTYPE_VERTEXBUFFER,
-            .usage = SG_USAGE_DYNAMIC,
+            .usage =
+                {
+                    .vertex_buffer = true,
+                    .immutable = false,
+                    .dynamic_update = true,
+                },
         });
 
     // Prepare Index buffer object.
@@ -487,8 +505,10 @@ void Routine::initBuffers() {
 
     ibo_ = sg_make_buffer(
         sg_buffer_desc{
-            .type = SG_BUFFERTYPE_INDEXBUFFER,
-            .usage = SG_USAGE_IMMUTABLE,
+            .usage =
+                {
+                    .index_buffer = true,
+                },
             .data =
                 {
                     .ptr = induces_.data(),
@@ -941,10 +961,8 @@ std::optional<sg_image> Routine::getTexture(const std::string& path) {
     const auto& image = (*itr)->second;
     sg_image_desc image_desc = {
         .type = SG_IMAGETYPE_2D,
-        .render_target = false,
         .width = static_cast<int>(image.width),
         .height = static_cast<int>(image.height),
-        .usage = SG_USAGE_IMMUTABLE,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
     };
     image_desc.data.subimage[0][0] = {

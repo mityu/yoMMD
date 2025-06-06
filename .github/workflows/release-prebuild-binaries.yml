@@ -52,6 +52,7 @@ jobs:
             mingw-w64-x86_64-binutils
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-diffutils
       - name: Clone submodules
         if: steps.check.outputs.skip == 'no'
         run:

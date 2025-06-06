@@ -27,6 +27,7 @@ jobs:
             mingw-w64-x86_64-binutils
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-diffutils
       - name: Show environment
         run: |
           uname -a
@@ -47,7 +48,7 @@ jobs:
         with:
           submodules: recursive
       - name: Setup build tools
-        run: brew install cmake
+        run: brew install --formula cmake
       - name: Show environment
         run: |
           uname -a

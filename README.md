@@ -99,6 +99,8 @@ Please see files under `doc/` directory: https://github.com/mityu/yoMMD/tree/mai
 
 The example configuration for the screenshot on the top of this README.
 
+Note that if you copy and paste this configuration on Windows, you may encounter an weired error that says no model or motion is found on the path `./つみ式ミクさんv4/つみ式ミクさんv4.pmx` or `./ぼんやり待ちループ/ぼんやり待ち合わせ_腕広いver(465f).vmd` even if it looks like existing there.  It is due to character encoding error, and in that case, please try re-typing the path manually or copying and pasting file path from actual model or motion file on your computer.
+
 ```toml
 model = "./つみ式ミクさんv4/つみ式ミクさんv4.pmx"
 default-model-position = [0.65, -0.85]

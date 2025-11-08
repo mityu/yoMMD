@@ -128,8 +128,6 @@ where directory structure is:
      |-- ぼんやり待ち合わせ_腕広いver(465f).vmd
 ```
 
-**NOTE:** yoMMD won't show MMD model on screen when no MMD motions are specified.
-
 # License
 
 The MIT License, except for the files in `icons/` directory.

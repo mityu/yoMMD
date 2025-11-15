@@ -18,6 +18,8 @@ AlignAfterOpenBracket: AlwaysBreak
 Cpp11BracedListStyle: true
 
 IncludeCategories:
+  - Regex: '^"winver.hpp"$'
+    Priority: 1
   - Regex: '^<windowsx?.h>'
     Priority: 1
   - Regex: '^<ext/.*\.h>'

@@ -1,0 +1,6 @@
+#ifndef WINDOWS_WINVER_HPP_
+#define WINDOWS_WINVER_HPP_
+
+#define WINVER 0x0605
+
+#endif  // WINDOWS_WINVER_HPP_

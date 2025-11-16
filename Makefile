@@ -17,7 +17,7 @@ CMAKE_BUILDFILE:=Makefile
 
 ifeq ($(OS),Windows_NT)
 TARGET:=$(TARGET).exe
-SRCS+=windows/main.cpp windows/resource.rc
+SRCS+=windows/main.cpp windows/msgbox.cpp windows/menu.cpp windows/resource.rc
 LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi -ldcomp -lgdi32 -ldwmapi -municode
 LDFLAGS_release:=-mwindows
 SOKOL_SHDC:=lib/sokol-tools-bin/bin/win32/sokol-shdc.exe

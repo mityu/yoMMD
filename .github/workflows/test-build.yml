@@ -61,3 +61,19 @@ jobs:
         run: |
           make -j app
           make -j debug
+  macos-nix:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - uses: cachix/install-nix-action@v31
+      - name: Show clang version
+        run: |
+          nix develop . --command bash -c "which -a clang++"
+          nix develop . --command bash -c "clang++ --version"
+      - run: nix develop . --command bash -c "make build-bullet"
+      - run: nix develop . --command bash -c "make build-saba"
+      - run: nix develop . --command bash -c "make -j debug"
+      - run: nix develop . --command bash -c "make -j app"

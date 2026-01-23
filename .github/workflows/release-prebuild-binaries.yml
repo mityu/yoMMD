@@ -4,6 +4,9 @@ on:
   #   - cron: '0 14 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   windows:
     runs-on: windows-latest

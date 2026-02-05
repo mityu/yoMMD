@@ -14,13 +14,36 @@
 #include "sokol_gfx.h"
 #include "util.hpp"
 
+// Wrapper of sg_image and sg_view.
+// Holds both sg_image and sg_view object.
+class SgImageView {
+public:
+    SgImageView();
+    SgImageView(const sg_image_desc& img_desc);
+    SgImageView(const Image& image);
+
+    const sg_view& getView() const;
+    const sg_image& getImage() const;
+
+    void destroy();
+
+private:
+    using Container = struct {
+        sg_image image;
+        sg_view view;
+    };
+
+private:
+    std::optional<Container> container_;
+};
+
 class Material {
 public:
     explicit Material(const saba::MMDMaterial& mat);
     const saba::MMDMaterial& material;
-    std::optional<sg_image> texture;
-    std::optional<sg_image> spTexture;
-    std::optional<sg_image> toonTexture;
+    std::optional<SgImageView> texture;
+    std::optional<SgImageView> spTexture;
+    std::optional<SgImageView> toonTexture;
     bool textureHasAlpha;
 };
 
@@ -155,7 +178,7 @@ private:
     void initPipeline();
     void selectNextMotion();
     std::optional<ImageMap::const_iterator> loadImage(const std::string& path);
-    std::optional<sg_image> getTexture(const std::string& path);
+    std::optional<SgImageView> getTexture(const std::string& path);
     void updateGravity();
 
 private:
@@ -188,9 +211,9 @@ private:
     glm::mat4 projectionMatrix_;  // For projection transformation
     MMD mmd_;
 
-    sg_image dummyTex_;
+    SgImageView dummyTex_;
     ImageMap texImages_;
-    std::map<std::string, sg_image> textures_;
+    std::map<std::string, SgImageView> textures_;
     std::vector<Material> materials_;
     sg_sampler sampler_texture_;
     sg_sampler sampler_sphere_texture_;

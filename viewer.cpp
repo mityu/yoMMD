@@ -53,6 +53,46 @@ inline glm::vec3 toVec3(glm::vec2 xy, decltype(xy)::value_type z) {
 
 }  // namespace
 
+SgImageView::SgImageView() {}
+
+SgImageView::SgImageView(const sg_image_desc& img_desc) {
+    sg_image image = sg_make_image(img_desc);
+    sg_view view = sg_make_view(sg_view_desc{.texture = {.image = image}});
+    container_ = Container{.image = image, .view = view};
+}
+
+SgImageView::SgImageView(const Image& src) {
+    sg_image image = sg_make_image(
+        sg_image_desc{
+            .width = src.width,
+            .height = src.height,
+            .data = {.mip_levels = {{.ptr = src.pixels.data(), .size = src.pixels.size()}}}});
+    sg_view view = sg_make_view(sg_view_desc{.texture = {.image = image}});
+    container_ = Container{.image = image, .view = view};
+}
+
+void SgImageView::destroy() {
+    if (container_.has_value()) {
+        sg_destroy_image(container_->image);
+        sg_destroy_view(container_->view);
+    }
+    container_ = std::nullopt;
+}
+
+const sg_image& SgImageView::getImage() const {
+    if (!container_.has_value()) {
+        Err::Exit("Internal error: Image is accessed before initialize or after destroy.");
+    }
+    return container_->image;
+}
+
+const sg_view& SgImageView::getView() const {
+    if (!container_.has_value()) {
+        Err::Exit("Internal error: Image view is accessed before initialize after destroy.");
+    }
+    return container_->view;
+}
+
 Material::Material(const saba::MMDMaterial& mat) : material(mat), textureHasAlpha(false) {}
 
 void MMD::LoadModel(
@@ -520,13 +560,13 @@ void Routine::initBuffers() {
 void Routine::initTextures() {
     static constexpr uint8_t dummyPixel[4] = {0, 0, 0, 0};
 
-    dummyTex_ = sg_make_image(
+    dummyTex_ = SgImageView(
         sg_image_desc{
             .width = 1,
             .height = 1,
             .data =
                 {
-                    .subimage = {{{.ptr = dummyPixel, .size = 4}}},
+                    .mip_levels = {{.ptr = dummyPixel, .size = 4}},
                 },
         });
 
@@ -782,7 +822,7 @@ void Routine::Draw() {
         };
 
         if (material.texture) {
-            binds_.images[IMG_u_Tex] = *material.texture;
+            binds_.views[VIEW_u_Tex] = material.texture->getView();
             binds_.samplers[SMP_u_Tex_smp] = sampler_texture_;
             if (material.textureHasAlpha) {
                 // Use Material Alpha * Texture Alpha
@@ -794,12 +834,12 @@ void Routine::Draw() {
             u_mmd_fs.u_TexMulFactor = mmdMaterial.m_textureMulFactor;
             u_mmd_fs.u_TexAddFactor = mmdMaterial.m_textureAddFactor;
         } else {
-            binds_.images[IMG_u_Tex] = dummyTex_;
+            binds_.views[VIEW_u_Tex] = dummyTex_.getView();
             binds_.samplers[SMP_u_Tex_smp] = sampler_texture_;
         }
 
         if (material.spTexture) {
-            binds_.images[IMG_u_SphereTex] = *material.spTexture;
+            binds_.views[VIEW_u_SphereTex] = material.spTexture->getView();
             binds_.samplers[SMP_u_SphereTex_smp] = sampler_sphere_texture_;
             switch (mmdMaterial.m_spTextureMode) {
             case saba::MMDMaterial::SphereTextureMode::Mul:
@@ -814,18 +854,18 @@ void Routine::Draw() {
             u_mmd_fs.u_SphereTexMulFactor = mmdMaterial.m_spTextureMulFactor;
             u_mmd_fs.u_SphereTexAddFactor = mmdMaterial.m_spTextureAddFactor;
         } else {
-            binds_.images[IMG_u_SphereTex] = dummyTex_;
+            binds_.views[VIEW_u_SphereTex] = dummyTex_.getView();
             binds_.samplers[SMP_u_SphereTex_smp] = sampler_sphere_texture_;
         }
 
         if (material.toonTexture) {
-            binds_.images[IMG_u_ToonTex] = *material.toonTexture;
+            binds_.views[VIEW_u_ToonTex] = material.toonTexture->getView();
             binds_.samplers[SMP_u_ToonTex_smp] = sampler_toon_texture_;
             u_mmd_fs.u_ToonTexMulFactor = mmdMaterial.m_toonTextureMulFactor;
             u_mmd_fs.u_ToonTexAddFactor = mmdMaterial.m_toonTextureAddFactor;
             u_mmd_fs.u_ToonTexMode = 1;
         } else {
-            binds_.images[IMG_u_ToonTex] = dummyTex_;
+            binds_.views[VIEW_u_ToonTex] = dummyTex_.getView();
             binds_.samplers[SMP_u_ToonTex_smp] = sampler_toon_texture_;
         }
 
@@ -853,6 +893,10 @@ void Routine::Terminate() {
     if (!shouldTerminate_)
         return;
 
+    for (auto& texture : textures_) {
+        texture.second.destroy();
+    }
+
     motionID_ = 0;
     motionWeights_.clear();
     induces_.clear();
@@ -866,7 +910,7 @@ void Routine::Terminate() {
     sg_destroy_buffer(normVB_);
     sg_destroy_buffer(uvVB_);
 
-    sg_destroy_image(dummyTex_);
+    dummyTex_.destroy();
 
     sg_destroy_pipeline(pipeline_frontface_);
     sg_destroy_pipeline(pipeline_bothface_);
@@ -950,7 +994,7 @@ std::optional<Routine::ImageMap::const_iterator> Routine::loadImage(const std::s
     }
 }
 
-std::optional<sg_image> Routine::getTexture(const std::string& path) {
+std::optional<SgImageView> Routine::getTexture(const std::string& path) {
     if (const auto itr = textures_.find(path); itr != textures_.cend())
         return itr->second;
 
@@ -965,11 +1009,11 @@ std::optional<sg_image> Routine::getTexture(const std::string& path) {
         .height = static_cast<int>(image.height),
         .pixel_format = SG_PIXELFORMAT_RGBA8,
     };
-    image_desc.data.subimage[0][0] = {
+    image_desc.data.mip_levels[0] = {
         .ptr = image.pixels.data(),
         .size = image.pixels.size(),
     };
-    const sg_image handler = sg_make_image(&image_desc);
+    const auto handler = SgImageView(image_desc);
     textures_.emplace(path, handler);
     return handler;
 }

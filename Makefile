@@ -37,6 +37,16 @@ else
 SOKOL_SHDC:=lib/sokol-tools-bin/bin/osx/sokol-shdc
 PKGNAME_PLATFORM:=darwin-x86_64
 endif
+else ifeq ($(shell uname),Linux)
+ARCH:=$(shell uname -m)
+PKGNAME_PLATFORM:=linux-$(ARCH)
+LDFLAGS+=-lX11 -lXi -lXcursor -ldl -lpthread -lm -lGL # -lvulkan
+SRCS+=sokol-app/main.cpp
+ifeq ($(ARCH),x86_64)
+SOKOL_SHDC:=lib/sokol-tools-bin/bin/linux/sokol-shdc
+else
+SOKOL_SHDC:=lib/sokol-tools-bin/bin/linux_arm64/sokol-shdc
+endif
 endif
 
 ifneq ($(shell command -v ninja),)
@@ -98,7 +108,7 @@ $(eval $(call GEN_BUILD_RULES,debug,./$(TARGET)))
 $(eval $(call GEN_BUILD_RULES,release,release/$(TARGET)))
 
 auto/%.glsl.h: %.glsl $(SOKOL_SHDC)
-	$(SOKOL_SHDC) --input $< --output $@ --slang metal_macos:hlsl5
+	$(SOKOL_SHDC) --input $< --output $@ --slang metal_macos:hlsl5:glsl430
 ifeq ($(OS),Windows_NT)
 	# CRLF -> LF
 	tr -d \\r < $@ > $@.tmp && mv $@.tmp $@
@@ -174,6 +184,7 @@ lib/bullet3/build/$(CMAKE_BUILDFILE):
 		-DBUILD_CPU_DEMOS=OFF              \
 		-DBUILD_ENET=OFF                   \
 		-DBUILD_EXTRAS=OFF                 \
+		-DBUILD_EGL=OFF                    \
 		-DBUILD_OPENGL3_DEMOS=OFF          \
 		-DBUILD_PYBULLET=OFF               \
 		-DBUILD_SHARED_LIBS=OFF            \

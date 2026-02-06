@@ -1,7 +1,7 @@
 !.gitignore
 config.toml
-yommd
-yommd.exe
+yoMMD
+yoMMD.exe
 build/
 package/
 default-attachments/

@@ -1,0 +1,58 @@
+diff --git a/sokol_app.h b/sokol_app.h
+index db2e8dc..f8bd452 100644
+--- a/sokol_app.h
++++ b/sokol_app.h
+@@ -2516,6 +2516,7 @@ inline void sapp_run(const sapp_desc& desc) { return sapp_run(&desc); }
+     #include <X11/Xresource.h>
+     #include <X11/Xatom.h>
+     #include <X11/extensions/XInput2.h>
++    #include <X11/extensions/Xrender.h>
+     #include <X11/Xcursor/Xcursor.h>
+     #include <X11/cursorfont.h> /* XC_* font cursors */
+     #include <X11/Xmd.h> /* CARD32 */
+@@ -7729,6 +7730,7 @@ typedef struct {
+     int         stencil_bits;
+     int         samples;
+     bool        doublebuffer;
++    bool        transparent;
+     uintptr_t   handle;
+ } _sapp_gl_fbconfig;
+ 
+@@ -7865,6 +7867,9 @@ _SOKOL_PRIVATE const _sapp_gl_fbconfig* _sapp_gl_choose_fbconfig(const _sapp_gl_
+             */
+             missing++;
+         }
++        if (desired->transparent != current->transparent) {
++            missing++;
++        }
+ 
+         /* These polynomials make many small channel size differences matter
+             less than one large channel size difference
+@@ -12015,6 +12020,15 @@ _SOKOL_PRIVATE GLXFBConfig _sapp_glx_choosefbconfig(void) {
+                 continue;
+             }
+         }
++        if (_sapp.desc.alpha) {
++            XVisualInfo* vi = _sapp.glx.GetVisualFromFBConfig(_sapp.x11.display, n);
++            if (vi)
++            {
++                XRenderPictFormat* pf = XRenderFindVisualFormat(_sapp.x11.display, vi->visual);
++                u->transparent = pf && pf->direct.alphaMask;
++                XFree(vi);
++            }
++        }
+         u->red_bits = _sapp_glx_attrib(n, GLX_RED_SIZE);
+         u->green_bits = _sapp_glx_attrib(n, GLX_GREEN_SIZE);
+         u->blue_bits = _sapp_glx_attrib(n, GLX_BLUE_SIZE);
+@@ -12036,9 +12050,10 @@ _SOKOL_PRIVATE GLXFBConfig _sapp_glx_choosefbconfig(void) {
+     desired.green_bits = 8;
+     desired.blue_bits = 8;
+     desired.alpha_bits = 8;
+-    desired.depth_bits = 24;
++    desired.depth_bits = _sapp.desc.alpha ? 32 : 24;
+     desired.stencil_bits = 8;
+     desired.doublebuffer = true;
++    desired.transparent = _sapp.desc.alpha;
+     desired.samples = _sapp.sample_count > 1 ? _sapp.sample_count : 0;
+     closest = _sapp_gl_choose_fbconfig(&desired, usable_configs, usable_count);
+     GLXFBConfig result = 0;

@@ -40,7 +40,7 @@ endif
 else ifeq ($(shell uname),Linux)
 ARCH:=$(shell uname -m)
 PKGNAME_PLATFORM:=linux-$(ARCH)
-LDFLAGS+=-lX11 -lXi -lXcursor -ldl -lpthread -lm -lGL # -lvulkan
+LDFLAGS+=-lX11 -lXi -lXcursor -lXrender -ldl -lpthread -lm -lGL
 SRCS+=sokol-app/main.cpp
 ifeq ($(ARCH),x86_64)
 SOKOL_SHDC:=lib/sokol-tools-bin/bin/linux/sokol-shdc

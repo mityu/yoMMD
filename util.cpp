@@ -164,6 +164,14 @@ void Logger(
         ss << "\n\t" << message;
     }
 
+#ifdef PLATFORM_WINDOWS
+    if (logItem == SG_LOGITEM_D3D11_FEATURE_LEVEL_0_DETECTED) {
+        // Only show this error on console.
+        Info::Log(ss.str());
+        return;
+    }
+#endif
+
     if (logLevel == 0) {
         ss << "\nAborting because of panic.";
         Err::Exit(ss.str());

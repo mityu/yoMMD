@@ -3,7 +3,7 @@
   "extends": ["config:base"],
   "lockFileMaintenance": {
     "enabled": true,
-    "extends": ["schedule:* * * * 6"]
+    "extends": ["schedule:0 0 * * 6"]
   },
   "automerge": true,
   "automergeStrategy": "rebase",

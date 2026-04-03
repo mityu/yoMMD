@@ -13,6 +13,8 @@ updates:
           - "lib/sokol"
           - "lib/sokol-tools-bin"
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directories:
+      - "/.github/actions/**"
+      - "/.github/workflows"
     schedule:
       interval: "weekly"

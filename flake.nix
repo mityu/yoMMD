@@ -9,6 +9,7 @@
       forEachDarwinSystem = nixpkgs.lib.genAttrs [
         "aarch64-darwin"
         "x86_64-darwin"
+        "x86_64-linux"
       ];
     in
     {
@@ -26,7 +27,27 @@
               gnumake
               cmake
               ninja
+              libglvnd
             ];
+          };
+          cross-to-windows = pkgs.mkShell {
+            nativeBuildInputs = with pkgs.pkgsCross.mingwW64; [
+              stdenv.cc
+              cmake
+              ninja
+              gnumake
+              libglvnd
+              glfw
+              # windows.pthreads
+            ];
+            # buildInputs = [
+            #   (pkgs.pkgsCross.mingwW64.windows.mcfgthreads.overrideAttrs {
+            #     dontDisableStatic = true;
+            #   })
+            # ];
+            # buildInputs = [
+            #   pkgs.pkgsCross.mingwW64.threads
+            # ];
           };
         }
       );

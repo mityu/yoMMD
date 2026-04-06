@@ -15,7 +15,7 @@ For Windows user, you can download pre-build binary from here: https://github.co
 # Development environment
 
 - Apple/homebrew clang on macOS Ventura 13
-- GCC on MinGW64 on MSYS2 on Windows 11
+- GCC on UCRT64 on MSYS2 on Windows 11
 
 yoMMD must work on these environment.
 
@@ -35,18 +35,18 @@ $ brew install cmake
 $ brew install ninja  # optional
 ```
 
-#### With MinGW64 on msys2:
+#### With UCRT64 on msys2:
 
-Only MinGW64 on MSYS2 is officially supported now.  Please prepare it before
+Only UCRT64 on MSYS2 is officially supported now.  Please prepare it before
 building yoMMD.
 
-Note that you have to use `mingw-w64-x86_64-cmake` package, not `cmake` package.
+Note that you have to use `mingw-w64-ucrt-x86_64-cmake` package, not `cmake` package.
 yoMMD build will fail with the msys cmake package.
 
 ```
 $ pacman -S make
-$ pacman -S mingw-w64-x86_64-cmake
-$ pacman -S mingw-w64-x86_64-ninja  # optional
+$ pacman -S mingw-w64-ucrt-x86_64-cmake
+$ pacman -S mingw-w64-ucrt-x86_64-ninja  # optional
 ```
 
 

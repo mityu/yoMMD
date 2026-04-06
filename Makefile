@@ -1,5 +1,5 @@
-CXX:=g++
-CC:=gcc
+CXX:=x86_64-w64-mingw32-g++
+CC:=x86_64-w64-mingw32-gcc
 TARGET:=yoMMD
 SRCS:=viewer.cpp config.cpp resources.cpp image.cpp keyboard.cpp util.cpp libs.mm auto/version.cpp
 CFLAGS:=-Ilib/saba/src/ -Ilib/sokol -Ilib/glm -Ilib/stb \
@@ -15,7 +15,7 @@ PKGNAME_PLATFORM:=
 CMAKE_GENERATOR:=
 CMAKE_BUILDFILE:=Makefile
 
-ifeq ($(OS),Windows_NT)
+ifeq (,)
 TARGET:=$(TARGET).exe
 SRCS+=windows/main.cpp windows/msgbox.cpp windows/menu.cpp windows/resource.rc
 LDFLAGS+=-static -lkernel32 -luser32 -lshell32 -ld3d11 -ldxgi -ldcomp -lgdi32 -ldwmapi -municode
@@ -37,6 +37,9 @@ else
 SOKOL_SHDC:=lib/sokol-tools-bin/bin/osx/sokol-shdc
 PKGNAME_PLATFORM:=darwin-x86_64
 endif
+else
+SOKOL_SHDC:=lib/sokol-tools-bin/bin/linux/sokol-shdc
+PKGNAME_PLATFORM:=unknown-x86_64
 endif
 
 ifneq ($(shell command -v ninja),)
@@ -86,7 +89,7 @@ $(call GEN_OBJDIR,$1)/%.mm.o: %.mm
 	$(CXX) -o $$@ $(CPPFLAGS) $(OBJCFLAGS) $(call GEN_CFLAGS,$1) -c $$<
 
 $(call GEN_OBJDIR,$1)/windows/resource.rc.o: windows/resource.rc windows/DpiAwareness.manifest
-	windres -o $$@ $$<
+	x86_64-w64-mingw32-windres -o $$@ $$<
 
 .PHONY: clean-$1
 clean-$1:
@@ -167,6 +170,18 @@ clean-bullet:
 lib/bullet3/build/$(CMAKE_BUILDFILE):
 	$(call MKDIR,lib/bullet3/build)
 	cd lib/bullet3/build && cmake \
+		-DCMAKE_SYSTEM_NAME=Windows \
+		-DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+		-DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ \
+		-DTHREADS_PTHREADS_WIN32_LIBRARY=pthread \
+		-DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+		-DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+		-DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+		-DCMAKE_CXX_FLAGS="$$NIX_CFLAGS_COMPILE" \
+		-DCMAKE_EXE_LINKER_FLAGS="$$NIX_LDFLAGS" \
+		-DCMAKE_HAVE_PTHREADS_CREATE=ON \
+		-DCMAKE_HAVE_LIBC_PTHREAD=ON \
+		-DTHREADS_FOUND=ON \
 		-DLIBRARY_OUTPUT_PATH=./           \
 		-DBUILD_BULLET2_DEMOS=OFF          \
 		-DBUILD_BULLET3=OFF                \

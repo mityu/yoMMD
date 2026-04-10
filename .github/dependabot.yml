@@ -18,3 +18,8 @@ updates:
       - "/.github/workflows"
     schedule:
       interval: "weekly"
+  - package-ecosystem: "nix"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "friday"

@@ -1,21 +1,14 @@
 name: Release prebuild binaries
 on:
-  # schedule:
-  #   - cron: '0 14 * * *'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  windows:
-    runs-on: windows-latest
-    timeout-minutes: 30
-    defaults:
-      run:
-        shell: msys2 {0}
-    permissions:
-      contents: write
+  check-create-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
       - name: Download the latest release
@@ -29,22 +22,44 @@ jobs:
           extract: true
           out-file-path: "latest-release"
       - name: Check version between latest release and latest source code
-        id: check
-        shell: bash
+        if: ${{ steps.pull_latest_release.outcome == 'success' }}
         run: |
-          if [[ "${{ steps.pull_latest_release.outcome }}" == 'failure' ]]; then
-            echo "skip=no" >> $GITHUB_OUTPUT
-          else
-            version_release=$(./latest-release/yoMMD.exe --version | sed 's/^version: *//i')
-            version_source=$(./scripts/gen-version-string)
-            if [[ $version_release == $version_source ]]; then
-              echo "skip=yes" >> $GITHUB_OUTPUT
-            else
-              echo "skip=no" >> $GITHUB_OUTPUT
-            fi
+          version_release=$(./latest-release/yoMMD.exe --version | sed 's/^version: *//i')
+          version_source=$(./scripts/gen-version-string)
+          if [[ "$version_release" == "$version_source" ]]; then
+            # No need to create a new release because there's no updates in this repository.
+            exit 1
           fi
+
+  build-release-hash:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      commit_hash: ${{ steps.build-hash.outputs.commit_hash }}
+      version_string: ${{ steps.build-hash.outputs.version_string }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: build-hash
+        run: |
+          {
+            echo "commit_hash=$(git log -1 --format="%h")"
+            echo "version_string=$(./scripts/gen-version-string)"
+          } >> "$GITHUB_OUTPUT"
+
+  build-on-windows:
+    needs:
+      - check-create-release
+      - build-release-hash
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
       - uses: msys2/setup-msys2@v2
-        if: steps.check.outputs.skip == 'no'
         with:
           msystem: UCRT64
           release: false
@@ -56,43 +71,112 @@ jobs:
             mingw-w64-ucrt-x86_64-gcc
             mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-diffutils
-      - name: Clone submodules
-        if: steps.check.outputs.skip == 'no'
-        run:
-          git submodule update --init --recursive --recommend-shallow --depth 1
       - name: Build submodule libraries
-        if: steps.check.outputs.skip == 'no'
         uses: ./.github/actions/build-submodules
         with:
           shell: msys2 {0}
       - name: Build binary
-        if: steps.check.outputs.skip == 'no'
-        run: |
-          make release -j
+        run: make release -j
       - name: Package
-        if: steps.check.outputs.skip == 'no'
         id: package
         run: |
-          version_string=$(./scripts/gen-version-string)
-          package_name="../package/yoMMD-win-${version_string}.zip"
-          commit_hash=$(git log -1 --format='%H')
-          changelog_file="../package/changelog.md"
-          mkdir ../package
+          version_string="${{ needs.build-release-hash.outputs.version_string }}"
+          package_name="./yoMMD-win-$(uname -m)-${version_string}.zip"
           mv release/yoMMD.exe yoMMD.exe
           zip $package_name yoMMD.exe
-          echo "Version: $version_string" > $changelog_file
-          echo "Documents:" >> $changelog_file
-          echo " - [Configuration](https://github.com/mityu/yoMMD/blob/${commit_hash}/doc/configuration.rst)" >> $changelog_file
-          echo " - [Operation Guide](https://github.com/mityu/yoMMD/blob/${commit_hash}/doc/operation-guide.rst)" >> $changelog_file
           echo "package_name=$package_name" >> $GITHUB_OUTPUT
-          echo "tag_name=$version_string" >> $GITHUB_OUTPUT
-          echo "changelog_file=$changelog_file" >> $GITHUB_OUTPUT
-      - name: Upload releases
-        uses: softprops/action-gh-release@v2
-        if: steps.check.outputs.skip == 'no'
+      - uses: actions/upload-artifact@v7
         with:
-          files: ${{ steps.package.outputs.package_name }}
+          name: artifact-windows
+          if-no-files-found: error
+          path: ${{ steps.package.outputs.package_name }}
+
+  build-on-macos:
+    needs:
+      - check-create-release
+      - build-release-hash
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - name: Setup build tools
+        run: brew install --formula cmake
+      - name: Show environment
+        run: |
+          uname -a
+          clang++ --version
+      - name: Build submodules
+        uses: ./.github/actions/build-submodules/
+        with:
+          shell: bash
+      - run: make -j app
+      - id: package
+        run: |
+          version_string="${{ needs.build-release-hash.outputs.version_string }}"
+          package_name="./package/yoMMD-macos-$(uname -m)-${version_string}.zip"
+          mv ./package/yoMMD.app ./yoMMD.app
+          zip -r "$package_name" ./yoMMD.app
+          echo "package_name=$package_name" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: artifact-macos
+          if-no-files-found: error
+          path: ${{ steps.package.outputs.package_name }}
+
+  create-release:
+    needs:
+      - build-release-hash
+      - build-on-windows
+      - build-on-macos
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Unpack artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: artifact-*
+          merge-multiple: true
+      - name: Debug info
+        run: |
+          ls -l
+          if type tree >/dev/null; then
+            tree .
+          fi
+      - id: package
+        run: |
+          cat <<-EOF >> "$GITHUB_OUTPUT"
+            tag_name="${{ needs.build-release-hash.outputs.version_string }}"
+          EOF
+      - name: Create CHANGELOG
+        id: changelog
+        run: |
+          commit_hash="${{ needs.build-release-hash.outputs.commit_hash }}"
+          changelog_file="./CHANGELOG.md"
+          cat <<EOF >> "$changelog_file"
+          # General information
+
+          Version: ${{ needs.build-release-hash.outputs.version_string }}
+          Documents:
+           - [Configuration](https://github.com/mityu/yoMMD/blob/${commit_hash}/doc/configuration.rst)
+           - [Operation Guide](https://github.com/mityu/yoMMD/blob/${commit_hash}/doc/operation-guide.rst)
+
+          # Notes for macOS binary
+
+          Since the pre-build binary is not signed with an Apple Developer ID, macOS will show an error when you're opening the downloaded yoMMD.app.
+          In order to open it, you need to remove the quarantine attribute.
+
+          \`\`\`sh
+          xattr -dr com.apple.quarantine /path/to/yoMMD.app
+          \`\`\`
+          EOF
+          echo "changelog_file=$changelog_file" >> "$GITHUB_OUTPUT"
+      - name: Create Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: yoMMD-*-${{ needs.build-release-hash.outputs.version_string }}.zip
           tag_name: ${{ steps.package.outputs.tag_name }}
-          body_path: ${{ steps.package.outputs.changelog_file }}
+          body_path: ${{ steps.changelog.outputs.changelog_file }}
           draft: false
           prerelease: false

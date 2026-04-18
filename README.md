@@ -10,7 +10,9 @@ for Windows and macOS.
 
 # Pre-build binary
 
-For Windows user, you can download pre-build binary from here: https://github.com/mityu/yoMMD/releases/latest
+Pre-build binaries for both Windows and macOS are prepared.  You can download them from here: https://github.com/mityu/yoMMD/releases/latest
+
+Note that on macOS, you'll see an error when you launch the downloaded yoMMD.app because the binary is not signed with an Apple Developer ID.
 
 # Development environment
 

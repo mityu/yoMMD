@@ -88,7 +88,7 @@ jobs:
           echo "tag_name=$version_string" >> $GITHUB_OUTPUT
           echo "changelog_file=$changelog_file" >> $GITHUB_OUTPUT
       - name: Upload releases
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         if: steps.check.outputs.skip == 'no'
         with:
           files: ${{ steps.package.outputs.package_name }}

@@ -144,11 +144,6 @@ jobs:
           if type tree >/dev/null; then
             tree .
           fi
-      - id: package
-        run: |
-          cat <<-EOF >> "$GITHUB_OUTPUT"
-            tag_name="${{ needs.build-release-hash.outputs.version_string }}"
-          EOF
       - name: Create CHANGELOG
         id: changelog
         run: |
@@ -176,7 +171,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: yoMMD-*-${{ needs.build-release-hash.outputs.version_string }}.zip
-          tag_name: ${{ steps.package.outputs.tag_name }}
+          tag_name: ${{ needs.build-release-hash.outputs.version_string }}
           body_path: ${{ steps.changelog.outputs.changelog_file }}
           draft: false
           prerelease: false

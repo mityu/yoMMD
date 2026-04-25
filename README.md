@@ -12,7 +12,12 @@ for Windows and macOS.
 
 Pre-build binaries for both Windows and macOS are prepared.  You can download them from here: https://github.com/mityu/yoMMD/releases/latest
 
-Note that on macOS, you'll see an error when you launch the downloaded yoMMD.app because the binary is not signed with an Apple Developer ID.
+Note that on macOS, you'll see an error when you launch the downloaded yoMMD.app because the binary is not signed with an Apple Developer ID.  In that case, you need to remove the quarantine attribute to open the app.
+
+But removing the quarantine attribute allows the app to bypasses the protections against malwares by macOS, so **do this on your own risk**.
+```
+xattr -dr com.apple.quarantine /path/to/yoMMD.app
+```
 
 # Development environment
 

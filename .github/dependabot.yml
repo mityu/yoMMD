@@ -20,7 +20,8 @@ updates:
       interval: "weekly"
     groups:
       github-actions:
-        patterns: "*"
+        patterns:
+          - "*"
   - package-ecosystem: "nix"
     directory: "/"
     schedule:
@@ -28,4 +29,5 @@ updates:
       day: "friday"
     groups:
       nix:
-        patterns: "*"
+        patterns:
+          - "*"
